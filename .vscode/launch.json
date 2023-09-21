@@ -1,0 +1,51 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'swappy'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=swappy",
+                    "--package=swappy",
+                ],
+                "filter": {
+                    "name": "swappy",
+                    "kind": "bin"
+                }
+            },
+            "args": [
+                "--filename",
+                "/home/gabm/Pictures/Screenshots/swappy-20230921-054340.png",
+                //"/home/gabm/Pictures/Wallpaper/torres_1.jpg"
+                "--output-filename",
+                "/tmp/out.png"
+            ],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'swappy'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=swappy",
+                    "--package=swappy"
+                ],
+                "filter": {
+                    "name": "swappy",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}
