@@ -104,12 +104,12 @@ impl App {
             root.fullscreen();
         }
 
-        // this is a horrible workaround to let sway recognize the window as "not resizable" and
+        // this is a horrible hack to let sway recognize the window as "not resizable" and
         // place it floating mode. We then re-enable resizing to let if fit fullscreen (if requested)
         sender.command(|out, shutdown| {
             shutdown
                 .register(async move {
-                    tokio::time::sleep(Duration::from_millis(50)).await;
+                    tokio::time::sleep(Duration::from_millis(1)).await;
                     out.send(ResetResizable).unwrap();
                 })
                 .drop_on_shutdown()
