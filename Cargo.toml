@@ -2,8 +2,12 @@
 name = "satty"
 version = "0.1.0"
 edition = "2021"
+authors = ["Matthias Gabriel <gabm+aur@mailbox.org>"]
+description = "A screenshot annotation tool inspired by Swappy and Flameshot"
+homepage ="https://github.com/gabm/satty"
+repository ="https://github.com/gabm/satty"
+license = "MPL-2.0"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 relm4 = { version = "0.6.2", features = ["macros", "libadwaita"] }
@@ -17,3 +21,5 @@ anyhow = "1.0"
 
 # command line
 clap = { version = "4.4.4", features = ["derive"] }
+swayipc = { git = "https://github.com/JayceFayne/swayipc-rs.git", branch = "master" }
+libwayshot = "0.2.0"
