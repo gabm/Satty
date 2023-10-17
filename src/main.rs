@@ -145,8 +145,11 @@ impl App {
             .toolbar-top {border-radius: 0px 0px 6px 6px;}
             ",
         );
-        if let Some(display) = DisplayManager::get().default_display() {
-            gtk::style_context_add_provider_for_display(&display, &css_provider, 1);
+        match DisplayManager::get().default_display() {
+            Some(display) => {
+                gtk::style_context_add_provider_for_display(&display, &css_provider, 1)
+            }
+            None => println!("Cannot apply style"),
         }
     }
 }
