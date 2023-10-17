@@ -241,8 +241,13 @@ impl SketchBoard {
                 return;
             }
         };
-        let clipboard = DisplayManager::get().default_display().unwrap().clipboard();
-        clipboard.set_texture(&texture);
+        match DisplayManager::get().default_display() {
+            Some(display) => display.clipboard().set_texture(&texture),
+            None => {
+                println!("Cannot save to clipboard");
+                return;
+            }
+        }
     }
 
     fn handle_undo(&mut self) -> ToolUpdateResult {
