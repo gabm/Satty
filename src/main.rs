@@ -3,6 +3,7 @@ use std::{io, time::Duration};
 
 use gdk_pixbuf::{Pixbuf, PixbufLoader};
 use gtk::prelude::*;
+use relm4::gtk::gdk::Rectangle;
 use relm4::{
     actions::{ActionablePlus, RelmAction, RelmActionGroup},
     gtk::{self, gdk::DisplayManager, Align, CssProvider, Inhibit, Window},
@@ -64,11 +65,22 @@ enum AppInput {
 struct ResetResizable;
 
 impl App {
-    fn resize_window_initial(&self, root: &Window, sender: ComponentSender<Self>) {
-        let default_display = DisplayManager::get().default_display().unwrap();
+    fn get_monitor_size(root: &Window) -> Option<Rectangle> {
         let surface = root.surface();
-        let monitor = default_display.monitor_at_surface(&surface).unwrap();
-        let monitor_size = monitor.geometry();
+        DisplayManager::get()
+            .default_display()
+            .and_then(|display| display.monitor_at_surface(&surface))
+            .and_then(|monitor| Some(monitor.geometry()))
+    }
+
+    fn resize_window_initial(&self, root: &Window, sender: ComponentSender<Self>) {
+        let monitor_size = match Self::get_monitor_size(root) {
+            Some(s) => s,
+            None => {
+                root.set_default_size(self.original_image_width, self.original_image_height);
+                return;
+            }
+        };
 
         let reduced_monitor_width = monitor_size.width() as f64 * 0.8;
         let reduced_monitor_height = monitor_size.height() as f64 * 0.8;
