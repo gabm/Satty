@@ -252,6 +252,15 @@ impl Component for App {
 
                         set_icon_name: "drop-regular",
                         set_tooltip: "Blur",
+                        ActionablePlus::set_action::<ToolsAction>: Tools::Marker,
+
+                    },
+                    gtk::ToggleButton {
+                        set_focusable: false,
+                        set_hexpand: false,
+
+                        set_icon_name: "drop-regular",
+                        set_tooltip: "Blur",
                         ActionablePlus::set_action::<ToolsAction>: Tools::Blur,
 
                     },

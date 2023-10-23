@@ -17,8 +17,10 @@ mod arrow;
 mod blur;
 mod crop;
 mod line;
+mod marker;
 mod rectangle;
 mod text;
+
 pub enum ToolEvent {
     Activated,
     Deactivated,
@@ -102,6 +104,8 @@ pub use line::LineTool;
 pub use rectangle::RectangleTool;
 pub use text::TextTool;
 
+use self::marker::MarkerTool;
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
 pub enum Tools {
     Crop = 0,
@@ -109,7 +113,8 @@ pub enum Tools {
     Arrow = 2,
     Rectangle = 3,
     Text = 4,
-    Blur = 5,
+    Marker = 5,
+    Blur = 6,
 }
 
 pub struct ToolFactory {}
@@ -123,6 +128,7 @@ impl ToolFactory {
             Tools::Rectangle => Rc::new(RefCell::new(RectangleTool::new(style))),
             Tools::Text => Rc::new(RefCell::new(TextTool::new(style))),
             Tools::Blur => Rc::new(RefCell::new(BlurTool::new(style))),
+            Tools::Marker => Rc::new(RefCell::new(MarkerTool::new(style))),
         }
     }
 }
@@ -147,7 +153,8 @@ impl FromVariant for Tools {
             2 => Some(Tools::Arrow),
             3 => Some(Tools::Rectangle),
             4 => Some(Tools::Text),
-            5 => Some(Tools::Blur),
+            5 => Some(Tools::Marker),
+            6 => Some(Tools::Blur),
             _ => None,
         })
     }

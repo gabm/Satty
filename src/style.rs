@@ -4,6 +4,7 @@ use gdk_pixbuf::{
     glib::{FromVariant, Variant, VariantTy},
     prelude::{StaticVariantType, ToVariant},
 };
+use pangocairo::pango::SCALE;
 
 #[derive(Clone, Copy, Debug)]
 pub struct Style {
@@ -115,9 +116,9 @@ impl Default for Color {
 impl Size {
     pub fn to_text_size(&self) -> i32 {
         match *self {
-            Size::Small => 10,
-            Size::Medium => 16,
-            Size::Large => 30,
+            Size::Small => 10 * SCALE,
+            Size::Medium => 16 * SCALE,
+            Size::Large => 30 * SCALE,
         }
     }
 

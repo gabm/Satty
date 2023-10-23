@@ -7,21 +7,21 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'swappy'",
+            "name": "Debug executable 'satty'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=swappy",
-                    "--package=swappy",
+                    "--bin=satty",
+                    "--package=satty",
                 ],
                 "filter": {
-                    "name": "swappy",
+                    "name": "satty",
                     "kind": "bin"
                 }
             },
             "args": [
                 "--filename",
-                "/home/gabm/Pictures/Screenshots/swappy-20230921-054340.png",
+                "/home/gabm/Pictures/Screenshots/satty-20230921-054340.png",
                 //"/home/gabm/Pictures/Wallpaper/torres_1.jpg"
                 "--output-filename",
                 "/tmp/out.png"
@@ -31,16 +31,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'swappy'",
+            "name": "Debug unit tests in executable 'satty'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=swappy",
-                    "--package=swappy"
+                    "--bin=satty",
+                    "--package=satty"
                 ],
                 "filter": {
-                    "name": "swappy",
+                    "name": "satty",
                     "kind": "bin"
                 }
             },

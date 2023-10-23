@@ -25,11 +25,7 @@ pub struct Text {
     text_buffer: TextBuffer,
     style: Style,
 }
-impl Text {
-    fn convert_size(size: Size) -> i32 {
-        size.to_text_size() * SCALE
-    }
-}
+
 impl Drawable for Text {
     fn draw(&self, cx: &Context, _surface: &ImageSurface) -> Result<()> {
         let layout = pangocairo::create_layout(cx);
@@ -42,7 +38,7 @@ impl Drawable for Text {
         layout.set_text(text.as_str());
 
         let mut desc = FontDescription::from_string("Sans,Times new roman");
-        desc.set_size(Self::convert_size(self.style.size));
+        desc.set_size(self.style.size.to_text_size());
         layout.set_font_description(Some(&desc));
 
         let (r, g, b) = self.style.color.to_rgb_f64();
