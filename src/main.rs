@@ -4,6 +4,7 @@ use std::{io, time::Duration};
 use gdk_pixbuf::{Pixbuf, PixbufLoader};
 use gtk::prelude::*;
 use relm4::gtk::gdk::Rectangle;
+use relm4::RelmWidgetExt;
 use relm4::{
     actions::{ActionablePlus, RelmAction, RelmActionGroup},
     gtk::{self, gdk::DisplayManager, Align, CssProvider, Inhibit, Window},
@@ -192,6 +193,7 @@ impl Component for App {
                         set_hexpand: false,
 
                         set_icon_name: "arrow-undo-filled",
+                        set_tooltip: "Undo",
                         connect_clicked[sketch_board_sender] => move |_| {sketch_board_sender.emit(SketchBoardMessage::Undo);},
                     },
                     gtk::Button {
@@ -199,6 +201,7 @@ impl Component for App {
                         set_hexpand: false,
 
                         set_icon_name: "arrow-redo-filled",
+                        set_tooltip: "Redo",
                         connect_clicked[sketch_board_sender] => move |_| {sketch_board_sender.emit(SketchBoardMessage::Redo);},
                     },
                     gtk::Separator {},
@@ -207,6 +210,7 @@ impl Component for App {
                         set_hexpand: false,
 
                         set_icon_name: "crop-filled",
+                        set_tooltip: "Crop",
                         ActionablePlus::set_action::<ToolsAction>: Tools::Crop,
                     },
                     gtk::ToggleButton {
@@ -214,6 +218,7 @@ impl Component for App {
                         set_hexpand: false,
 
                         set_icon_name: "minus-large",
+                        set_tooltip: "Line tool",
                         ActionablePlus::set_action::<ToolsAction>: Tools::Line,
                     },
                     gtk::ToggleButton {
@@ -221,6 +226,7 @@ impl Component for App {
                         set_hexpand: false,
 
                         set_icon_name: "arrow-up-right-filled",
+                        set_tooltip: "Arrow tool",
                         ActionablePlus::set_action::<ToolsAction>: Tools::Arrow,
                     },
                     gtk::ToggleButton {
@@ -228,6 +234,7 @@ impl Component for App {
                         set_hexpand: false,
 
                         set_icon_name: "checkbox-unchecked-regular",
+                        set_tooltip: "Rectangle tool",
                         ActionablePlus::set_action::<ToolsAction>: Tools::Rectangle,
                     },
                     gtk::ToggleButton {
@@ -235,6 +242,7 @@ impl Component for App {
                         set_hexpand: false,
 
                         set_icon_name: "text-case-title-regular",
+                        set_tooltip: "Text tool",
                         ActionablePlus::set_action::<ToolsAction>: Tools::Text,
 
                     },
@@ -243,6 +251,7 @@ impl Component for App {
                         set_hexpand: false,
 
                         set_icon_name: "drop-regular",
+                        set_tooltip: "Blur",
                         ActionablePlus::set_action::<ToolsAction>: Tools::Blur,
 
                     },
@@ -252,6 +261,7 @@ impl Component for App {
                         set_hexpand: false,
 
                         set_icon_name: "copy-regular",
+                        set_tooltip: "Copy to clipboard",
                         connect_clicked[sketch_board_sender] => move |_| {sketch_board_sender.emit(SketchBoardMessage::CopyClipboard);},
                     },
                     #[name(save_button)]
@@ -260,6 +270,7 @@ impl Component for App {
                         set_hexpand: false,
 
                         set_icon_name: "save-regular",
+                        set_tooltip: "Save",
                         connect_clicked[sketch_board_sender] => move |_| {sketch_board_sender.emit(SketchBoardMessage::SaveFile);},
                     },
 
@@ -324,6 +335,7 @@ impl Component for App {
                         set_hexpand: false,
 
                         set_label: "S",
+                        set_tooltip: "Small font size",
                         ActionablePlus::set_action::<SizeAction>: Size::Small,
                     },
                     gtk::ToggleButton {
@@ -331,6 +343,7 @@ impl Component for App {
                         set_hexpand: false,
 
                         set_label: "M",
+                        set_tooltip: "Medium font size",
                         ActionablePlus::set_action::<SizeAction>: Size::Medium,
                     },
                     gtk::ToggleButton {
@@ -338,6 +351,7 @@ impl Component for App {
                         set_hexpand: false,
 
                         set_label: "L",
+                        set_tooltip: "Large font size",
                         ActionablePlus::set_action::<SizeAction>: Size::Large,
                     },
                 },
