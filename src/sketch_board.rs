@@ -375,10 +375,22 @@ impl Component for SketchBoard {
                 }
             }
             SketchBoardMessage::InputEvent(mut ie) => {
-                ie.remap_event_coordinates(self.scale_factor);
-                self.active_tool
-                    .borrow_mut()
-                    .handle_event(ToolEvent::Input(ie))
+                if let InputEvent::KeyEvent(ke) = ie {
+                    if ke.key == Key::z && ke.modifier == ModifierType::CONTROL_MASK {
+                        self.handle_undo()
+                    } else if ke.key == Key::y && ke.modifier == ModifierType::CONTROL_MASK {
+                        self.handle_redo()
+                    } else {
+                        self.active_tool
+                            .borrow_mut()
+                            .handle_event(ToolEvent::Input(ie))
+                    }
+                } else {
+                    ie.remap_event_coordinates(self.scale_factor);
+                    self.active_tool
+                        .borrow_mut()
+                        .handle_event(ToolEvent::Input(ie))
+                }
             }
             SketchBoardMessage::ColorSelected(color) => {
                 self.style.color = color;
