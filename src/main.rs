@@ -250,8 +250,8 @@ impl Component for App {
                         set_focusable: false,
                         set_hexpand: false,
 
-                        set_icon_name: "drop-regular",
-                        set_tooltip: "Blur",
+                        set_icon_name: "number-circle-1-regular",
+                        set_tooltip: "Numbered Marker",
                         ActionablePlus::set_action::<ToolsAction>: Tools::Marker,
 
                     },
