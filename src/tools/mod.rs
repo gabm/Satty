@@ -6,7 +6,7 @@ use gdk_pixbuf::{
     prelude::{StaticVariantType, ToVariant},
 };
 use pangocairo::cairo::ImageSurface;
-use relm4::gtk::{cairo::Context, prelude::SeatExt};
+use relm4::gtk::cairo::Context;
 
 use crate::{
     sketch_board::{InputEvent, KeyEventMsg, MouseEventMsg},
@@ -104,7 +104,7 @@ pub use line::LineTool;
 pub use rectangle::RectangleTool;
 pub use text::TextTool;
 
-use self::{crop::Crop, marker::MarkerTool};
+use self::marker::MarkerTool;
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum Tools {
