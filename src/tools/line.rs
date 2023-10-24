@@ -6,6 +6,7 @@ use crate::{math::Vec2D, sketch_board::MouseEventMsg, style::Style};
 
 use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
 
+#[derive(Default)]
 pub struct LineTool {
     line: Option<Line>,
     style: Style,
@@ -38,12 +39,6 @@ impl Drawable for Line {
         cx.restore()?;
 
         Ok(())
-    }
-}
-
-impl LineTool {
-    pub fn new(style: Style) -> Self {
-        Self { line: None, style }
     }
 }
 

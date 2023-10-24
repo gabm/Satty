@@ -15,7 +15,7 @@ use relm4::{gtk, Component, ComponentParts, ComponentSender};
 
 use crate::math::Vec2D;
 use crate::style::{Color, Size, Style};
-use crate::tools::{CropTool, Drawable, Tool, ToolEvent, ToolFactory, ToolUpdateResult, Tools};
+use crate::tools::{Drawable, Tool, ToolEvent, ToolUpdateResult, Tools, ToolsManager};
 
 #[derive(Debug, Clone, Copy)]
 pub enum SketchBoardMessage {
@@ -98,9 +98,9 @@ pub struct SketchBoard {
     board_dimensions: Vec2D,
     scale_factor: f64,
     active_tool: Rc<RefCell<dyn Tool>>,
+    tools: ToolsManager,
     drawables: Vec<Box<dyn Drawable>>,
     redo_stack: Vec<Box<dyn Drawable>>,
-    crop_tool: Rc<RefCell<CropTool>>,
     style: Style,
     config: SketchBoardConfig,
 }
@@ -156,7 +156,7 @@ impl SketchBoard {
 
         if render_crop {
             // render crop (even if tool not active)
-            if let Some(c) = self.crop_tool.borrow().get_crop() {
+            if let Some(c) = self.tools.get_crop_tool().borrow().get_crop() {
                 c.draw(&cx, &surface)?;
             }
         }
@@ -169,7 +169,8 @@ impl SketchBoard {
         let mut surface = self.render_full_size(false)?;
 
         if let Some((pos, size)) = self
-            .crop_tool
+            .tools
+            .get_crop_tool()
             .borrow()
             .get_crop()
             .and_then(|c| c.get_rectangle())
@@ -355,12 +356,14 @@ impl Component for SketchBoard {
                 }
 
                 // change active tool
-                match tool {
-                    Tools::Crop => self.active_tool = self.crop_tool.clone(),
-                    _ => self.active_tool = ToolFactory::create(tool, self.style),
-                };
+                self.active_tool = self.tools.get(&tool);
 
-                // set activated event
+                // send style event
+                self.active_tool
+                    .borrow_mut()
+                    .handle_event(ToolEvent::StyleChanged(self.style));
+
+                // send activated event
                 let activate_result = self
                     .active_tool
                     .borrow_mut()
@@ -420,18 +423,18 @@ impl Component for SketchBoard {
     ) -> ComponentParts<Self> {
         let board_dimensions = Vec2D::new(100.0, 100.0);
 
-        let crop_tool = Rc::new(RefCell::new(CropTool::default()));
+        let tools = ToolsManager::new();
 
         let model = Self {
             handler: DrawHandler::new(),
             board_dimensions,
             scale_factor: 1.0,
-            active_tool: crop_tool.clone(),
+            active_tool: tools.get(&Tools::Crop),
             drawables: Vec::new(),
             redo_stack: Vec::new(),
-            crop_tool,
             style: Style::default(),
             config,
+            tools,
         };
 
         let area = model.handler.drawing_area();

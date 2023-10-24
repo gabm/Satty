@@ -40,18 +40,10 @@ impl Drawable for Rectangle {
     }
 }
 
+#[derive(Default)]
 pub struct RectangleTool {
     rectangle: Option<Rectangle>,
     style: Style,
-}
-
-impl RectangleTool {
-    pub fn new(style: Style) -> Self {
-        Self {
-            rectangle: None,
-            style,
-        }
-    }
 }
 
 impl Tool for RectangleTool {

@@ -13,7 +13,7 @@ use relm4::gtk::prelude::*;
 use crate::{
     math::Vec2D,
     sketch_board::{KeyEventMsg, MouseButton, MouseEventMsg},
-    style::{Size, Style},
+    style::Style,
 };
 
 use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
@@ -68,15 +68,10 @@ impl Drawable for Text {
     }
 }
 
+#[derive(Default)]
 pub struct TextTool {
     text: Option<Text>,
     style: Style,
-}
-
-impl TextTool {
-    pub fn new(style: Style) -> Self {
-        Self { text: None, style }
-    }
 }
 
 impl Tool for TextTool {

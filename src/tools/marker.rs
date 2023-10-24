@@ -1,5 +1,4 @@
 use std::f64::consts::PI;
-use std::fmt::Alignment;
 
 use pangocairo::pango::{FontDescription, SCALE};
 
@@ -67,7 +66,6 @@ impl Drawable for Marker {
 
         // render text on top
         cx.set_source_rgb(1.0, 1.0, 1.0);
-
         cx.move_to(self.pos.x, self.pos.y);
         pangocairo::show_layout(cx, &layout);
 
@@ -110,11 +108,11 @@ impl Tool for MarkerTool {
     }
 }
 
-impl MarkerTool {
-    pub fn new(style: Style) -> Self {
+impl Default for MarkerTool {
+    fn default() -> Self {
         Self {
+            style: Default::default(),
             next_number: 1,
-            style,
         }
     }
 }

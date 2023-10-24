@@ -1,4 +1,4 @@
-use std::{borrow::Cow, cell::RefCell, fmt::Debug, rc::Rc};
+use std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
 use anyhow::Result;
 use gdk_pixbuf::{
@@ -6,7 +6,7 @@ use gdk_pixbuf::{
     prelude::{StaticVariantType, ToVariant},
 };
 use pangocairo::cairo::ImageSurface;
-use relm4::gtk::cairo::Context;
+use relm4::gtk::{cairo::Context, prelude::SeatExt};
 
 use crate::{
     sketch_board::{InputEvent, KeyEventMsg, MouseEventMsg},
@@ -104,9 +104,9 @@ pub use line::LineTool;
 pub use rectangle::RectangleTool;
 pub use text::TextTool;
 
-use self::marker::MarkerTool;
+use self::{crop::Crop, marker::MarkerTool};
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum Tools {
     Crop = 0,
     Line = 1,
@@ -117,19 +117,38 @@ pub enum Tools {
     Blur = 6,
 }
 
-pub struct ToolFactory {}
+pub struct ToolsManager {
+    tools: HashMap<Tools, Rc<RefCell<dyn Tool>>>,
+    crop_tool: Rc<RefCell<CropTool>>,
+}
 
-impl ToolFactory {
-    pub fn create(tool: Tools, style: Style) -> Rc<RefCell<dyn Tool>> {
+impl ToolsManager {
+    pub fn new() -> Self {
+        let mut tools: HashMap<Tools, Rc<RefCell<dyn Tool>>> = HashMap::new();
+        //tools.insert(Tools::Crop, Rc::new(RefCell::new(CropTool::default())));
+        tools.insert(Tools::Line, Rc::new(RefCell::new(LineTool::default())));
+        tools.insert(Tools::Arrow, Rc::new(RefCell::new(ArrowTool::default())));
+        tools.insert(
+            Tools::Rectangle,
+            Rc::new(RefCell::new(RectangleTool::default())),
+        );
+        tools.insert(Tools::Text, Rc::new(RefCell::new(TextTool::default())));
+        tools.insert(Tools::Blur, Rc::new(RefCell::new(BlurTool::default())));
+        tools.insert(Tools::Marker, Rc::new(RefCell::new(MarkerTool::default())));
+
+        let crop_tool = Rc::new(RefCell::new(CropTool::default()));
+        Self { tools, crop_tool }
+    }
+
+    pub fn get(&self, tool: &Tools) -> Rc<RefCell<dyn Tool>> {
         match tool {
-            Tools::Crop => Rc::new(RefCell::new(CropTool::default())),
-            Tools::Line => Rc::new(RefCell::new(LineTool::new(style))),
-            Tools::Arrow => Rc::new(RefCell::new(ArrowTool::new(style))),
-            Tools::Rectangle => Rc::new(RefCell::new(RectangleTool::new(style))),
-            Tools::Text => Rc::new(RefCell::new(TextTool::new(style))),
-            Tools::Blur => Rc::new(RefCell::new(BlurTool::new(style))),
-            Tools::Marker => Rc::new(RefCell::new(MarkerTool::new(style))),
+            Tools::Crop => self.crop_tool.clone(),
+            _ => self.tools.get(tool).unwrap().clone(),
         }
+    }
+
+    pub fn get_crop_tool(&self) -> Rc<RefCell<CropTool>> {
+        self.crop_tool.clone()
     }
 }
 

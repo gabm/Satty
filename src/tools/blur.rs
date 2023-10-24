@@ -101,15 +101,10 @@ impl Drawable for Blur {
     }
 }
 
+#[derive(Default)]
 pub struct BlurTool {
     blur: Option<Blur>,
     style: Style,
-}
-
-impl BlurTool {
-    pub fn new(style: Style) -> Self {
-        Self { blur: None, style }
-    }
 }
 
 impl Tool for BlurTool {

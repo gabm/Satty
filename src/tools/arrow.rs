@@ -15,15 +15,10 @@ pub struct Arrow {
     style: Style,
 }
 
+#[derive(Default)]
 pub struct ArrowTool {
     arrow: Option<Arrow>,
     style: Style,
-}
-
-impl ArrowTool {
-    pub fn new(style: Style) -> Self {
-        Self { arrow: None, style }
-    }
 }
 
 impl Tool for ArrowTool {
