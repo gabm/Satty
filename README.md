@@ -28,7 +28,7 @@ Start by providing a filename or a screenshot via stdin and annotate using the a
 You can bind a key to the following command:
 
 ```
-grim -g "$(slurp -o -c '#ff0000ff')" - | satty --filename - --fullscreen --output-filename ~/Pictures/Screenshots/satty-$(date '+%Y%m%d-%H:%M:%S').png
+grim -g "$(slurp -o -r -c '#ff0000ff')" - | satty --filename - --fullscreen --output-filename ~/Pictures/Screenshots/satty-$(date '+%Y%m%d-%H:%M:%S').png
 ```
 
 
