@@ -10,11 +10,34 @@ You can get the official Arch Linux package from the AUR:
 yay -S satty-bin
 ```
 
-.. or build from source:
+You can download a prebuilt binary for x86-64 on the [Satty Releases](https://github.com/gabm/satty/releases) page.
+
+
+## Build from source
+
+You first need to install the native dependencies of Satty (see below) and then run:
 
 ```
 cargo build --release
 ```
+
+## Dependencies 
+
+Satty is based on GTK-4 and Adwaita.
+
+### Ubuntu
+
+- libgtk-4-1
+- libadwaita-1-0
+
+### Arch Linux
+
+- pango 
+- glib2
+- cairo
+- libadwaita
+- gtk4
+- gdk-pixbuf2
 
 
 ## Usage
