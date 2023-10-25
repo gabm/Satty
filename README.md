@@ -2,6 +2,8 @@
 
 Satty - a Screenshot Annotation Tool inspired by [Swappy](https://github.com/jtheoof/swappy) and [Flameshot](https://flameshot.org/).
 
+![](assets/usage.gif)
+
 ## Install
 
 You can get the official Arch Linux package from the AUR:
@@ -44,7 +46,6 @@ Satty is based on GTK-4 and Adwaita.
 
 Start by providing a filename or a screenshot via stdin and annotate using the available tools. Save to clipboard or file when finished. Tools and Interface have been kept simple.
 
-![](assets/usage.gif)
 
 ### wlroots based compositors (Sway et. al.)
 
