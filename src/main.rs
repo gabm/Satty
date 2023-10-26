@@ -479,9 +479,9 @@ fn run_satty(args: Args) -> Result<()> {
         load_image(&args.filename)?
     };
 
-    let app = RelmApp::new("com.gabm.satty");
+    let app = RelmApp::new("com.gabm.satty").with_args(vec![]);
     relm4_icons::initialize_icons();
-    app.run_with_args::<App, &str>(AppConfig { args, image }, &[]);
+    app.run::<App>(AppConfig { args, image });
     Ok(())
 }
 
