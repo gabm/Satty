@@ -380,6 +380,10 @@ impl Component for SketchBoard {
                         self.handle_undo()
                     } else if ke.key == Key::y && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_redo()
+                    } else if ke.key == Key::Escape {
+                        relm4::main_application().quit();
+                        // this is only here to make rust happy. The application should exit with the previous call
+                        ToolUpdateResult::Unmodified
                     } else {
                         self.active_tool
                             .borrow_mut()
