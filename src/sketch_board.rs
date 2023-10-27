@@ -215,6 +215,11 @@ impl SketchBoard {
     }
 
     fn handle_save(&self) {
+        if self.config.output_filename.is_none() {
+            println!("No Output filename specified!");
+            return;
+        }
+
         let texture = match self.render_to_texture() {
             Ok(t) => t,
             Err(e) => {
@@ -222,11 +227,6 @@ impl SketchBoard {
                 return;
             }
         };
-
-        if self.config.output_filename.is_none() {
-            println!("No Output filename specified!");
-            return;
-        }
 
         if let Err(e) = texture.save_to_png(&self.config.output_filename.as_ref().unwrap()) {
             println!("Error while saving texture: {e}");
@@ -380,6 +380,12 @@ impl Component for SketchBoard {
                         self.handle_undo()
                     } else if ke.key == Key::y && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_redo()
+                    } else if ke.key == Key::s && ke.modifier == ModifierType::CONTROL_MASK {
+                        self.handle_save();
+                        ToolUpdateResult::Unmodified
+                    } else if ke.key == Key::c && ke.modifier == ModifierType::CONTROL_MASK {
+                        self.handle_copy_clipboard();
+                        ToolUpdateResult::Unmodified
                     } else if ke.key == Key::Escape {
                         relm4::main_application().quit();
                         // this is only here to make rust happy. The application should exit with the previous call
