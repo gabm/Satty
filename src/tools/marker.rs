@@ -8,9 +8,17 @@ use crate::{math::Vec2D, sketch_board::MouseEventMsg};
 
 use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
 
+use lazy_static::lazy_static;
+use std::sync::Mutex;
+
+lazy_static! {
+    // global variable to keep count of the Marker current number
+    pub static ref MARKER_CURRENT_NUMBER: Mutex<MarkerTool> = Mutex::new(MarkerTool::default());
+}
+
 pub struct MarkerTool {
     style: Style,
-    next_number: u16,
+    pub next_number: u16,
 }
 
 #[derive(Clone, Debug)]
@@ -88,15 +96,18 @@ impl Tool for MarkerTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
         match event {
             MouseEventMsg::Click(pos, button) => {
+                let mut current_marker = MARKER_CURRENT_NUMBER.lock().unwrap();
                 if button == MouseButton::Primary {
                     let marker = Marker {
                         pos,
-                        number: self.next_number,
+                        // number: self.next_number,
+                        number: current_marker.next_number,
                         style: self.style,
                     };
 
                     // increment for next
-                    self.next_number += 1;
+                    // self.next_number += 1;
+                    current_marker.next_number += 1;
 
                     ToolUpdateResult::Commit(marker.clone_box())
                 } else {

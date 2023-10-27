@@ -23,3 +23,5 @@ anyhow = "1.0"
 clap = { version = "4.4.4", features = ["derive"] }
 swayipc = { git = "https://github.com/JayceFayne/swayipc-rs.git", branch = "master" }
 libwayshot = "0.2.0"
+
+lazy_static = "1.4.0"

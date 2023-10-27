@@ -15,7 +15,7 @@ use relm4::{gtk, Component, ComponentParts, ComponentSender};
 
 use crate::math::Vec2D;
 use crate::style::{Color, Size, Style};
-use crate::tools::{Drawable, Tool, ToolEvent, ToolUpdateResult, Tools, ToolsManager};
+use crate::tools::{self, Drawable, Tool, ToolEvent, ToolUpdateResult, Tools, ToolsManager};
 
 #[derive(Debug, Clone, Copy)]
 pub enum SketchBoardMessage {
@@ -255,6 +255,12 @@ impl SketchBoard {
         match self.drawables.pop() {
             Some(d) => {
                 self.redo_stack.push(d);
+
+                let mut marker = tools::MARKER_CURRENT_NUMBER.lock().unwrap();
+                if marker.next_number > 1 {
+                    marker.next_number -= 1
+                }
+
                 ToolUpdateResult::Redraw
             }
             None => ToolUpdateResult::Unmodified,

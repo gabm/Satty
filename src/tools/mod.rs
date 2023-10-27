@@ -101,6 +101,7 @@ pub use arrow::ArrowTool;
 pub use blur::BlurTool;
 pub use crop::CropTool;
 pub use line::LineTool;
+pub use marker::MARKER_CURRENT_NUMBER;
 pub use rectangle::RectangleTool;
 pub use text::TextTool;
 
