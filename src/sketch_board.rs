@@ -91,6 +91,7 @@ impl InputEvent {
 pub struct SketchBoardConfig {
     pub original_image: Pixbuf,
     pub output_filename: Option<String>,
+    pub early_exit: bool,
 }
 
 pub struct SketchBoard {
@@ -382,9 +383,15 @@ impl Component for SketchBoard {
                         self.handle_redo()
                     } else if ke.key == Key::s && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_save();
+                        if self.config.early_exit {
+                            relm4::main_application().quit();
+                        }
                         ToolUpdateResult::Unmodified
                     } else if ke.key == Key::c && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_copy_clipboard();
+                        if self.config.early_exit {
+                            relm4::main_application().quit();
+                        }
                         ToolUpdateResult::Unmodified
                     } else if ke.key == Key::Escape {
                         relm4::main_application().quit();
@@ -416,10 +423,16 @@ impl Component for SketchBoard {
             }
             SketchBoardMessage::SaveFile => {
                 self.handle_save();
+                if self.config.early_exit {
+                    relm4::main_application().quit();
+                }
                 ToolUpdateResult::Unmodified
             }
             SketchBoardMessage::CopyClipboard => {
                 self.handle_copy_clipboard();
+                if self.config.early_exit {
+                    relm4::main_application().quit();
+                }
                 ToolUpdateResult::Unmodified
             }
             SketchBoardMessage::Undo => self.handle_undo(),

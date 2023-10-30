@@ -43,6 +43,9 @@ struct Args {
 
     #[arg(long, help = "Which filename to use for saving action")]
     output_filename: Option<String>,
+
+    #[arg(long, help = "Exit after copy/save")]
+    early_exit: bool,
 }
 
 struct AppConfig {
@@ -395,6 +398,7 @@ impl Component for App {
         let sketch_board_config = SketchBoardConfig {
             original_image: config.image,
             output_filename: config.args.output_filename.clone(),
+            early_exit: config.args.early_exit,
         };
 
         let sketch_board = SketchBoard::builder().launch(sketch_board_config).detach();
