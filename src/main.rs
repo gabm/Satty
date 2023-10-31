@@ -12,6 +12,7 @@ use relm4::{
 
 use anyhow::{anyhow, Context, Result};
 
+use ui::toast::Toast;
 use ui::toolbars::{StyleToolbar, ToolsToolbar};
 
 mod math;
@@ -57,7 +58,7 @@ struct App {
     original_image_height: i32,
     sketch_board: Controller<SketchBoard>,
     initially_fullscreen: bool,
-    toast: Option<String>,
+    toast: Controller<Toast>,
     tools_toolbar: Controller<ToolsToolbar>,
     style_toolbar: Controller<StyleToolbar>,
 }
@@ -65,12 +66,10 @@ struct App {
 #[derive(Debug)]
 enum AppInput {
     Realized,
-    ShowToast(String),
 }
 
 #[derive(Debug)]
 enum AppCommandOutput {
-    HideToast,
     ResetResizable,
 }
 
@@ -188,7 +187,6 @@ impl Component for App {
             add_controller = gtk::EventControllerKey {
                 connect_key_pressed[sketch_board_sender] => move | _, key, code, modifier | {
                     sketch_board_sender.emit(SketchBoardMessage::new_key_event(KeyEventMsg::new(key, code, modifier)));
-                    sender.input(AppInput::ShowToast("Hello World".to_string()));
                     Inhibit(false)
                 }
             },
@@ -198,28 +196,9 @@ impl Component for App {
 
                 add_overlay = model.style_toolbar.widget(),
 
-                add_overlay = &gtk::Box {
-                    set_valign: Align::Start,
-                    set_halign: Align::Center,
-                    add_css_class: "toast",
+                add_overlay = model.toast.widget(),
 
-                    #[watch]
-                    set_visible: model.toast.is_some(),
-
-                    gtk::Label {
-                        add_css_class: "toast-label",
-                        set_margin_start: 6,
-                        set_margin_end: 6,
-
-                        #[watch]
-                        set_text?: &model.toast
-                    }
-                },
-
-                #[local_ref]
-                sketch_board -> gtk::Box {},
-
-
+                model.sketch_board.widget(),
             }
         }
     }
@@ -227,13 +206,6 @@ impl Component for App {
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             AppInput::Realized => self.resize_window_initial(root, sender),
-            AppInput::ShowToast(msg) => {
-                self.toast = Some(msg);
-                sender.oneshot_command(async move {
-                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-                    AppCommandOutput::HideToast
-                });
-            }
         }
     }
 
@@ -245,7 +217,6 @@ impl Component for App {
     ) {
         match command {
             AppCommandOutput::ResetResizable => root.set_resizable(true),
-            AppCommandOutput::HideToast => self.toast = None,
         }
     }
 
@@ -282,17 +253,17 @@ impl Component for App {
                 SketchBoardMessage::ToolbarEvent(e)
             });
 
+        let toast = Toast::builder().launch(2000).detach();
+
         let model = App {
             original_image_width,
             original_image_height,
             sketch_board,
             initially_fullscreen: config.args.fullscreen,
-            toast: None,
+            toast,
             tools_toolbar,
             style_toolbar,
         };
-
-        let sketch_board = model.sketch_board.widget();
 
         let widgets = view_output!();
 
