@@ -1,12 +1,13 @@
 use std::io::Read;
 use std::{io, time::Duration};
 
+use command_line::CommandLine;
 use gdk_pixbuf::{Pixbuf, PixbufLoader};
 use gtk::prelude::*;
 use relm4::gtk::gdk::Rectangle;
 
 use relm4::{
-    gtk::{self, gdk::DisplayManager, Align, CssProvider, Inhibit, Window},
+    gtk::{self, gdk::DisplayManager, CssProvider, Inhibit, Window},
     Component, ComponentController, ComponentParts, ComponentSender, Controller, RelmApp,
 };
 
@@ -15,6 +16,7 @@ use anyhow::{anyhow, Context, Result};
 use ui::toast::Toast;
 use ui::toolbars::{StyleToolbar, ToolsToolbar};
 
+mod command_line;
 mod math;
 mod sketch_board;
 mod style;
@@ -25,32 +27,10 @@ use crate::sketch_board::SketchBoardConfig;
 use crate::sketch_board::{KeyEventMsg, SketchBoard, SketchBoardMessage};
 
 use crate::ui::toolbars::ToolsToolbarConfig;
-use clap::Parser;
-
-#[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
-struct Args {
-    /// Name of the person to greet
-    #[arg(
-        short,
-        long,
-        help = "Filename to read from, use '-' to read from stdin"
-    )]
-    filename: String,
-
-    #[arg(long, help = "whether to use fullscreen")]
-    fullscreen: bool,
-
-    #[arg(long, help = "Which filename to use for saving action")]
-    output_filename: Option<String>,
-
-    #[arg(long, help = "Exit after copy/save")]
-    early_exit: bool,
-}
 
 struct AppConfig {
     image: Pixbuf,
-    args: Args,
+    args: CommandLine,
 }
 
 struct App {
@@ -275,7 +255,7 @@ fn load_image(filename: &str) -> Result<Pixbuf> {
     Ok(Pixbuf::from_file(filename).context("couldn't load image")?)
 }
 
-fn run_satty(args: Args) -> Result<()> {
+fn run_satty(args: CommandLine) -> Result<()> {
     let image = if args.filename == "-" {
         let mut buf = Vec::<u8>::new();
         io::stdin().lock().read_to_end(&mut buf)?;
@@ -296,7 +276,7 @@ fn run_satty(args: Args) -> Result<()> {
 }
 
 fn main() -> Result<()> {
-    let args = Args::parse();
+    let args = CommandLine::do_parse();
 
     match run_satty(args) {
         Err(e) => {
