@@ -4,6 +4,14 @@ Satty - a Screenshot Annotation Tool inspired by [Swappy](https://github.com/jth
 
 ![](assets/usage.gif)
 
+Satty has been created to provide the following improvements over existing screenshot annotation tools:
+
+- very simple and easy to understand toolset (like Swappy)
+- fullscreen annotation mode and post shot cropping (like Flameshot)
+- working on wlroots based compositors (Sway, Hyprland, River, ...)
+- modern looking UI, thanks to GTK and Adwaita
+- be a playground for new features (post window selection, post paint editing, ...)
+
 ## Install
 
 You can get the official Arch Linux package from the AUR:
