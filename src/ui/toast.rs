@@ -5,6 +5,7 @@ pub struct Toast {
     text: String,
     visible: bool,
     next_timer: u64,
+    timeout: u64,
 }
 
 #[derive(Debug)]
@@ -34,9 +35,11 @@ impl Component for Toast {
             set_visible: model.visible,
 
             gtk::Label {
-                add_css_class: "toast-label",
-                set_margin_start: 6,
-                set_margin_end: 6,
+                set_margin_top: 10,
+                set_margin_bottom: 10,
+                set_margin_start: 16,
+                set_margin_end: 16,
+
 
                 #[watch]
                 set_text: &model.text
@@ -51,8 +54,9 @@ impl Component for Toast {
                 self.next_timer += 1;
 
                 let next_timer = self.next_timer;
+                let timeout = self.timeout;
                 sender.oneshot_command(async move {
-                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                    tokio::time::sleep(std::time::Duration::from_millis(timeout)).await;
                     ToastCommand::Hide(next_timer)
                 });
             }
@@ -75,7 +79,7 @@ impl Component for Toast {
     }
 
     fn init(
-        _: Self::Init,
+        timeout: Self::Init,
         root: &Self::Root,
         _sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
@@ -83,6 +87,7 @@ impl Component for Toast {
             text: String::new(),
             visible: false,
             next_timer: 0,
+            timeout,
         };
 
         let widgets = view_output!();

@@ -129,12 +129,6 @@ impl App {
                 border-radius: 6px;
                 margin-top: 50px;
             }
-            .toast-label {
-                margin-top: 6;
-                margin-bottom: 6;
-                margin-start: 6;
-                margin-end: 6;
-            }
             .toolbar-bottom {border-radius: 6px 6px 0px 0px;}
             .toolbar-top {border-radius: 0px 0px 6px 6px;}
             ",
