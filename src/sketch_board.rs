@@ -19,10 +19,15 @@ use crate::tools::{Drawable, Tool, ToolEvent, ToolUpdateResult, Tools, ToolsMana
 use crate::ui::toolbars::ToolbarEvent;
 
 #[derive(Debug, Clone, Copy)]
-pub enum SketchBoardMessage {
+pub enum SketchBoardInput {
     InputEvent(InputEvent),
     Resize(Vec2D),
     ToolbarEvent(ToolbarEvent),
+}
+
+#[derive(Debug, Clone)]
+pub enum SketchBoardOutput {
+    ShowToast(String),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -55,12 +60,12 @@ pub enum MouseEventMsg {
     //Motion(Vec2D),
 }
 
-impl SketchBoardMessage {
-    pub fn new_mouse_event(event: MouseEventMsg) -> SketchBoardMessage {
-        SketchBoardMessage::InputEvent(InputEvent::MouseEvent(event))
+impl SketchBoardInput {
+    pub fn new_mouse_event(event: MouseEventMsg) -> SketchBoardInput {
+        SketchBoardInput::InputEvent(InputEvent::MouseEvent(event))
     }
-    pub fn new_key_event(event: KeyEventMsg) -> SketchBoardMessage {
-        SketchBoardMessage::InputEvent(InputEvent::KeyEvent(event))
+    pub fn new_key_event(event: KeyEventMsg) -> SketchBoardInput {
+        SketchBoardInput::InputEvent(InputEvent::KeyEvent(event))
     }
 }
 
@@ -210,11 +215,14 @@ impl SketchBoard {
         }
     }
 
-    fn handle_save(&self) {
-        if self.config.output_filename.is_none() {
-            println!("No Output filename specified!");
-            return;
-        }
+    fn handle_save(&self, sender: ComponentSender<Self>) {
+        let output_filename = match &self.config.output_filename {
+            None => {
+                println!("No Output filename specified!");
+                return;
+            }
+            Some(o) => o,
+        };
 
         let texture = match self.render_to_texture() {
             Ok(t) => t,
@@ -224,13 +232,15 @@ impl SketchBoard {
             }
         };
 
-        if let Err(e) = texture.save_to_png(&self.config.output_filename.as_ref().unwrap()) {
-            println!("Error while saving texture: {e}");
-            return;
-        }
+        let msg = match texture.save_to_png(&output_filename) {
+            Err(e) => format!("Error while saving file: {e}"),
+            Ok(_) => format!("File saved to '{}'.", output_filename),
+        };
+
+        sender.output(SketchBoardOutput::ShowToast(msg)).unwrap();
     }
 
-    fn handle_copy_clipboard(&self) {
+    fn handle_copy_clipboard(&self, sender: ComponentSender<Self>) {
         let texture = match self.render_to_texture() {
             Ok(t) => t,
             Err(e) => {
@@ -238,8 +248,16 @@ impl SketchBoard {
                 return;
             }
         };
+
         match DisplayManager::get().default_display() {
-            Some(display) => display.clipboard().set_texture(&texture),
+            Some(display) => {
+                display.clipboard().set_texture(&texture);
+                sender
+                    .output(SketchBoardOutput::ShowToast(
+                        "Copied to clipboard.".to_string(),
+                    ))
+                    .unwrap();
+            }
             None => {
                 println!("Cannot save to clipboard");
                 return;
@@ -267,7 +285,11 @@ impl SketchBoard {
         }
     }
 
-    fn handle_toolbar_event(&mut self, toolbar_event: ToolbarEvent) -> ToolUpdateResult {
+    fn handle_toolbar_event(
+        &mut self,
+        toolbar_event: ToolbarEvent,
+        sender: ComponentSender<Self>,
+    ) -> ToolUpdateResult {
         match toolbar_event {
             ToolbarEvent::ToolSelected(tool) => {
                 // deactivate old tool and save drawable, if any
@@ -315,14 +337,14 @@ impl SketchBoard {
                     .handle_event(ToolEvent::StyleChanged(self.style))
             }
             ToolbarEvent::SaveFile => {
-                self.handle_save();
+                self.handle_save(sender);
                 if self.config.early_exit {
                     relm4::main_application().quit();
                 }
                 ToolUpdateResult::Unmodified
             }
             ToolbarEvent::CopyClipboard => {
-                self.handle_copy_clipboard();
+                self.handle_copy_clipboard(sender);
                 if self.config.early_exit {
                     relm4::main_application().quit();
                 }
@@ -337,14 +359,12 @@ impl SketchBoard {
 #[relm4::component(pub)]
 impl Component for SketchBoard {
     type CommandOutput = ();
-    type Input = SketchBoardMessage;
-    type Output = ();
+    type Input = SketchBoardInput;
+    type Output = SketchBoardOutput;
     type Init = SketchBoardConfig;
 
     view! {
         gtk::Box {
-
-
             #[local_ref]
             area -> gtk::DrawingArea {
                 set_vexpand: true,
@@ -355,17 +375,17 @@ impl Component for SketchBoard {
                         set_button: 0,
                         connect_drag_begin[sender] => move |controller, x, y| {
                             if controller.current_button() == gtk::gdk::BUTTON_PRIMARY {
-                                sender.input(SketchBoardMessage::new_mouse_event(MouseEventMsg::BeginDrag(Vec2D::new(x, y))));
+                                sender.input(SketchBoardInput::new_mouse_event(MouseEventMsg::BeginDrag(Vec2D::new(x, y))));
                             }
                         },
                         connect_drag_update[sender] => move |controller, x, y| {
                             if controller.current_button() == gtk::gdk::BUTTON_PRIMARY {
-                                sender.input(SketchBoardMessage::new_mouse_event(MouseEventMsg::UpdateDrag(Vec2D::new(x, y))));
+                                sender.input(SketchBoardInput::new_mouse_event(MouseEventMsg::UpdateDrag(Vec2D::new(x, y))));
                             }
                         },
                         connect_drag_end[sender] => move |controller, x, y| {
                             if controller.current_button() == gtk::gdk::BUTTON_PRIMARY {
-                                sender.input(SketchBoardMessage::new_mouse_event(MouseEventMsg::EndDrag(Vec2D::new(x, y))));
+                                sender.input(SketchBoardInput::new_mouse_event(MouseEventMsg::EndDrag(Vec2D::new(x, y))));
                             }
                         }
                 },
@@ -380,44 +400,39 @@ impl Component for SketchBoard {
                             MouseButton::Middle
                         };
 
-                        sender.input(SketchBoardMessage::new_mouse_event(MouseEventMsg::Click(Vec2D::new(x, y), button)));
+                        sender.input(SketchBoardInput::new_mouse_event(MouseEventMsg::Click(Vec2D::new(x, y), button)));
                     }
                 },
 
                 connect_resize[sender] => move |_, x, y| {
-                    sender.input(SketchBoardMessage::Resize(Vec2D::new(x as f64,y as f64)));
+                    sender.input(SketchBoardInput::Resize(Vec2D::new(x as f64,y as f64)));
                 }
             }
         },
     }
 
-    fn update(
-        &mut self,
-        msg: SketchBoardMessage,
-        _sender: ComponentSender<Self>,
-        _root: &Self::Root,
-    ) {
+    fn update(&mut self, msg: SketchBoardInput, sender: ComponentSender<Self>, _root: &Self::Root) {
         // handle resize ourselves, pass everything else to tool
         let result = match msg {
-            SketchBoardMessage::Resize(dim) => {
+            SketchBoardInput::Resize(dim) => {
                 self.resize(dim);
                 ToolUpdateResult::Redraw
             }
 
-            SketchBoardMessage::InputEvent(mut ie) => {
+            SketchBoardInput::InputEvent(mut ie) => {
                 if let InputEvent::KeyEvent(ke) = ie {
                     if ke.key == Key::z && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_undo()
                     } else if ke.key == Key::y && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_redo()
                     } else if ke.key == Key::s && ke.modifier == ModifierType::CONTROL_MASK {
-                        self.handle_save();
+                        self.handle_save(sender);
                         if self.config.early_exit {
                             relm4::main_application().quit();
                         }
                         ToolUpdateResult::Unmodified
                     } else if ke.key == Key::c && ke.modifier == ModifierType::CONTROL_MASK {
-                        self.handle_copy_clipboard();
+                        self.handle_copy_clipboard(sender);
                         if self.config.early_exit {
                             relm4::main_application().quit();
                         }
@@ -438,8 +453,8 @@ impl Component for SketchBoard {
                         .handle_event(ToolEvent::Input(ie))
                 }
             }
-            SketchBoardMessage::ToolbarEvent(toolbar_event) => {
-                self.handle_toolbar_event(toolbar_event)
+            SketchBoardInput::ToolbarEvent(toolbar_event) => {
+                self.handle_toolbar_event(toolbar_event, sender)
             }
         };
 

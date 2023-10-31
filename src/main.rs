@@ -13,6 +13,7 @@ use relm4::{
 
 use anyhow::{anyhow, Context, Result};
 
+use sketch_board::SketchBoardOutput;
 use ui::toast::Toast;
 use ui::toolbars::{StyleToolbar, ToolsToolbar};
 
@@ -24,7 +25,7 @@ mod tools;
 mod ui;
 
 use crate::sketch_board::SketchBoardConfig;
-use crate::sketch_board::{KeyEventMsg, SketchBoard, SketchBoardMessage};
+use crate::sketch_board::{KeyEventMsg, SketchBoard, SketchBoardInput};
 
 use crate::ui::toolbars::ToolsToolbarConfig;
 
@@ -166,7 +167,7 @@ impl Component for App {
             // and send the messages there
             add_controller = gtk::EventControllerKey {
                 connect_key_pressed[sketch_board_sender] => move | _, key, code, modifier | {
-                    sketch_board_sender.emit(SketchBoardMessage::new_key_event(KeyEventMsg::new(key, code, modifier)));
+                    sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
                     Inhibit(false)
                 }
             },
@@ -207,37 +208,40 @@ impl Component for App {
     ) -> ComponentParts<Self> {
         Self::apply_style();
 
-        let original_image_width = config.image.width();
-        let original_image_height = config.image.height();
+        // Toast
+        let toast = Toast::builder().launch(2000).detach();
 
+        // SketchBoard
         let sketch_board_config = SketchBoardConfig {
-            original_image: config.image,
+            original_image: config.image.clone(),
             output_filename: config.args.output_filename.clone(),
             early_exit: config.args.early_exit,
         };
 
-        let sketch_board = SketchBoard::builder().launch(sketch_board_config).detach();
+        let sketch_board = SketchBoard::builder().launch(sketch_board_config).forward(
+            toast.sender(),
+            |t| match t {
+                SketchBoardOutput::ShowToast(msg) => ui::toast::ToastMessage::Show(msg),
+            },
+        );
+
         let sketch_board_sender = sketch_board.sender().clone();
 
+        // Toolbars
         let tools_toolbar = ToolsToolbar::builder()
             .launch(ToolsToolbarConfig {
                 show_save_button: config.args.output_filename.is_some(),
             })
-            .forward(sketch_board.sender(), |e| {
-                SketchBoardMessage::ToolbarEvent(e)
-            });
+            .forward(sketch_board.sender(), |e| SketchBoardInput::ToolbarEvent(e));
 
         let style_toolbar = StyleToolbar::builder()
             .launch(())
-            .forward(sketch_board.sender(), |e| {
-                SketchBoardMessage::ToolbarEvent(e)
-            });
+            .forward(sketch_board.sender(), |e| SketchBoardInput::ToolbarEvent(e));
 
-        let toast = Toast::builder().launch(2000).detach();
-
+        // Model
         let model = App {
-            original_image_width,
-            original_image_height,
+            original_image_width: config.image.width(),
+            original_image_height: config.image.height(),
             sketch_board,
             initially_fullscreen: config.args.fullscreen,
             toast,
