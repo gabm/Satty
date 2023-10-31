@@ -116,25 +116,25 @@ impl Default for Color {
 impl Size {
     pub fn to_text_size(&self) -> i32 {
         match *self {
-            Size::Small => 10 * SCALE,
-            Size::Medium => 16 * SCALE,
-            Size::Large => 30 * SCALE,
+            Size::Small => 12 * SCALE,
+            Size::Medium => 18 * SCALE,
+            Size::Large => 32 * SCALE,
         }
     }
 
     pub fn to_line_width(&self) -> f64 {
         match *self {
-            Size::Small => 1.0,
-            Size::Medium => 2.0,
-            Size::Large => 4.0,
+            Size::Small => 2.0,
+            Size::Medium => 3.0,
+            Size::Large => 5.0,
         }
     }
 
     pub fn to_blur_factor(&self) -> f64 {
         match *self {
-            Size::Small => 4.0,
-            Size::Medium => 8.0,
-            Size::Large => 16.0,
+            Size::Small => 6.0,
+            Size::Medium => 10.0,
+            Size::Large => 20.0,
         }
     }
 }
