@@ -1,4 +1,6 @@
+use std::cell::RefCell;
 use std::f64::consts::PI;
+use std::rc::Rc;
 
 use pangocairo::pango::{FontDescription, SCALE};
 
@@ -10,7 +12,7 @@ use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
 
 pub struct MarkerTool {
     style: Style,
-    next_number: u16,
+    next_number: Rc<RefCell<u16>>,
 }
 
 #[derive(Clone, Debug)]
@@ -18,6 +20,7 @@ pub struct Marker {
     pos: Vec2D,
     number: u16,
     style: Style,
+    tool_next_number: Rc<RefCell<u16>>,
 }
 
 impl Drawable for Marker {
@@ -73,6 +76,14 @@ impl Drawable for Marker {
 
         Ok(())
     }
+
+    fn handle_undo(&mut self) {
+        *self.tool_next_number.borrow_mut() = self.number;
+    }
+
+    fn handle_redo(&mut self) {
+        *self.tool_next_number.borrow_mut() = self.number + 1;
+    }
 }
 
 impl Tool for MarkerTool {
@@ -91,12 +102,13 @@ impl Tool for MarkerTool {
                 if button == MouseButton::Primary {
                     let marker = Marker {
                         pos,
-                        number: self.next_number,
+                        number: *self.next_number.borrow(),
                         style: self.style,
+                        tool_next_number: self.next_number.clone(),
                     };
 
                     // increment for next
-                    self.next_number += 1;
+                    *self.next_number.borrow_mut() += 1;
 
                     ToolUpdateResult::Commit(marker.clone_box())
                 } else {
@@ -112,7 +124,7 @@ impl Default for MarkerTool {
     fn default() -> Self {
         Self {
             style: Default::default(),
-            next_number: 1,
+            next_number: Rc::new(RefCell::new(1)),
         }
     }
 }

@@ -267,7 +267,11 @@ impl SketchBoard {
 
     fn handle_undo(&mut self) -> ToolUpdateResult {
         match self.drawables.pop() {
-            Some(d) => {
+            Some(mut d) => {
+                // notify of the undo action
+                d.handle_undo();
+
+                // push to redo stack
                 self.redo_stack.push(d);
                 ToolUpdateResult::Redraw
             }
@@ -277,8 +281,13 @@ impl SketchBoard {
 
     fn handle_redo(&mut self) -> ToolUpdateResult {
         match self.redo_stack.pop() {
-            Some(d) => {
+            Some(mut d) => {
+                // notify of the redo action
+                d.handle_redo();
+
+                // push to drawable stack
                 self.drawables.push(d);
+
                 ToolUpdateResult::Redraw
             }
             None => ToolUpdateResult::Unmodified,

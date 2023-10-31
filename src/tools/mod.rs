@@ -88,6 +88,8 @@ where
 
 pub trait Drawable: DrawableClone + Debug {
     fn draw(&self, cx: &Context, surface: &ImageSurface) -> Result<()>;
+    fn handle_undo(&mut self) {}
+    fn handle_redo(&mut self) {}
 }
 
 #[derive(Debug)]
