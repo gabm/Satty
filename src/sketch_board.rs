@@ -14,20 +14,15 @@ use relm4::gtk::gdk::{DisplayManager, Key, MemoryFormat, MemoryTexture, Modifier
 use relm4::{gtk, Component, ComponentParts, ComponentSender};
 
 use crate::math::Vec2D;
-use crate::style::{Color, Size, Style};
+use crate::style::Style;
 use crate::tools::{Drawable, Tool, ToolEvent, ToolUpdateResult, Tools, ToolsManager};
+use crate::ui::toolbars::ToolbarEvent;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SketchBoardMessage {
     InputEvent(InputEvent),
-    ToolSelected(Tools),
-    ColorSelected(Color),
-    SizeSelected(Size),
     Resize(Vec2D),
-    SaveFile,
-    CopyClipboard,
-    Undo,
-    Redo,
+    ToolbarEvent(ToolbarEvent),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -271,6 +266,72 @@ impl SketchBoard {
             None => ToolUpdateResult::Unmodified,
         }
     }
+
+    fn handle_toolbar_event(&mut self, toolbar_event: ToolbarEvent) -> ToolUpdateResult {
+        match toolbar_event {
+            ToolbarEvent::ToolSelected(tool) => {
+                // deactivate old tool and save drawable, if any
+                let mut deactivate_result = self
+                    .active_tool
+                    .borrow_mut()
+                    .handle_event(ToolEvent::Deactivated);
+
+                if let ToolUpdateResult::Commit(d) = deactivate_result {
+                    self.drawables.push(d);
+                    self.redo_stack.clear();
+                    // we handle commit directly and "downgrade" to a simple redraw result
+                    deactivate_result = ToolUpdateResult::Redraw;
+                }
+
+                // change active tool
+                self.active_tool = self.tools.get(&tool);
+
+                // send style event
+                self.active_tool
+                    .borrow_mut()
+                    .handle_event(ToolEvent::StyleChanged(self.style));
+
+                // send activated event
+                let activate_result = self
+                    .active_tool
+                    .borrow_mut()
+                    .handle_event(ToolEvent::Activated);
+
+                match activate_result {
+                    ToolUpdateResult::Unmodified => deactivate_result,
+                    _ => activate_result,
+                }
+            }
+            ToolbarEvent::ColorSelected(color) => {
+                self.style.color = color;
+                self.active_tool
+                    .borrow_mut()
+                    .handle_event(ToolEvent::StyleChanged(self.style))
+            }
+            ToolbarEvent::SizeSelected(size) => {
+                self.style.size = size;
+                self.active_tool
+                    .borrow_mut()
+                    .handle_event(ToolEvent::StyleChanged(self.style))
+            }
+            ToolbarEvent::SaveFile => {
+                self.handle_save();
+                if self.config.early_exit {
+                    relm4::main_application().quit();
+                }
+                ToolUpdateResult::Unmodified
+            }
+            ToolbarEvent::CopyClipboard => {
+                self.handle_copy_clipboard();
+                if self.config.early_exit {
+                    relm4::main_application().quit();
+                }
+                ToolUpdateResult::Unmodified
+            }
+            ToolbarEvent::Undo => self.handle_undo(),
+            ToolbarEvent::Redo => self.handle_redo(),
+        }
+    }
 }
 
 #[relm4::component(pub)]
@@ -342,39 +403,7 @@ impl Component for SketchBoard {
                 self.resize(dim);
                 ToolUpdateResult::Redraw
             }
-            SketchBoardMessage::ToolSelected(tool) => {
-                // deactivate old tool and save drawable, if any
-                let mut deactivate_result = self
-                    .active_tool
-                    .borrow_mut()
-                    .handle_event(ToolEvent::Deactivated);
 
-                if let ToolUpdateResult::Commit(d) = deactivate_result {
-                    self.drawables.push(d);
-                    self.redo_stack.clear();
-                    // we handle commit directly and "downgrade" to a simple redraw result
-                    deactivate_result = ToolUpdateResult::Redraw;
-                }
-
-                // change active tool
-                self.active_tool = self.tools.get(&tool);
-
-                // send style event
-                self.active_tool
-                    .borrow_mut()
-                    .handle_event(ToolEvent::StyleChanged(self.style));
-
-                // send activated event
-                let activate_result = self
-                    .active_tool
-                    .borrow_mut()
-                    .handle_event(ToolEvent::Activated);
-
-                match activate_result {
-                    ToolUpdateResult::Unmodified => deactivate_result,
-                    _ => activate_result,
-                }
-            }
             SketchBoardMessage::InputEvent(mut ie) => {
                 if let InputEvent::KeyEvent(ke) = ie {
                     if ke.key == Key::z && ke.modifier == ModifierType::CONTROL_MASK {
@@ -409,34 +438,9 @@ impl Component for SketchBoard {
                         .handle_event(ToolEvent::Input(ie))
                 }
             }
-            SketchBoardMessage::ColorSelected(color) => {
-                self.style.color = color;
-                self.active_tool
-                    .borrow_mut()
-                    .handle_event(ToolEvent::StyleChanged(self.style))
+            SketchBoardMessage::ToolbarEvent(toolbar_event) => {
+                self.handle_toolbar_event(toolbar_event)
             }
-            SketchBoardMessage::SizeSelected(size) => {
-                self.style.size = size;
-                self.active_tool
-                    .borrow_mut()
-                    .handle_event(ToolEvent::StyleChanged(self.style))
-            }
-            SketchBoardMessage::SaveFile => {
-                self.handle_save();
-                if self.config.early_exit {
-                    relm4::main_application().quit();
-                }
-                ToolUpdateResult::Unmodified
-            }
-            SketchBoardMessage::CopyClipboard => {
-                self.handle_copy_clipboard();
-                if self.config.early_exit {
-                    relm4::main_application().quit();
-                }
-                ToolUpdateResult::Unmodified
-            }
-            SketchBoardMessage::Undo => self.handle_undo(),
-            SketchBoardMessage::Redo => self.handle_redo(),
         };
 
         //println!("Event={:?} Result={:?}", msg, result);

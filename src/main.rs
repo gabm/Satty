@@ -1,4 +1,3 @@
-use std::cell::Cell;
 use std::io::Read;
 use std::{io, time::Duration};
 
@@ -6,28 +5,25 @@ use gdk_pixbuf::{Pixbuf, PixbufLoader};
 use gtk::prelude::*;
 use relm4::gtk::gdk::Rectangle;
 
-use relm4::prelude::*;
-use relm4::RelmWidgetExt;
 use relm4::{
-    actions::{ActionablePlus, RelmAction, RelmActionGroup},
     gtk::{self, gdk::DisplayManager, Align, CssProvider, Inhibit, Window},
     Component, ComponentController, ComponentParts, ComponentSender, Controller, RelmApp,
 };
 
 use anyhow::{anyhow, Context, Result};
-use style::Color;
+
+use ui::toolbars::{StyleToolbar, ToolsToolbar};
 
 mod math;
 mod sketch_board;
 mod style;
 mod tools;
+mod ui;
 
 use crate::sketch_board::SketchBoardConfig;
-use crate::style::Size;
-use crate::{
-    sketch_board::{KeyEventMsg, SketchBoard, SketchBoardMessage},
-    tools::Tools,
-};
+use crate::sketch_board::{KeyEventMsg, SketchBoard, SketchBoardMessage};
+
+use crate::ui::toolbars::ToolsToolbarConfig;
 use clap::Parser;
 
 #[derive(Parser, Debug)]
@@ -62,6 +58,8 @@ struct App {
     sketch_board: Controller<SketchBoard>,
     initially_fullscreen: bool,
     toast: Option<String>,
+    tools_toolbar: Controller<ToolsToolbar>,
+    style_toolbar: Controller<StyleToolbar>,
 }
 
 #[derive(Debug)]
@@ -140,14 +138,6 @@ impl App {
         });
     }
 
-    fn create_icon(color: Color) -> gtk::Image {
-        let pixbuf =
-            gdk_pixbuf::Pixbuf::new(gdk_pixbuf::Colorspace::Rgb, false, 8, 40, 40).unwrap();
-        pixbuf.fill(color.to_rgba_u32());
-
-        gtk::Image::from_pixbuf(Some(&pixbuf))
-    }
-
     fn apply_style() {
         let css_provider = CssProvider::new();
         css_provider.load_from_data(
@@ -204,190 +194,9 @@ impl Component for App {
             },
 
             gtk::Overlay {
-                add_overlay = &gtk::Box {
-                    set_orientation: gtk::Orientation::Horizontal,
-                    set_spacing: 2,
-                    set_valign: Align::Start,
-                    set_halign: Align::Center,
-                    add_css_class: "toolbar",
-                    add_css_class: "toolbar-top",
+                add_overlay = model.tools_toolbar.widget(),
 
-                    gtk::Button {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_icon_name: "arrow-undo-filled",
-                        set_tooltip: "Undo",
-                        connect_clicked[sketch_board_sender] => move |_| {sketch_board_sender.emit(SketchBoardMessage::Undo);},
-                    },
-                    gtk::Button {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_icon_name: "arrow-redo-filled",
-                        set_tooltip: "Redo",
-                        connect_clicked[sketch_board_sender] => move |_| {sketch_board_sender.emit(SketchBoardMessage::Redo);},
-                    },
-                    gtk::Separator {},
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_icon_name: "crop-filled",
-                        set_tooltip: "Crop",
-                        ActionablePlus::set_action::<ToolsAction>: Tools::Crop,
-                    },
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_icon_name: "minus-large",
-                        set_tooltip: "Line tool",
-                        ActionablePlus::set_action::<ToolsAction>: Tools::Line,
-                    },
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_icon_name: "arrow-up-right-filled",
-                        set_tooltip: "Arrow tool",
-                        ActionablePlus::set_action::<ToolsAction>: Tools::Arrow,
-                    },
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_icon_name: "checkbox-unchecked-regular",
-                        set_tooltip: "Rectangle tool",
-                        ActionablePlus::set_action::<ToolsAction>: Tools::Rectangle,
-                    },
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_icon_name: "text-case-title-regular",
-                        set_tooltip: "Text tool",
-                        ActionablePlus::set_action::<ToolsAction>: Tools::Text,
-
-                    },
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_icon_name: "number-circle-1-regular",
-                        set_tooltip: "Numbered Marker",
-                        ActionablePlus::set_action::<ToolsAction>: Tools::Marker,
-
-                    },
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_icon_name: "drop-regular",
-                        set_tooltip: "Blur",
-                        ActionablePlus::set_action::<ToolsAction>: Tools::Blur,
-
-                    },
-                    gtk::Separator {},
-                    gtk::Button {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_icon_name: "copy-regular",
-                        set_tooltip: "Copy to clipboard",
-                        connect_clicked[sketch_board_sender] => move |_| {sketch_board_sender.emit(SketchBoardMessage::CopyClipboard);},
-                    },
-                    #[name(save_button)]
-                    gtk::Button {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_icon_name: "save-regular",
-                        set_tooltip: "Save",
-                        connect_clicked[sketch_board_sender] => move |_| {sketch_board_sender.emit(SketchBoardMessage::SaveFile);},
-                    },
-
-                },
-
-                add_overlay = &gtk::Box {
-                    set_orientation: gtk::Orientation::Horizontal,
-                    set_spacing: 2,
-                    set_valign: Align::End,
-                    set_halign: Align::Center,
-                    add_css_class: "toolbar",
-                    add_css_class: "toolbar-bottom",
-
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        #[local_ref]
-                        orange_icon -> gtk::Image {},
-
-                        ActionablePlus::set_action::<ColorAction>: Color::Orange,
-                    },
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        #[local_ref]
-                        red_icon -> gtk::Image {},
-
-                        ActionablePlus::set_action::<ColorAction>: Color::Red,
-                    },
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        #[local_ref]
-                        green_icon -> gtk::Image {},
-
-                        ActionablePlus::set_action::<ColorAction>: Color::Green,
-                    },
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        #[local_ref]
-                        blue_icon -> gtk::Image {},
-
-                        ActionablePlus::set_action::<ColorAction>: Color::Blue,
-                    },
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        #[local_ref]
-                        cove_icon -> gtk::Image {},
-
-                        ActionablePlus::set_action::<ColorAction>: Color::Cove,
-                    },
-                    gtk::Separator {},
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_label: "S",
-                        set_tooltip: "Small font size",
-                        ActionablePlus::set_action::<SizeAction>: Size::Small,
-                    },
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_label: "M",
-                        set_tooltip: "Medium font size",
-                        ActionablePlus::set_action::<SizeAction>: Size::Medium,
-                    },
-                    gtk::ToggleButton {
-                        set_focusable: false,
-                        set_hexpand: false,
-
-                        set_label: "L",
-                        set_tooltip: "Large font size",
-                        ActionablePlus::set_action::<SizeAction>: Size::Large,
-                    },
-                },
+                add_overlay = model.style_toolbar.widget(),
 
                 add_overlay = &gtk::Box {
                     set_valign: Align::Start,
@@ -459,67 +268,37 @@ impl Component for App {
         let sketch_board = SketchBoard::builder().launch(sketch_board_config).detach();
         let sketch_board_sender = sketch_board.sender().clone();
 
+        let tools_toolbar = ToolsToolbar::builder()
+            .launch(ToolsToolbarConfig {
+                show_save_button: config.args.output_filename.is_some(),
+            })
+            .forward(sketch_board.sender(), |e| {
+                SketchBoardMessage::ToolbarEvent(e)
+            });
+
+        let style_toolbar = StyleToolbar::builder()
+            .launch(())
+            .forward(sketch_board.sender(), |e| {
+                SketchBoardMessage::ToolbarEvent(e)
+            });
+
         let model = App {
             original_image_width,
             original_image_height,
             sketch_board,
             initially_fullscreen: config.args.fullscreen,
             toast: None,
+            tools_toolbar,
+            style_toolbar,
         };
 
         let sketch_board = model.sketch_board.widget();
 
-        // color icons
-        let orange_icon = Self::create_icon(Color::Orange);
-        let red_icon = Self::create_icon(Color::Red);
-        let green_icon = Self::create_icon(Color::Green);
-        let blue_icon = Self::create_icon(Color::Blue);
-        let cove_icon = Self::create_icon(Color::Cove);
-
         let widgets = view_output!();
-
-        widgets
-            .save_button
-            .set_visible(config.args.output_filename.is_some());
-
-        // Tools Action for selecting tools
-        let sketch_board_sender_tmp = sketch_board_sender.clone();
-        let tool_action: RelmAction<ToolsAction> =
-            RelmAction::new_stateful_with_target_value(&Tools::Crop, move |_, state, value| {
-                *state = value;
-                sketch_board_sender_tmp.emit(SketchBoardMessage::ToolSelected(*state));
-            });
-
-        // Color Action for selecting colors
-        let sketch_board_sender_tmp = sketch_board_sender.clone();
-        let color_action: RelmAction<ColorAction> =
-            RelmAction::new_stateful_with_target_value(&Color::Orange, move |_, state, value| {
-                *state = value;
-                sketch_board_sender_tmp.emit(SketchBoardMessage::ColorSelected(*state));
-            });
-
-        // Size Action for selecting sizes
-        let sketch_board_sender_tmp = sketch_board_sender.clone();
-        let size_action: RelmAction<SizeAction> =
-            RelmAction::new_stateful_with_target_value(&Size::Medium, move |_, state, value| {
-                *state = value;
-                sketch_board_sender_tmp.emit(SketchBoardMessage::SizeSelected(*state));
-            });
-
-        let mut group = RelmActionGroup::<WindowActionGroup>::new();
-        group.add_action(tool_action);
-        group.add_action(color_action);
-        group.add_action(size_action);
-        group.register_for_widget(&widgets.main_window);
 
         ComponentParts { model, widgets }
     }
 }
-
-relm4::new_action_group!(WindowActionGroup, "win");
-relm4::new_stateful_action!(ToolsAction, WindowActionGroup, "tools", Tools, Tools);
-relm4::new_stateful_action!(ColorAction, WindowActionGroup, "colors", Color, Color);
-relm4::new_stateful_action!(SizeAction, WindowActionGroup, "sizes", Size, Size);
 
 fn load_image(filename: &str) -> Result<Pixbuf> {
     Ok(Pixbuf::from_file(filename).context("couldn't load image")?)
