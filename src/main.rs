@@ -1,9 +1,12 @@
+use std::cell::Cell;
 use std::io::Read;
 use std::{io, time::Duration};
 
 use gdk_pixbuf::{Pixbuf, PixbufLoader};
 use gtk::prelude::*;
 use relm4::gtk::gdk::Rectangle;
+
+use relm4::prelude::*;
 use relm4::RelmWidgetExt;
 use relm4::{
     actions::{ActionablePlus, RelmAction, RelmActionGroup},
@@ -58,15 +61,20 @@ struct App {
     original_image_height: i32,
     sketch_board: Controller<SketchBoard>,
     initially_fullscreen: bool,
+    toast: Option<String>,
 }
 
 #[derive(Debug)]
 enum AppInput {
     Realized,
+    ShowToast(String),
 }
 
 #[derive(Debug)]
-struct ResetResizable;
+enum AppCommandOutput {
+    HideToast,
+    ResetResizable,
+}
 
 impl App {
     fn get_monitor_size(root: &Window) -> Option<Rectangle> {
@@ -126,7 +134,7 @@ impl App {
             shutdown
                 .register(async move {
                     tokio::time::sleep(Duration::from_millis(1)).await;
-                    out.send(ResetResizable).unwrap();
+                    out.send(AppCommandOutput::ResetResizable).unwrap();
                 })
                 .drop_on_shutdown()
         });
@@ -145,6 +153,18 @@ impl App {
         css_provider.load_from_data(
             "
             .toolbar {color: #f9f9f9 ; background: #00000099;}
+            .toast {
+                color: #f9f9f9;
+                background: #00000099;
+                border-radius: 6px;
+                margin-top: 50px;
+            }
+            .toast-label {
+                margin-top: 6;
+                margin-bottom: 6;
+                margin-start: 6;
+                margin-end: 6;
+            }
             .toolbar-bottom {border-radius: 6px 6px 0px 0px;}
             .toolbar-top {border-radius: 0px 0px 6px 6px;}
             ",
@@ -163,7 +183,7 @@ impl Component for App {
     type Init = AppConfig;
     type Input = AppInput;
     type Output = ();
-    type CommandOutput = ResetResizable;
+    type CommandOutput = AppCommandOutput;
 
     view! {
           main_window = gtk::Window {
@@ -178,6 +198,7 @@ impl Component for App {
             add_controller = gtk::EventControllerKey {
                 connect_key_pressed[sketch_board_sender] => move | _, key, code, modifier | {
                     sketch_board_sender.emit(SketchBoardMessage::new_key_event(KeyEventMsg::new(key, code, modifier)));
+                    sender.input(AppInput::ShowToast("Hello World".to_string()));
                     Inhibit(false)
                 }
             },
@@ -368,8 +389,27 @@ impl Component for App {
                     },
                 },
 
+                add_overlay = &gtk::Box {
+                    set_valign: Align::Start,
+                    set_halign: Align::Center,
+                    add_css_class: "toast",
+
+                    #[watch]
+                    set_visible: model.toast.is_some(),
+
+                    gtk::Label {
+                        add_css_class: "toast-label",
+                        set_margin_start: 6,
+                        set_margin_end: 6,
+
+                        #[watch]
+                        set_text?: &model.toast
+                    }
+                },
+
                 #[local_ref]
-                sketch_board -> gtk::Box {}
+                sketch_board -> gtk::Box {},
+
 
             }
         }
@@ -378,11 +418,26 @@ impl Component for App {
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             AppInput::Realized => self.resize_window_initial(root, sender),
+            AppInput::ShowToast(msg) => {
+                self.toast = Some(msg);
+                sender.oneshot_command(async move {
+                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                    AppCommandOutput::HideToast
+                });
+            }
         }
     }
 
-    fn update_cmd(&mut self, _: ResetResizable, _: ComponentSender<Self>, root: &Self::Root) {
-        root.set_resizable(true);
+    fn update_cmd(
+        &mut self,
+        command: AppCommandOutput,
+        _: ComponentSender<Self>,
+        root: &Self::Root,
+    ) {
+        match command {
+            AppCommandOutput::ResetResizable => root.set_resizable(true),
+            AppCommandOutput::HideToast => self.toast = None,
+        }
     }
 
     fn init(
@@ -409,6 +464,7 @@ impl Component for App {
             original_image_height,
             sketch_board,
             initially_fullscreen: config.args.fullscreen,
+            toast: None,
         };
 
         let sketch_board = model.sketch_board.widget();
