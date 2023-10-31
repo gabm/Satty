@@ -57,7 +57,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "arrow-undo-filled",
-                set_tooltip: "Undo",
+                set_tooltip: "Undo (Ctrl-Z)",
                 connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::Undo);},
             },
             gtk::Button {
@@ -65,7 +65,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "arrow-redo-filled",
-                set_tooltip: "Redo",
+                set_tooltip: "Redo (Ctrl-Y)",
                 connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::Redo);},
             },
             gtk::Separator {},
@@ -134,7 +134,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "copy-regular",
-                set_tooltip: "Copy to clipboard",
+                set_tooltip: "Copy to clipboard (Ctrl+C)",
                 connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::CopyClipboard);},
             },
             gtk::Button {
@@ -142,7 +142,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "save-regular",
-                set_tooltip: "Save",
+                set_tooltip: "Save (Ctrl+S)",
                 connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::SaveFile);},
 
                 set_visible: model.config.show_save_button
