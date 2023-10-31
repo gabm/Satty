@@ -9,7 +9,7 @@ Satty has been created to provide the following improvements over existing scree
 - very simple and easy to understand toolset (like Swappy)
 - fullscreen annotation mode and post shot cropping (like Flameshot)
 - working on wlroots based compositors (Sway, Hyprland, River, ...)
-- modern looking UI, thanks to GTK and Adwaita
+- minimal, modern looking UI, thanks to GTK and Adwaita
 - be a playground for new features (post window selection, post paint editing, ...)
 
 ## Install
