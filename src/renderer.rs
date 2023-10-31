@@ -5,7 +5,7 @@ use anyhow::Result;
 use gdk_pixbuf::glib::Bytes;
 use gdk_pixbuf::Pixbuf;
 use pangocairo::cairo::{Context, Format, ImageSurface, Operator};
-use pangocairo::cairo::{Filter, Pattern};
+
 use relm4::gtk::gdk::{MemoryFormat, MemoryTexture};
 use relm4::gtk::prelude::*;
 
@@ -79,7 +79,6 @@ impl Renderer {
         // render to window
         cx.scale(scale_factor, scale_factor);
         cx.set_source_surface(surface, 0.0, 0.0)?;
-        Pattern::set_filter(&cx.source(), Filter::Fast);
         cx.paint()?;
 
         Ok(())
