@@ -58,7 +58,7 @@ impl SimpleComponent for ToolsToolbar {
 
                 set_icon_name: "arrow-undo-filled",
                 set_tooltip: "Undo",
-                connect_clicked[sender] => move |_| {sender.output(ToolbarEvent::Undo).unwrap();},
+                connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::Undo);},
             },
             gtk::Button {
                 set_focusable: false,
@@ -66,7 +66,7 @@ impl SimpleComponent for ToolsToolbar {
 
                 set_icon_name: "arrow-redo-filled",
                 set_tooltip: "Redo",
-                connect_clicked[sender] => move |_| {sender.output(ToolbarEvent::Redo).unwrap();},
+                connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::Redo);},
             },
             gtk::Separator {},
             gtk::ToggleButton {
@@ -135,7 +135,7 @@ impl SimpleComponent for ToolsToolbar {
 
                 set_icon_name: "copy-regular",
                 set_tooltip: "Copy to clipboard",
-                connect_clicked[sender] => move |_| {sender.output(ToolbarEvent::CopyClipboard).unwrap();},
+                connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::CopyClipboard);},
             },
             gtk::Button {
                 set_focusable: false,
@@ -143,7 +143,7 @@ impl SimpleComponent for ToolsToolbar {
 
                 set_icon_name: "save-regular",
                 set_tooltip: "Save",
-                connect_clicked[sender] => move |_| {sender.output(ToolbarEvent::SaveFile).unwrap();},
+                connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::SaveFile);},
 
                 set_visible: model.config.show_save_button
             },
@@ -165,8 +165,8 @@ impl SimpleComponent for ToolsToolbar {
             RelmAction::new_stateful_with_target_value(&Tools::Crop, move |_, state, value| {
                 *state = value;
                 sender_tmp
-                    .output(ToolbarEvent::ToolSelected(*state))
-                    .unwrap();
+                    .output_sender()
+                    .emit(ToolbarEvent::ToolSelected(*state));
             });
 
         let mut group = RelmActionGroup::<ToolsToolbarActionGroup>::new();
@@ -274,8 +274,8 @@ impl SimpleComponent for StyleToolbar {
             RelmAction::new_stateful_with_target_value(&Color::Orange, move |_, state, value| {
                 *state = value;
                 sender_tmp
-                    .output(ToolbarEvent::ColorSelected(*state))
-                    .unwrap();
+                    .output_sender()
+                    .emit(ToolbarEvent::ColorSelected(*state));
             });
 
         // Size Action for selecting sizes
@@ -284,8 +284,8 @@ impl SimpleComponent for StyleToolbar {
             RelmAction::new_stateful_with_target_value(&Size::Medium, move |_, state, value| {
                 *state = value;
                 sender_tmp
-                    .output(ToolbarEvent::SizeSelected(*state))
-                    .unwrap();
+                    .output_sender()
+                    .emit(ToolbarEvent::SizeSelected(*state));
             });
 
         let mut group = RelmActionGroup::<StyleToolbarActionGroup>::new();

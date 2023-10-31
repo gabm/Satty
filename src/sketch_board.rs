@@ -237,7 +237,9 @@ impl SketchBoard {
             Ok(_) => format!("File saved to '{}'.", output_filename),
         };
 
-        sender.output(SketchBoardOutput::ShowToast(msg)).unwrap();
+        sender
+            .output_sender()
+            .emit(SketchBoardOutput::ShowToast(msg));
     }
 
     fn handle_copy_clipboard(&self, sender: ComponentSender<Self>) {
@@ -252,11 +254,9 @@ impl SketchBoard {
         match DisplayManager::get().default_display() {
             Some(display) => {
                 display.clipboard().set_texture(&texture);
-                sender
-                    .output(SketchBoardOutput::ShowToast(
-                        "Copied to clipboard.".to_string(),
-                    ))
-                    .unwrap();
+                sender.output_sender().emit(SketchBoardOutput::ShowToast(
+                    "Copied to clipboard.".to_string(),
+                ));
             }
             None => {
                 println!("Cannot save to clipboard");
