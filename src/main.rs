@@ -19,6 +19,7 @@ use ui::toolbars::{StyleToolbar, ToolsToolbar};
 
 mod command_line;
 mod math;
+mod renderer;
 mod sketch_board;
 mod style;
 mod tools;

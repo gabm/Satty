@@ -1,21 +1,17 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use gdk_pixbuf::glib::Bytes;
 use gdk_pixbuf::Pixbuf;
 use gtk::prelude::*;
 
-use anyhow::Result;
-
-use pangocairo::cairo::{Filter, Format, ImageSurface, Pattern};
 use relm4::drawing::DrawHandler;
-use relm4::gtk::cairo::{Context, Operator};
-use relm4::gtk::gdk::{DisplayManager, Key, MemoryFormat, MemoryTexture, ModifierType};
+use relm4::gtk::gdk::{DisplayManager, Key, ModifierType};
 use relm4::{gtk, Component, ComponentParts, ComponentSender};
 
 use crate::math::Vec2D;
+use crate::renderer::Renderer;
 use crate::style::Style;
-use crate::tools::{Drawable, Tool, ToolEvent, ToolUpdateResult, Tools, ToolsManager};
+use crate::tools::{Tool, ToolEvent, ToolUpdateResult, Tools, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
 
 #[derive(Debug, Clone, Copy)]
@@ -96,18 +92,16 @@ pub struct SketchBoardConfig {
 
 pub struct SketchBoard {
     handler: DrawHandler,
-    board_dimensions: Vec2D,
-    scale_factor: f64,
     active_tool: Rc<RefCell<dyn Tool>>,
     tools: ToolsManager,
-    drawables: Vec<Box<dyn Drawable>>,
-    redo_stack: Vec<Box<dyn Drawable>>,
     style: Style,
     config: SketchBoardConfig,
+    renderer: Renderer,
+    scale_factor: f64,
 }
 
 impl SketchBoard {
-    fn resize(&mut self, new_dimensions: Vec2D) {
+    pub fn calculate_scale_factor(&mut self, new_dimensions: Vec2D) {
         let aspect_ratio =
             self.config.original_image.width() as f64 / self.config.original_image.height() as f64;
         self.scale_factor = if new_dimensions.x / aspect_ratio <= new_dimensions.y {
@@ -115,102 +109,13 @@ impl SketchBoard {
         } else {
             new_dimensions.y * aspect_ratio / self.config.original_image.width() as f64
         };
-
-        self.board_dimensions = new_dimensions;
     }
-
-    fn render_to_window(&self, cx: &Context) -> Result<()> {
-        let surface = self.render_full_size(true)?;
-
-        // render to window
-        cx.scale(self.scale_factor, self.scale_factor);
-        cx.set_source_surface(surface, 0.0, 0.0)?;
-        Pattern::set_filter(&cx.source(), Filter::Fast);
-        cx.paint()?;
-
-        Ok(())
-    }
-
-    fn render_full_size(&self, render_crop: bool) -> Result<ImageSurface> {
-        let surface = ImageSurface::create(
-            Format::ARgb32,
-            self.config.original_image.width(),
-            self.config.original_image.height(),
-        )?;
-
-        let cx: Context = Context::new(surface.clone())?;
-        cx.set_operator(Operator::Over);
-
-        // render background image
-        cx.set_source_pixbuf(&self.config.original_image, 0.0, 0.0);
-        cx.paint()?;
-
-        // render comitted drawables
-        for da in &self.drawables {
-            da.draw(&cx, &surface)?;
-        }
-
-        // render drawable of active tool, if any
-        if let Some(d) = &self.active_tool.borrow().get_drawable() {
-            d.draw(&cx, &surface)?;
-        }
-
-        if render_crop {
-            // render crop (even if tool not active)
-            if let Some(c) = self.tools.get_crop_tool().borrow().get_crop() {
-                c.draw(&cx, &surface)?;
-            }
-        }
-
-        Ok(surface)
-    }
-
-    fn render_with_crop(&self) -> Result<ImageSurface> {
-        // render final image
-        let mut surface = self.render_full_size(false)?;
-
-        if let Some((pos, size)) = self
-            .tools
-            .get_crop_tool()
-            .borrow()
-            .get_crop()
-            .and_then(|c| c.get_rectangle())
-        {
-            // crop the full size render to target values
-            let cropped_surface =
-                ImageSurface::create(Format::ARgb32, size.x as i32, size.y as i32)?;
-            let cropped_cx = Context::new(cropped_surface.clone())?;
-            cropped_cx.set_source_surface(surface, -pos.x, -pos.y)?;
-            cropped_cx.paint()?;
-
-            surface = cropped_surface.clone();
-        }
-
-        Ok(surface)
-    }
-
-    fn render_to_texture(&self) -> Result<MemoryTexture> {
-        let mut surface = self.render_with_crop()?;
-
-        let height = surface.height();
-        let width = surface.width();
-        let stride = surface.stride() as usize;
-        let data = surface.data()?;
-
-        let texture = MemoryTexture::new(
-            width,
-            height,
-            MemoryFormat::B8g8r8a8Premultiplied,
-            &Bytes::from(&*data),
-            stride,
-        );
-
-        Ok(texture)
-    }
-
-    fn redraw_screen(&mut self) {
+    fn refresh_screen(&mut self) {
         let cx = self.handler.get_context();
-        if let Err(e) = self.render_to_window(&cx) {
+        if let Err(e) = self
+            .renderer
+            .render_to_window(&cx, self.scale_factor, &self.active_tool)
+        {
             println!("Error drawing: {:?}", e);
         }
     }
@@ -224,7 +129,7 @@ impl SketchBoard {
             Some(o) => o,
         };
 
-        let texture = match self.render_to_texture() {
+        let texture = match self.renderer.render_to_texture(&self.active_tool) {
             Ok(t) => t,
             Err(e) => {
                 println!("Error while creating texture: {e}");
@@ -243,7 +148,7 @@ impl SketchBoard {
     }
 
     fn handle_copy_clipboard(&self, sender: ComponentSender<Self>) {
-        let texture = match self.render_to_texture() {
+        let texture = match self.renderer.render_to_texture(&self.active_tool) {
             Ok(t) => t,
             Err(e) => {
                 println!("Error while creating texture: {e}");
@@ -266,31 +171,18 @@ impl SketchBoard {
     }
 
     fn handle_undo(&mut self) -> ToolUpdateResult {
-        match self.drawables.pop() {
-            Some(mut d) => {
-                // notify of the undo action
-                d.handle_undo();
-
-                // push to redo stack
-                self.redo_stack.push(d);
-                ToolUpdateResult::Redraw
-            }
-            None => ToolUpdateResult::Unmodified,
+        if self.renderer.undo() {
+            ToolUpdateResult::Redraw
+        } else {
+            ToolUpdateResult::Unmodified
         }
     }
 
     fn handle_redo(&mut self) -> ToolUpdateResult {
-        match self.redo_stack.pop() {
-            Some(mut d) => {
-                // notify of the redo action
-                d.handle_redo();
-
-                // push to drawable stack
-                self.drawables.push(d);
-
-                ToolUpdateResult::Redraw
-            }
-            None => ToolUpdateResult::Unmodified,
+        if self.renderer.redo() {
+            ToolUpdateResult::Redraw
+        } else {
+            ToolUpdateResult::Unmodified
         }
     }
 
@@ -308,8 +200,7 @@ impl SketchBoard {
                     .handle_event(ToolEvent::Deactivated);
 
                 if let ToolUpdateResult::Commit(d) = deactivate_result {
-                    self.drawables.push(d);
-                    self.redo_stack.clear();
+                    self.renderer.commit(d);
                     // we handle commit directly and "downgrade" to a simple redraw result
                     deactivate_result = ToolUpdateResult::Redraw;
                 }
@@ -424,7 +315,7 @@ impl Component for SketchBoard {
         // handle resize ourselves, pass everything else to tool
         let result = match msg {
             SketchBoardInput::Resize(dim) => {
-                self.resize(dim);
+                self.calculate_scale_factor(dim);
                 ToolUpdateResult::Redraw
             }
 
@@ -470,12 +361,11 @@ impl Component for SketchBoard {
         //println!("Event={:?} Result={:?}", msg, result);
         match result {
             ToolUpdateResult::Commit(drawable) => {
-                self.drawables.push(drawable);
-                self.redo_stack.clear();
-                self.redraw_screen();
+                self.renderer.commit(drawable);
+                self.refresh_screen();
             }
             ToolUpdateResult::Unmodified => (),
-            ToolUpdateResult::Redraw => self.redraw_screen(),
+            ToolUpdateResult::Redraw => self.refresh_screen(),
         };
     }
 
@@ -484,18 +374,14 @@ impl Component for SketchBoard {
         root: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let board_dimensions = Vec2D::new(100.0, 100.0);
-
         let tools = ToolsManager::new();
 
         let model = Self {
             handler: DrawHandler::new(),
-            board_dimensions,
-            scale_factor: 1.0,
             active_tool: tools.get(&Tools::Crop),
-            drawables: Vec::new(),
-            redo_stack: Vec::new(),
             style: Style::default(),
+            renderer: Renderer::new(config.original_image.clone(), tools.get_crop_tool()),
+            scale_factor: 1.0,
             config,
             tools,
         };
