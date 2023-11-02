@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Satty
+GenericName=A Screenshot Annotation Tool inspired by Swappy and Flameshot.
+TryExec=satty
+Exec=satty -f %f
+Terminal=false
+NoDisplay=true
+Type=Application
+Keywords=wayland;snapshot;annotation;editing;
+#Icon=satty
+Categories=Utility;Graphics;
+StartupNotify=true
+MimeType=image/png;image/jpeg;
