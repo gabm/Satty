@@ -7,13 +7,12 @@ build:
 
 build-release:
 	cargo build --release
-	strip target/release/satty
 
 clean:
 	cargo clean
 
 install: build-release
-	install -Dm755 target/release/satty -t ${PREFIX}/bin/
+	install -s -Dm755 target/release/satty -t ${PREFIX}/bin/
 	install -Dm644 satty.desktop ${PREFIX}/share/applications/satty.desktop
 	install -Dm644 assets/satty.svg ${PREFIX}/share/icons/hicolor/scalable/apps/satty.svg
 
