@@ -7,17 +7,17 @@ pub struct CommandLine {
     #[arg(
         short,
         long,
-        help = "Filename to read from, use '-' to read from stdin"
+        help = "Path to input image or '-' to read from stdin."
     )]
     pub filename: String,
 
-    #[arg(long, help = "whether to use fullscreen")]
+    #[arg(long, help = "Start Satty in fullscreen mode.")]
     pub fullscreen: bool,
 
-    #[arg(long, help = "Which filename to use for saving action")]
+    #[arg(long, help = "Filename to use for saving action, omit to disable saving to file.")]
     pub output_filename: Option<String>,
 
-    #[arg(long, help = "Exit after copy/save")]
+    #[arg(long, help = "Exit directly after copy/save action.")]
     pub early_exit: bool,
 }
 
