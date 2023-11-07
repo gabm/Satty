@@ -1,6 +1,6 @@
-# Satty
+# <img src="assets/satty.svg" height="42"> Satty: Modern Screenshot Annotation. 
 
-Satty - a Screenshot Annotation Tool inspired by [Swappy](https://github.com/jtheoof/swappy) and [Flameshot](https://flameshot.org/).
+Satty is a screenshot annotation tool inspired by [Swappy](https://github.com/jtheoof/swappy) and [Flameshot](https://flameshot.org/).
 
 ![](assets/usage.gif)
 
