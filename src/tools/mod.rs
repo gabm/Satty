@@ -18,6 +18,7 @@ mod blur;
 mod crop;
 mod line;
 mod marker;
+mod pointer;
 mod rectangle;
 mod text;
 
@@ -106,17 +107,18 @@ pub use line::LineTool;
 pub use rectangle::RectangleTool;
 pub use text::TextTool;
 
-use self::marker::MarkerTool;
+use self::{marker::MarkerTool, pointer::PointerTool};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum Tools {
-    Crop = 0,
-    Line = 1,
-    Arrow = 2,
-    Rectangle = 3,
-    Text = 4,
-    Marker = 5,
-    Blur = 6,
+    Pointer = 0,
+    Crop = 1,
+    Line = 2,
+    Arrow = 3,
+    Rectangle = 4,
+    Text = 5,
+    Marker = 6,
+    Blur = 7,
 }
 
 pub struct ToolsManager {
@@ -128,6 +130,10 @@ impl ToolsManager {
     pub fn new() -> Self {
         let mut tools: HashMap<Tools, Rc<RefCell<dyn Tool>>> = HashMap::new();
         //tools.insert(Tools::Crop, Rc::new(RefCell::new(CropTool::default())));
+        tools.insert(
+            Tools::Pointer,
+            Rc::new(RefCell::new(PointerTool::default())),
+        );
         tools.insert(Tools::Line, Rc::new(RefCell::new(LineTool::default())));
         tools.insert(Tools::Arrow, Rc::new(RefCell::new(ArrowTool::default())));
         tools.insert(
@@ -169,13 +175,14 @@ impl ToVariant for Tools {
 impl FromVariant for Tools {
     fn from_variant(variant: &Variant) -> Option<Self> {
         variant.get::<u32>().and_then(|v| match v {
-            0 => Some(Tools::Crop),
-            1 => Some(Tools::Line),
-            2 => Some(Tools::Arrow),
-            3 => Some(Tools::Rectangle),
-            4 => Some(Tools::Text),
-            5 => Some(Tools::Marker),
-            6 => Some(Tools::Blur),
+            0 => Some(Tools::Pointer),
+            1 => Some(Tools::Crop),
+            2 => Some(Tools::Line),
+            3 => Some(Tools::Arrow),
+            4 => Some(Tools::Rectangle),
+            5 => Some(Tools::Text),
+            6 => Some(Tools::Marker),
+            7 => Some(Tools::Blur),
             _ => None,
         })
     }

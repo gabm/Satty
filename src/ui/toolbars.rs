@@ -52,6 +52,7 @@ impl SimpleComponent for ToolsToolbar {
             add_css_class: "toolbar",
             add_css_class: "toolbar-top",
 
+
             gtk::Button {
                 set_focusable: false,
                 set_hexpand: false,
@@ -69,6 +70,14 @@ impl SimpleComponent for ToolsToolbar {
                 connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::Redo);},
             },
             gtk::Separator {},
+            gtk::ToggleButton {
+                set_focusable: false,
+                set_hexpand: false,
+
+                set_icon_name: "cursor-regular",
+                set_tooltip: "Crop",
+                ActionablePlus::set_action::<ToolsAction>: Tools::Pointer,
+            },
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
@@ -162,7 +171,7 @@ impl SimpleComponent for ToolsToolbar {
         // Tools Action for selecting tools
         let sender_tmp: ComponentSender<ToolsToolbar> = sender.clone();
         let tool_action: RelmAction<ToolsAction> =
-            RelmAction::new_stateful_with_target_value(&Tools::Crop, move |_, state, value| {
+            RelmAction::new_stateful_with_target_value(&Tools::Pointer, move |_, state, value| {
                 *state = value;
                 sender_tmp
                     .output_sender()

@@ -10,6 +10,14 @@ pub struct Vec2D {
 }
 
 impl Vec2D {
+    pub fn zero() -> Self {
+        Self { x: 0f64, y: 0f64 }
+    }
+
+    pub fn new(x: f64, y: f64) -> Self {
+        Self { x, y }
+    }
+
     pub fn norm(&self) -> f64 {
         (self.x * self.x + self.y * self.y).sqrt()
     }

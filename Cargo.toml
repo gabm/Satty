@@ -11,7 +11,6 @@ license = "MPL-2.0"
 
 [dependencies]
 relm4 = { version = "0.6.2", features = ["macros", "libadwaita"] }
-relm4-icons = { version = "0.6.0", features = ["number-circle-1-regular", "drop-regular", "arrow-redo-filled", "arrow-undo-filled", "save-regular", "copy-regular", "text-case-title-regular","text-font-regular","minus-large", "checkbox-unchecked-regular", "crop-filled", "arrow-up-right-filled", "rectangle-landscape-regular"] }
 pangocairo = "0.17.10"
 tokio = { version = "1.32.0", features = ["full"]}
 gdk-pixbuf = "0.17.2"
@@ -21,3 +20,23 @@ anyhow = "1.0"
 
 # command line
 clap = { version = "4.4.4", features = ["derive"] }
+
+
+[dependencies.relm4-icons]
+version = "0.6.0"
+features = [
+    "cursor-regular",
+    "number-circle-1-regular",
+    "drop-regular",
+    "arrow-redo-filled",
+    "arrow-undo-filled",
+    "save-regular",
+    "copy-regular",
+    "text-case-title-regular",
+    "text-font-regular",
+    "minus-large",
+    "checkbox-unchecked-regular",
+    "crop-filled",
+    "arrow-up-right-filled",
+    "rectangle-landscape-regular"
+]

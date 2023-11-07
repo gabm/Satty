@@ -378,7 +378,7 @@ impl Component for SketchBoard {
 
         let model = Self {
             handler: DrawHandler::new(),
-            active_tool: tools.get(&Tools::Crop),
+            active_tool: tools.get(&Tools::Pointer),
             style: Style::default(),
             renderer: Renderer::new(config.original_image.clone(), tools.get_crop_tool()),
             scale_factor: 1.0,
@@ -390,16 +390,6 @@ impl Component for SketchBoard {
         let widgets = view_output!();
 
         ComponentParts { model, widgets }
-    }
-}
-
-impl Vec2D {
-    pub fn zero() -> Self {
-        Self { x: 0f64, y: 0f64 }
-    }
-
-    pub fn new(x: f64, y: f64) -> Self {
-        Self { x, y }
     }
 }
 
