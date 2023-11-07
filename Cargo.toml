@@ -1,9 +1,9 @@
 [package]
 name = "satty"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 authors = ["Matthias Gabriel <gabm+aur@mailbox.org>"]
-description = "A screenshot annotation tool inspired by Swappy and Flameshot"
+description = "A screenshot annotation tool inspired by Swappy and Flameshot."
 homepage ="https://github.com/gabm/satty"
 repository ="https://github.com/gabm/satty"
 license = "MPL-2.0"
