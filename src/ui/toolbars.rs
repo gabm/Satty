@@ -305,15 +305,6 @@ impl Component for StyleToolbar {
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Cove,
             },
             gtk::Separator {},
-            gtk::Button {
-
-                set_focusable: false,
-                set_hexpand: false,
-
-                set_icon_name: "color-regular",
-
-                connect_clicked => StyleToolbarInput::ShowColorDialog,
-            },
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
@@ -324,6 +315,15 @@ impl Component for StyleToolbar {
                 },
 
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Custom,
+            },
+            gtk::Button {
+
+                set_focusable: false,
+                set_hexpand: false,
+
+                set_icon_name: "color-regular",
+
+                connect_clicked => StyleToolbarInput::ShowColorDialog,
             },
             gtk::Separator {},
             gtk::ToggleButton {
@@ -392,7 +392,6 @@ impl Component for StyleToolbar {
         let color_action: RelmAction<ColorAction> = RelmAction::new_stateful_with_target_value(
             &ColorButtons::Orange,
             move |_, state, value| {
-                println!("state_changed={value:?}");
                 *state = value;
 
                 sender_tmp.input(StyleToolbarInput::ColorButtonSelected(value));
