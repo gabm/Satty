@@ -270,6 +270,7 @@ impl Component for StyleToolbar {
 
                 create_icon(Color::orange()),
 
+                set_tooltip: "Orange",
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Orange,
             },
             gtk::ToggleButton {
@@ -278,6 +279,7 @@ impl Component for StyleToolbar {
 
                 create_icon(Color::red()),
 
+                set_tooltip: "Red",
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Red,
             },
             gtk::ToggleButton {
@@ -286,6 +288,7 @@ impl Component for StyleToolbar {
 
                 create_icon(Color::green()),
 
+                set_tooltip: "Green",
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Green,
             },
             gtk::ToggleButton {
@@ -294,6 +297,7 @@ impl Component for StyleToolbar {
 
                 create_icon(Color::blue()),
 
+                set_tooltip: "Blue",
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Blue
             },
             gtk::ToggleButton {
@@ -301,6 +305,7 @@ impl Component for StyleToolbar {
                 set_hexpand: false,
 
                 create_icon(Color::cove()),
+                set_tooltip: "Cove",
 
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Cove,
             },
@@ -313,7 +318,7 @@ impl Component for StyleToolbar {
                     #[watch]
                     set_from_pixbuf: Some(&model.custom_color_pixbuf)
                 },
-
+                set_tooltip: "Custom color",
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Custom,
             },
             gtk::Button {
@@ -322,6 +327,7 @@ impl Component for StyleToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "color-regular",
+                set_tooltip: "Pick custom color",
 
                 connect_clicked => StyleToolbarInput::ShowColorDialog,
             },
@@ -331,7 +337,7 @@ impl Component for StyleToolbar {
                 set_hexpand: false,
 
                 set_label: "S",
-                set_tooltip: "Small font size",
+                set_tooltip: "Small size",
                 ActionablePlus::set_action::<SizeAction>: Size::Small,
             },
             gtk::ToggleButton {
@@ -339,7 +345,7 @@ impl Component for StyleToolbar {
                 set_hexpand: false,
 
                 set_label: "M",
-                set_tooltip: "Medium font size",
+                set_tooltip: "Medium size",
                 ActionablePlus::set_action::<SizeAction>: Size::Medium,
             },
             gtk::ToggleButton {
@@ -347,7 +353,7 @@ impl Component for StyleToolbar {
                 set_hexpand: false,
 
                 set_label: "L",
-                set_tooltip: "Large font size",
+                set_tooltip: "Large size",
                 ActionablePlus::set_action::<SizeAction>: Size::Large,
             },
 
