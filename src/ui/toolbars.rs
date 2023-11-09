@@ -207,7 +207,7 @@ impl SimpleComponent for ToolsToolbar {
 }
 
 #[derive(Debug, Copy, Clone)]
-enum ColorButtons {
+pub enum ColorButtons {
     Orange = 0,
     Red = 1,
     Green = 2,
