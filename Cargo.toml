@@ -10,7 +10,7 @@ license = "MPL-2.0"
 
 
 [dependencies]
-relm4 = { version = "0.6.2", features = ["macros", "libadwaita"] }
+relm4 = { version = "0.6.2", features = ["macros", "libadwaita", "gnome_44"] }
 pangocairo = "0.17.10"
 tokio = { version = "1.32.0", features = ["full"]}
 gdk-pixbuf = "0.17.2"

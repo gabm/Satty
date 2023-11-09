@@ -5,20 +5,20 @@ use gdk_pixbuf::{
     prelude::{StaticVariantType, ToVariant},
 };
 use pangocairo::pango::SCALE;
+use relm4::gtk::gdk::RGBA;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Style {
     pub color: Color,
     pub size: Size,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
-pub enum Color {
-    Orange = 0,
-    Red = 1,
-    Green = 2,
-    Blue = 3,
-    Cove = 4,
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Color {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub a: u8,
 }
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
@@ -28,62 +28,100 @@ pub enum Size {
     Large = 2,
 }
 
-impl Default for Style {
+impl Default for Color {
     fn default() -> Self {
-        Self {
-            color: Color::Orange,
-            size: Size::Medium,
-        }
+        Self::orange()
+    }
+}
+
+impl Default for Size {
+    fn default() -> Self {
+        Size::Medium
     }
 }
 
 impl StaticVariantType for Color {
     fn static_variant_type() -> Cow<'static, VariantTy> {
-        Cow::Borrowed(VariantTy::UINT32)
+        Cow::Borrowed(VariantTy::TUPLE)
     }
 }
-
 impl ToVariant for Color {
     fn to_variant(&self) -> Variant {
-        Variant::from(*self as u32)
+        (self.r, self.g, self.b, self.a).to_variant()
     }
 }
 
 impl FromVariant for Color {
     fn from_variant(variant: &Variant) -> Option<Self> {
-        variant.get::<u32>().and_then(|v| match v {
-            0 => Some(Color::Orange),
-            1 => Some(Color::Red),
-            2 => Some(Color::Green),
-            3 => Some(Color::Blue),
-            4 => Some(Color::Cove),
-            _ => None,
-        })
+        <(u8, u8, u8, u8)>::from_variant(&variant)
+            .and_then(|(r, g, b, a)| Some(Self { r, g, b, a }))
     }
 }
 
 impl Color {
-    pub fn to_rgb_f64(&self) -> (f64, f64, f64) {
-        let (r, g, b) = self.to_rgb_u8();
-        ((r as f64) / 255.0, (g as f64) / 255.0, (b as f64) / 255.0)
+    pub fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
+        Self { r, g, b, a }
     }
 
-    pub fn to_rgb_u8(&self) -> (u8, u8, u8) {
-        match *self {
-            Color::Orange => (240, 147, 43),
-            Color::Red => (235, 77, 75),
-            Color::Green => (106, 176, 76),
-            Color::Blue => (34, 166, 179),
-            Color::Cove => (19, 15, 64),
-        }
+    pub fn from_gdk(rgba: RGBA) -> Self {
+        Self::new(
+            (rgba.red() * 255.0) as u8,
+            (rgba.green() * 255.0) as u8,
+            (rgba.blue() * 255.0) as u8,
+            (rgba.alpha() * 255.0) as u8,
+        )
     }
 
+    pub fn orange() -> Self {
+        Self::new(240, 147, 43, 255)
+    }
+    pub fn red() -> Self {
+        Self::new(235, 77, 75, 255)
+    }
+    pub fn green() -> Self {
+        Self::new(106, 176, 76, 255)
+    }
+    pub fn blue() -> Self {
+        Self::new(34, 166, 179, 255)
+    }
+    pub fn cove() -> Self {
+        Self::new(19, 15, 64, 255)
+    }
+
+    pub fn to_rgba_f64(&self) -> (f64, f64, f64, f64) {
+        (
+            (self.r as f64) / 255.0,
+            (self.g as f64) / 255.0,
+            (self.b as f64) / 255.0,
+            (self.a as f64) / 255.0,
+        )
+    }
     pub fn to_rgba_u32(&self) -> u32 {
-        let (r, g, b) = self.to_rgb_u8();
-        ((r as u32) << 24) | ((g as u32) << 16) | ((b as u32) << 8) | (255u32)
+        ((self.r as u32) << 24) | ((self.g as u32) << 16) | ((self.b as u32) << 8) | (self.a as u32)
     }
 }
 
+impl From<RGBA> for Color {
+    fn from(value: RGBA) -> Self {
+        Self::new(
+            (value.red() * 255.0) as u8,
+            (value.green() * 255.0) as u8,
+            (value.blue() * 255.0) as u8,
+            (value.alpha() * 255.0) as u8,
+        )
+    }
+}
+
+impl Into<RGBA> for Color {
+    fn into(self) -> RGBA {
+        RGBA::new(
+            self.r as f32 / 255.0,
+            self.g as f32 / 255.0,
+            self.b as f32 / 255.0,
+            self.a as f32 / 255.0,
+        )
+    }
+}
 impl StaticVariantType for Size {
     fn static_variant_type() -> Cow<'static, VariantTy> {
         Cow::Borrowed(VariantTy::UINT32)
@@ -104,12 +142,6 @@ impl FromVariant for Size {
             2 => Some(Size::Large),
             _ => None,
         })
-    }
-}
-
-impl Default for Color {
-    fn default() -> Self {
-        Self::Cove
     }
 }
 

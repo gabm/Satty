@@ -41,10 +41,10 @@ impl Drawable for Text {
         desc.set_size(self.style.size.to_text_size());
         layout.set_font_description(Some(&desc));
 
-        let (r, g, b) = self.style.color.to_rgb_f64();
+        let (r, g, b, a) = self.style.color.to_rgba_f64();
 
         cx.save()?;
-        cx.set_source_rgb(r, g, b);
+        cx.set_source_rgba(r, g, b, a);
 
         cx.move_to(self.pos.x, self.pos.y);
         pangocairo::show_layout(cx, &layout);

@@ -26,12 +26,12 @@ impl Drawable for Line {
             None => return Ok(()), // exit early if no direction
         };
 
-        let (r, g, b) = self.style.color.to_rgb_f64();
+        let (r, g, b, a) = self.style.color.to_rgba_f64();
 
         cx.save()?;
 
         cx.set_line_width(self.style.size.to_line_width());
-        cx.set_source_rgb(r, g, b);
+        cx.set_source_rgba(r, g, b, a);
         cx.move_to(self.start.x, self.start.y);
         cx.rel_line_to(direction.x, direction.y);
         cx.stroke()?;

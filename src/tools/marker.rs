@@ -46,7 +46,7 @@ impl Drawable for Marker {
             + (rect.height() / SCALE * rect.height() / SCALE) as f64)
             .sqrt();
 
-        let (r, g, b) = self.style.color.to_rgb_f64();
+        let (r, g, b, a) = self.style.color.to_rgba_f64();
 
         cx.save()?;
 
@@ -58,12 +58,12 @@ impl Drawable for Marker {
             0.0,
             2.0 * PI,
         ); // full circle
-        cx.set_source_rgb(r, g, b);
+        cx.set_source_rgba(r, g, b, a);
         cx.fill()?;
 
         // draw a circle around
         cx.arc(circle_pos_x, circle_pos_y, circle_radius, 0.0, 2.0 * PI); // full circle
-        cx.set_source_rgb(r, g, b);
+        cx.set_source_rgba(r, g, b, a);
         cx.set_line_width(self.style.size.to_line_width() * 2.0);
         cx.stroke()?;
 

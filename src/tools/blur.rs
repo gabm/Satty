@@ -62,14 +62,14 @@ impl Drawable for Blur {
             Some(s) => s,
             None => return Ok(()), // early exit if none
         };
-        let (r, g, b) = self.style.color.to_rgb_f64();
+        let (r, g, b, a) = self.style.color.to_rgba_f64();
 
         cx.save()?;
 
         if self.editing {
             // set style
             cx.set_line_width(Size::Medium.to_line_width());
-            cx.set_source_rgb(r, g, b);
+            cx.set_source_rgba(r, g, b, a);
 
             // make rect
             cx.rectangle(self.top_left.x, self.top_left.y, size.x, size.y);

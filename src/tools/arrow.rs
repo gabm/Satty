@@ -121,12 +121,12 @@ impl Drawable for Arrow {
         };
 
         let (p1, p2) = self.get_arrow_head_points();
-        let (r, g, b) = self.style.color.to_rgb_f64();
+        let (r, g, b, a) = self.style.color.to_rgba_f64();
 
         cx.save()?;
 
         cx.set_line_width(self.style.size.to_line_width());
-        cx.set_source_rgb(r, g, b);
+        cx.set_source_rgba(r, g, b, a);
 
         // base line
         cx.move_to(self.start.x, self.start.y);
