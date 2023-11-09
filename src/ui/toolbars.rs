@@ -6,6 +6,7 @@ use crate::{
 };
 
 use gdk_pixbuf::{
+    gio::SimpleAction,
     glib::{FromVariant, Variant, VariantTy},
     Pixbuf,
 };
@@ -26,6 +27,7 @@ pub struct ToolsToolbarConfig {
 pub struct StyleToolbar {
     custom_color: Color,
     custom_color_pixbuf: Pixbuf,
+    color_action: SimpleAction,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -41,6 +43,7 @@ pub enum ToolbarEvent {
 
 #[derive(Debug, Copy, Clone)]
 pub enum StyleToolbarInput {
+    ColorButtonSelected(ColorButtons),
     ShowColorDialog,
     ColorDialogFinished(Option<Color>),
 }
@@ -219,7 +222,7 @@ impl StyleToolbar {
         relm4::spawn_local(async move {
             let dialog = ColorDialog::builder()
                 .modal(true)
-                .title("Choose Colour")
+                .title("Choose Color")
                 .with_alpha(true)
                 .build();
 
@@ -233,14 +236,14 @@ impl StyleToolbar {
         });
     }
 
-    fn map_button_to_color(button: ColorButtons) -> Option<Color> {
+    fn map_button_to_color(&self, button: ColorButtons) -> Color {
         match button {
-            ColorButtons::Orange => Some(Color::orange()),
-            ColorButtons::Red => Some(Color::red()),
-            ColorButtons::Green => Some(Color::green()),
-            ColorButtons::Blue => Some(Color::blue()),
-            ColorButtons::Cove => Some(Color::cove()),
-            ColorButtons::Custom => None,
+            ColorButtons::Orange => Color::orange(),
+            ColorButtons::Red => Color::red(),
+            ColorButtons::Green => Color::green(),
+            ColorButtons::Blue => Color::blue(),
+            ColorButtons::Cove => Color::cove(),
+            ColorButtons::Custom => self.custom_color,
         }
     }
 }
@@ -302,7 +305,15 @@ impl Component for StyleToolbar {
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Cove,
             },
             gtk::Separator {},
+            gtk::Button {
 
+                set_focusable: false,
+                set_hexpand: false,
+
+                set_icon_name: "color-regular",
+
+                connect_clicked => StyleToolbarInput::ShowColorDialog,
+            },
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
@@ -313,8 +324,6 @@ impl Component for StyleToolbar {
                 },
 
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Custom,
-
-                connect_clicked => StyleToolbarInput::ShowColorDialog,
             },
             gtk::Separator {},
             gtk::ToggleButton {
@@ -351,10 +360,22 @@ impl Component for StyleToolbar {
                 self.show_color_dialog(sender, root.toplevel_window());
             }
             StyleToolbarInput::ColorDialogFinished(color) => {
-                let color = color.unwrap_or(self.custom_color);
+                if let Some(color) = color {
+                    self.custom_color = color;
+                    self.custom_color_pixbuf = create_icon_pixbuf(color);
 
-                self.custom_color = color;
-                self.custom_color_pixbuf = create_icon_pixbuf(color);
+                    // set the custom button active
+                    self.color_action
+                        .change_state(&ColorButtons::Custom.to_variant());
+
+                    // set new color
+                    sender
+                        .output_sender()
+                        .emit(ToolbarEvent::ColorSelected(color));
+                }
+            }
+            StyleToolbarInput::ColorButtonSelected(button) => {
+                let color = self.map_button_to_color(button);
                 sender
                     .output_sender()
                     .emit(ToolbarEvent::ColorSelected(color));
@@ -366,31 +387,15 @@ impl Component for StyleToolbar {
         root: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let custom_color = Color::pink();
-        let custom_color_pixbuf = create_icon_pixbuf(custom_color);
-
-        // create model
-        let model = StyleToolbar {
-            custom_color,
-            custom_color_pixbuf,
-        };
-
-        // create widgets
-        let widgets = view_output!();
-
         // Color Action for selecting colors
         let sender_tmp: ComponentSender<StyleToolbar> = sender.clone();
         let color_action: RelmAction<ColorAction> = RelmAction::new_stateful_with_target_value(
             &ColorButtons::Orange,
             move |_, state, value| {
+                println!("state_changed={value:?}");
                 *state = value;
 
-                // custom color will be handled by presenting a dialog
-                if let Some(color) = Self::map_button_to_color(value) {
-                    sender_tmp
-                        .output_sender()
-                        .emit(ToolbarEvent::ColorSelected(color));
-                }
+                sender_tmp.input(StyleToolbarInput::ColorButtonSelected(value));
             },
         );
 
@@ -403,6 +408,19 @@ impl Component for StyleToolbar {
                     .output_sender()
                     .emit(ToolbarEvent::SizeSelected(*state));
             });
+
+        let custom_color = Color::pink();
+        let custom_color_pixbuf = create_icon_pixbuf(custom_color);
+
+        // create model
+        let model = StyleToolbar {
+            custom_color,
+            custom_color_pixbuf,
+            color_action: SimpleAction::from(color_action.clone()),
+        };
+
+        // create widgets
+        let widgets = view_output!();
 
         let mut group = RelmActionGroup::<StyleToolbarActionGroup>::new();
         group.add_action(color_action);
@@ -424,6 +442,13 @@ relm4::new_stateful_action!(
     ColorButtons,
     ColorButtons
 );
+
+impl Clone for ColorAction {
+    fn clone(&self) -> Self {
+        Self {}
+    }
+}
+
 relm4::new_stateful_action!(SizeAction, StyleToolbarActionGroup, "sizes", Size, Size);
 
 impl StaticVariantType for ColorButtons {

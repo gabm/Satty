@@ -25,6 +25,7 @@ clap = { version = "4.4.4", features = ["derive"] }
 [dependencies.relm4-icons]
 version = "0.6.0"
 features = [
+    "color-regular",
     "cursor-regular",
     "number-circle-1-regular",
     "drop-regular",
