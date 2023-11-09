@@ -5,7 +5,10 @@ use crate::{
     tools::Tools,
 };
 
-use gdk_pixbuf::glib::{FromVariant, Variant, VariantTy};
+use gdk_pixbuf::{
+    glib::{FromVariant, Variant, VariantTy},
+    Pixbuf,
+};
 use relm4::{
     actions::{ActionablePlus, RelmAction, RelmActionGroup},
     gtk::{prelude::*, Align, ColorDialog, Window},
@@ -22,6 +25,7 @@ pub struct ToolsToolbarConfig {
 
 pub struct StyleToolbar {
     custom_color: Color,
+    custom_color_pixbuf: Pixbuf,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -41,11 +45,13 @@ pub enum StyleToolbarInput {
     ColorDialogFinished(Option<Color>),
 }
 
-fn create_icon(color: Color) -> gtk::Image {
+fn create_icon_pixbuf(color: Color) -> Pixbuf {
     let pixbuf = gdk_pixbuf::Pixbuf::new(gdk_pixbuf::Colorspace::Rgb, false, 8, 40, 40).unwrap();
     pixbuf.fill(color.to_rgba_u32());
-
-    gtk::Image::from_pixbuf(Some(&pixbuf))
+    pixbuf
+}
+fn create_icon(color: Color) -> gtk::Image {
+    gtk::Image::from_pixbuf(Some(&create_icon_pixbuf(color)))
 }
 
 #[relm4::component(pub)]
@@ -301,11 +307,14 @@ impl Component for StyleToolbar {
                 set_focusable: false,
                 set_hexpand: false,
 
+                gtk::Image::from_pixbuf(Some(&model.custom_color_pixbuf)) {
+                    #[watch]
+                    set_from_pixbuf: Some(&model.custom_color_pixbuf)
+                },
+
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Custom,
 
-                connect_clicked[sender] => move |_| {
-                    sender.input(StyleToolbarInput::ShowColorDialog);
-                }
+                connect_clicked => StyleToolbarInput::ShowColorDialog,
             },
             gtk::Separator {},
             gtk::ToggleButton {
@@ -342,12 +351,13 @@ impl Component for StyleToolbar {
                 self.show_color_dialog(sender, root.toplevel_window());
             }
             StyleToolbarInput::ColorDialogFinished(color) => {
-                if let Some(color) = color {
-                    self.custom_color = color;
-                    sender
-                        .output_sender()
-                        .emit(ToolbarEvent::ColorSelected(color));
-                }
+                let color = color.unwrap_or(self.custom_color);
+
+                self.custom_color = color;
+                self.custom_color_pixbuf = create_icon_pixbuf(color);
+                sender
+                    .output_sender()
+                    .emit(ToolbarEvent::ColorSelected(color));
             }
         }
     }
@@ -356,9 +366,13 @@ impl Component for StyleToolbar {
         root: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
+        let custom_color = Color::pink();
+        let custom_color_pixbuf = create_icon_pixbuf(custom_color);
+
         // create model
         let model = StyleToolbar {
-            custom_color: Color::orange(),
+            custom_color,
+            custom_color_pixbuf,
         };
 
         // create widgets
@@ -369,10 +383,9 @@ impl Component for StyleToolbar {
         let color_action: RelmAction<ColorAction> = RelmAction::new_stateful_with_target_value(
             &ColorButtons::Orange,
             move |_, state, value| {
-                println!("Callback, new value={value:?}, state={state:?}");
                 *state = value;
 
-                // custom color will be handled differently
+                // custom color will be handled by presenting a dialog
                 if let Some(color) = Self::map_button_to_color(value) {
                     sender_tmp
                         .output_sender()

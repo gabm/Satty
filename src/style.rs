@@ -88,6 +88,10 @@ impl Color {
         Self::new(19, 15, 64, 255)
     }
 
+    pub fn pink() -> Self {
+        Self::new(200, 37, 184, 255)
+    }
+
     pub fn to_rgba_f64(&self) -> (f64, f64, f64, f64) {
         (
             (self.r as f64) / 255.0,
