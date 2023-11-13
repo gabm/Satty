@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use gdk_pixbuf::{Pixbuf, PixbufFormat};
+use gdk_pixbuf::Pixbuf;
 use gtk::prelude::*;
 
 use relm4::drawing::DrawHandler;
