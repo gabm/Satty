@@ -10,6 +10,8 @@
                 "/home/gabm/Pictures/Screenshots/swappy-20230921-054340.png",
                 //"/home/gabm/Pictures/Wallpaper/torres_1.jpg"
                 //"--fullscreen",
+                "--output-filename",
+                "/tmp/out.png"
             ],
             "problemMatcher": [
                 "$rustc"

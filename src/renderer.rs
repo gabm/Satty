@@ -107,6 +107,24 @@ impl Renderer {
         Ok(surface)
     }
 
+    pub fn render_to_pixbuf(&self, active_tool: &Rc<RefCell<dyn Tool>>) -> Result<Pixbuf> {
+        let mut surface = self.render_with_crop(active_tool)?;
+        let height = surface.height();
+        let width = surface.width();
+        let stride = surface.stride();
+        let data = surface.data()?;
+
+        Ok(Pixbuf::from_bytes(
+            &Bytes::from(&*data),
+            gdk_pixbuf::Colorspace::Rgb,
+            true,
+            8,
+            width,
+            height,
+            stride,
+        ))
+    }
+
     pub fn render_to_texture(&self, active_tool: &Rc<RefCell<dyn Tool>>) -> Result<MemoryTexture> {
         let mut surface = self.render_with_crop(active_tool)?;
 
