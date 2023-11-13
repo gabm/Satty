@@ -110,6 +110,14 @@ impl SimpleComponent for ToolsToolbar {
                 set_focusable: false,
                 set_hexpand: false,
 
+                set_icon_name: "pen-regular",
+                set_tooltip: "Brush tool",
+                ActionablePlus::set_action::<ToolsAction>: Tools::Brush,
+            },
+            gtk::ToggleButton {
+                set_focusable: false,
+                set_hexpand: false,
+
                 set_icon_name: "minus-large",
                 set_tooltip: "Line tool",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Line,

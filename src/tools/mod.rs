@@ -15,6 +15,7 @@ use crate::{
 
 mod arrow;
 mod blur;
+mod brush;
 mod crop;
 mod line;
 mod marker;
@@ -107,7 +108,7 @@ pub use line::LineTool;
 pub use rectangle::RectangleTool;
 pub use text::TextTool;
 
-use self::{marker::MarkerTool, pointer::PointerTool};
+use self::{brush::BrushTool, marker::MarkerTool, pointer::PointerTool};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum Tools {
@@ -119,6 +120,7 @@ pub enum Tools {
     Text = 5,
     Marker = 6,
     Blur = 7,
+    Brush = 8,
 }
 
 pub struct ToolsManager {
@@ -143,6 +145,7 @@ impl ToolsManager {
         tools.insert(Tools::Text, Rc::new(RefCell::new(TextTool::default())));
         tools.insert(Tools::Blur, Rc::new(RefCell::new(BlurTool::default())));
         tools.insert(Tools::Marker, Rc::new(RefCell::new(MarkerTool::default())));
+        tools.insert(Tools::Brush, Rc::new(RefCell::new(BrushTool::default())));
 
         let crop_tool = Rc::new(RefCell::new(CropTool::default()));
         Self { tools, crop_tool }
@@ -183,6 +186,7 @@ impl FromVariant for Tools {
             5 => Some(Tools::Text),
             6 => Some(Tools::Marker),
             7 => Some(Tools::Blur),
+            8 => Some(Tools::Brush),
             _ => None,
         })
     }
