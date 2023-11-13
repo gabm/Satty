@@ -16,6 +16,7 @@ pub struct BrushTool {
 
 #[derive(Debug, Clone)]
 pub struct BrushDrawable {
+    start: Vec2D,
     points: Vec<Vec2D>,
     style: Style,
 }
@@ -34,18 +35,20 @@ impl Drawable for BrushDrawable {
         cx.set_source_rgba(r, g, b, a);
         cx.set_line_join(pangocairo::cairo::LineJoin::Bevel);
 
-        if self.points.len() == 1 {
+        if self.points.len() == 0 {
             cx.arc(
-                self.points[0].x,
-                self.points[0].y,
+                self.start.x,
+                self.start.y,
                 self.style.size.to_line_width(),
                 0.0,
                 2.0 * PI,
             );
             cx.fill()?;
-        } else if self.points.len() > 1 {
+        } else if self.points.len() > 0 {
+            cx.move_to(self.start.x, self.start.y);
+
             for p in &self.points {
-                cx.line_to(p.x, p.y);
+                cx.line_to(self.start.x + p.x, self.start.y + p.y);
             }
             cx.stroke()?;
         }
@@ -61,7 +64,8 @@ impl Tool for BrushTool {
         match event {
             MouseEventMsg::BeginDrag(pos) => {
                 self.drawable = Some(BrushDrawable {
-                    points: vec![pos],
+                    start: pos,
+                    points: Vec::new(),
                     style: self.style,
                 });
 
@@ -70,10 +74,7 @@ impl Tool for BrushTool {
             MouseEventMsg::EndDrag(dir) => {
                 if let Some(brush) = &mut self.drawable {
                     // add last point
-                    brush.points.push(Vec2D::new(
-                        brush.points[0].x + dir.x,
-                        brush.points[0].y + dir.y,
-                    ));
+                    brush.points.push(Vec2D::new(dir.x, dir.y));
 
                     // commit
                     let result = brush.clone_box();
@@ -87,10 +88,7 @@ impl Tool for BrushTool {
             MouseEventMsg::UpdateDrag(dir) => {
                 if let Some(brush) = &mut self.drawable {
                     // add point
-                    brush.points.push(Vec2D::new(
-                        brush.points[0].x + dir.x,
-                        brush.points[0].y + dir.y,
-                    ));
+                    brush.points.push(Vec2D::new(dir.x, dir.y));
 
                     ToolUpdateResult::Redraw
                 } else {
@@ -100,7 +98,8 @@ impl Tool for BrushTool {
             MouseEventMsg::Click(pos, button) => {
                 if button == MouseButton::Primary {
                     let brush = Box::new(BrushDrawable {
-                        points: vec![pos],
+                        start: pos,
+                        points: Vec::new(),
                         style: self.style,
                     });
                     ToolUpdateResult::Commit(brush)
