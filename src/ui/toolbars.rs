@@ -95,7 +95,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "cursor-regular",
-                set_tooltip: "Crop",
+                set_tooltip: "Pointer",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Pointer,
             },
             gtk::ToggleButton {
