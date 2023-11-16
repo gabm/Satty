@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::fs;
 use std::rc::Rc;
 
 use gdk_pixbuf::Pixbuf;
@@ -120,25 +121,6 @@ impl SketchBoard {
         }
     }
 
-    fn get_requested_format(filename: &str) -> &str {
-        filename.split('.').last().unwrap_or("png")
-    }
-
-    fn get_format(filename: &str) -> String {
-        let requested_format = Self::get_requested_format(&filename);
-        Pixbuf::formats()
-            .into_iter()
-            .find(|f| f.name() == requested_format)
-            .and_then(|f| {
-                if f.is_writable() {
-                    Some(f.name().to_string())
-                } else {
-                    None
-                }
-            })
-            .unwrap_or("png".to_string())
-    }
-
     fn handle_save(&self, sender: ComponentSender<Self>) {
         let output_filename = match &self.config.output_filename {
             None => {
@@ -148,7 +130,7 @@ impl SketchBoard {
             Some(o) => o,
         };
 
-        let pixbuf = match self.renderer.render_to_pixbuf(&self.active_tool) {
+        let texture = match self.renderer.render_to_texture(&self.active_tool) {
             Ok(t) => t,
             Err(e) => {
                 println!("Error while creating texture: {e}");
@@ -156,9 +138,9 @@ impl SketchBoard {
             }
         };
 
-        let format = Self::get_format(&output_filename);
+        let data = texture.save_to_png_bytes();
 
-        let msg = match pixbuf.savev(output_filename, &format, &vec![]) {
+        let msg = match fs::write(output_filename, data) {
             Err(e) => format!("Error while saving file: {e}"),
             Ok(_) => format!("File saved to '{}'.", output_filename),
         };
