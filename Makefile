@@ -2,16 +2,29 @@ ifeq ($(PREFIX),)
     PREFIX := /usr/local
 endif
 
-build:
+SOURCEDIRS:=src src/tools src/ui
+SOURCEFILES:=$(foreach d,$(SOURCEDIRS),$(wildcard $(d)/*.rs))
+
+build: target/debug/satty
+
+build-release: target/release/satty
+
+force-build:
 	cargo build
 
-build-release:
+force-build-release:
+	cargo build --release
+
+target/debug/satty: $(SOURCEFILES)
+	cargo build
+
+target/release/satty: $(SOURCEFILES)
 	cargo build --release
 
 clean:
 	cargo clean
 
-install: build-release
+install: target/release/satty
 	install -s -Dm755 target/release/satty -t ${PREFIX}/bin/
 	install -Dm644 satty.desktop ${PREFIX}/share/applications/satty.desktop
 	install -Dm644 assets/satty.svg ${PREFIX}/share/icons/hicolor/scalable/apps/satty.svg
