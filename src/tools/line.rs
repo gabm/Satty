@@ -1,8 +1,6 @@
-use std::f64::consts::PI;
-
 use anyhow::Result;
 use pangocairo::cairo::{Context, ImageSurface};
-use relm4::gtk::gdk::{ffi::GDK_SHIFT_MASK, Key, ModifierType};
+use relm4::gtk::gdk::{Key, ModifierType};
 
 use crate::{
     math::Vec2D,
