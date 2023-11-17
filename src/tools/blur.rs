@@ -6,7 +6,7 @@ use relm4::gtk::gdk::Key;
 
 use crate::{
     math::{self, Vec2D},
-    sketch_board::MouseEventMsg,
+    sketch_board::{MouseEventMsg, MouseEventType},
     style::{Size, Style},
 };
 
@@ -109,11 +109,11 @@ pub struct BlurTool {
 
 impl Tool for BlurTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
-        match event {
-            MouseEventMsg::BeginDrag(pos) => {
+        match event.type_ {
+            MouseEventType::BeginDrag => {
                 // start new
                 self.blur = Some(Blur {
-                    top_left: pos,
+                    top_left: event.pos,
                     size: None,
                     style: self.style,
                     editing: true,
@@ -122,14 +122,14 @@ impl Tool for BlurTool {
 
                 ToolUpdateResult::Redraw
             }
-            MouseEventMsg::EndDrag(dir) => {
+            MouseEventType::EndDrag => {
                 if let Some(a) = &mut self.blur {
-                    if dir == Vec2D::zero() {
+                    if event.pos == Vec2D::zero() {
                         self.blur = None;
 
                         ToolUpdateResult::Redraw
                     } else {
-                        a.size = Some(dir);
+                        a.size = Some(event.pos);
                         a.editing = false;
 
                         let result = a.clone_box();
@@ -141,12 +141,12 @@ impl Tool for BlurTool {
                     ToolUpdateResult::Unmodified
                 }
             }
-            MouseEventMsg::UpdateDrag(dir) => {
+            MouseEventType::UpdateDrag => {
                 if let Some(a) = &mut self.blur {
-                    if dir == Vec2D::zero() {
+                    if event.pos == Vec2D::zero() {
                         return ToolUpdateResult::Unmodified;
                     }
-                    a.size = Some(dir);
+                    a.size = Some(event.pos);
 
                     ToolUpdateResult::Redraw
                 } else {

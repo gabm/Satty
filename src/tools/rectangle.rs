@@ -2,7 +2,11 @@ use anyhow::Result;
 use pangocairo::cairo::{Context, ImageSurface};
 use relm4::gtk::gdk::Key;
 
-use crate::{math::Vec2D, sketch_board::MouseEventMsg, style::Style};
+use crate::{
+    math::Vec2D,
+    sketch_board::{MouseEventMsg, MouseEventType},
+    style::Style,
+};
 
 use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
 
@@ -48,25 +52,25 @@ pub struct RectangleTool {
 
 impl Tool for RectangleTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
-        match event {
-            MouseEventMsg::BeginDrag(pos) => {
+        match event.type_ {
+            MouseEventType::BeginDrag => {
                 // start new
                 self.rectangle = Some(Rectangle {
-                    top_left: pos,
+                    top_left: event.pos,
                     size: None,
                     style: self.style,
                 });
 
                 ToolUpdateResult::Redraw
             }
-            MouseEventMsg::EndDrag(dir) => {
+            MouseEventType::EndDrag => {
                 if let Some(a) = &mut self.rectangle {
-                    if dir == Vec2D::zero() {
+                    if event.pos == Vec2D::zero() {
                         self.rectangle = None;
 
                         ToolUpdateResult::Redraw
                     } else {
-                        a.size = Some(dir);
+                        a.size = Some(event.pos);
                         let result = a.clone_box();
                         self.rectangle = None;
 
@@ -76,12 +80,12 @@ impl Tool for RectangleTool {
                     ToolUpdateResult::Unmodified
                 }
             }
-            MouseEventMsg::UpdateDrag(dir) => {
+            MouseEventType::UpdateDrag => {
                 if let Some(a) = &mut self.rectangle {
-                    if dir == Vec2D::zero() {
+                    if event.pos == Vec2D::zero() {
                         return ToolUpdateResult::Unmodified;
                     }
-                    a.size = Some(dir);
+                    a.size = Some(event.pos);
 
                     ToolUpdateResult::Redraw
                 } else {

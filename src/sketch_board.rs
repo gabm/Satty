@@ -49,20 +49,49 @@ pub struct KeyEventMsg {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum MouseEventMsg {
-    BeginDrag(Vec2D),
-    EndDrag(Vec2D),
-    UpdateDrag(Vec2D),
-    Click(Vec2D, MouseButton),
+pub enum MouseEventType {
+    BeginDrag,
+    EndDrag,
+    UpdateDrag,
+    Click,
     //Motion(Vec2D),
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct MouseEventMsg {
+    pub type_: MouseEventType,
+    pub button: MouseButton,
+    pub modifier: ModifierType,
+    pub pos: Vec2D,
+}
+
 impl SketchBoardInput {
-    pub fn new_mouse_event(event: MouseEventMsg) -> SketchBoardInput {
-        SketchBoardInput::InputEvent(InputEvent::MouseEvent(event))
+    pub fn new_mouse_event(
+        event_type: MouseEventType,
+        button: u32,
+        modifier: ModifierType,
+        pos: Vec2D,
+    ) -> SketchBoardInput {
+        SketchBoardInput::InputEvent(InputEvent::MouseEvent(MouseEventMsg {
+            type_: event_type,
+            button: button.into(),
+            modifier,
+            pos,
+        }))
     }
     pub fn new_key_event(event: KeyEventMsg) -> SketchBoardInput {
         SketchBoardInput::InputEvent(InputEvent::KeyEvent(event))
+    }
+}
+
+impl From<u32> for MouseButton {
+    fn from(value: u32) -> Self {
+        match value {
+            gtk::gdk::BUTTON_PRIMARY => MouseButton::Primary,
+            gtk::gdk::BUTTON_MIDDLE => MouseButton::Middle,
+            gtk::gdk::BUTTON_SECONDARY => MouseButton::Secondary,
+            _ => MouseButton::Primary,
+        }
     }
 }
 
@@ -74,12 +103,7 @@ impl InputEvent {
 
     fn remap_event_coordinates(&mut self, scale: f64) {
         match self {
-            InputEvent::MouseEvent(me) => match me {
-                MouseEventMsg::BeginDrag(p) => Self::screen2image(p, scale),
-                MouseEventMsg::EndDrag(p) => Self::screen2image(p, scale),
-                MouseEventMsg::UpdateDrag(p) => Self::screen2image(p, scale),
-                MouseEventMsg::Click(p, _) => Self::screen2image(p, scale),
-            },
+            InputEvent::MouseEvent(me) => Self::screen2image(&mut me.pos, scale),
             _ => (),
         };
     }
@@ -286,33 +310,37 @@ impl Component for SketchBoard {
                 add_controller = gtk::GestureDrag {
                         set_button: 0,
                         connect_drag_begin[sender] => move |controller, x, y| {
-                            if controller.current_button() == gtk::gdk::BUTTON_PRIMARY {
-                                sender.input(SketchBoardInput::new_mouse_event(MouseEventMsg::BeginDrag(Vec2D::new(x, y))));
-                            }
+                            sender.input(SketchBoardInput::new_mouse_event(
+                                MouseEventType::BeginDrag,
+                                controller.current_button(),
+                                controller.current_event_state(),
+                                Vec2D::new(x, y)));
+
                         },
                         connect_drag_update[sender] => move |controller, x, y| {
-                            if controller.current_button() == gtk::gdk::BUTTON_PRIMARY {
-                                sender.input(SketchBoardInput::new_mouse_event(MouseEventMsg::UpdateDrag(Vec2D::new(x, y))));
-                            }
+                            sender.input(SketchBoardInput::new_mouse_event(
+                                MouseEventType::UpdateDrag,
+                                controller.current_button(),
+                                controller.current_event_state(),
+                                Vec2D::new(x, y)));
                         },
                         connect_drag_end[sender] => move |controller, x, y| {
-                            if controller.current_button() == gtk::gdk::BUTTON_PRIMARY {
-                                sender.input(SketchBoardInput::new_mouse_event(MouseEventMsg::EndDrag(Vec2D::new(x, y))));
-                            }
+                            sender.input(SketchBoardInput::new_mouse_event(
+                                MouseEventType::EndDrag,
+                                controller.current_button(),
+                                controller.current_event_state(),
+                                Vec2D::new(x, y)
+                            ));
                         }
                 },
                 add_controller = gtk::GestureClick {
                     set_button: 0,
                     connect_pressed[sender] => move |controller, _, x, y| {
-                        let button = if controller.current_button() == gtk::gdk::BUTTON_PRIMARY {
-                            MouseButton::Primary
-                        } else if controller.current_button() == gtk::gdk::BUTTON_SECONDARY {
-                            MouseButton::Secondary
-                        } else {
-                            MouseButton::Middle
-                        };
-
-                        sender.input(SketchBoardInput::new_mouse_event(MouseEventMsg::Click(Vec2D::new(x, y), button)));
+                        sender.input(SketchBoardInput::new_mouse_event(
+                            MouseEventType::Click,
+                            controller.current_button(),
+                            controller.current_event_state(),
+                            Vec2D::new(x, y)));
                     }
                 },
 

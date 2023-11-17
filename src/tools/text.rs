@@ -12,7 +12,7 @@ use relm4::gtk::prelude::*;
 
 use crate::{
     math::Vec2D,
-    sketch_board::{KeyEventMsg, MouseButton, MouseEventMsg},
+    sketch_board::{KeyEventMsg, MouseButton, MouseEventMsg, MouseEventType},
     style::Style,
 };
 
@@ -184,9 +184,9 @@ impl Tool for TextTool {
     }
 
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
-        match event {
-            MouseEventMsg::Click(pos, button) => {
-                if button == MouseButton::Primary {
+        match event.type_ {
+            MouseEventType::Click => {
+                if event.button == MouseButton::Primary {
                     // create commit message if necessary
                     let return_value = match &mut self.text {
                         Some(l) => {
@@ -198,7 +198,7 @@ impl Tool for TextTool {
 
                     // create a new Text
                     self.text = Some(Text {
-                        pos,
+                        pos: event.pos,
                         text_buffer: TextBuffer::new(None),
                         editing: true,
                         style: self.style,

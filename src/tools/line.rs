@@ -2,7 +2,11 @@ use anyhow::Result;
 use pangocairo::cairo::{Context, ImageSurface};
 use relm4::gtk::gdk::Key;
 
-use crate::{math::Vec2D, sketch_board::MouseEventMsg, style::Style};
+use crate::{
+    math::Vec2D,
+    sketch_board::{MouseEventMsg, MouseEventType},
+    style::Style,
+};
 
 use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
 
@@ -44,25 +48,25 @@ impl Drawable for Line {
 
 impl Tool for LineTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
-        match event {
-            MouseEventMsg::BeginDrag(pos) => {
+        match event.type_ {
+            MouseEventType::BeginDrag => {
                 // start new
                 self.line = Some(Line {
-                    start: pos,
+                    start: event.pos,
                     direction: None,
                     style: self.style,
                 });
 
                 ToolUpdateResult::Redraw
             }
-            MouseEventMsg::EndDrag(dir) => {
+            MouseEventType::EndDrag => {
                 if let Some(a) = &mut self.line {
-                    if dir == Vec2D::zero() {
+                    if event.pos == Vec2D::zero() {
                         self.line = None;
 
                         ToolUpdateResult::Redraw
                     } else {
-                        a.direction = Some(dir);
+                        a.direction = Some(event.pos);
                         let result = a.clone_box();
                         self.line = None;
 
@@ -72,9 +76,9 @@ impl Tool for LineTool {
                     ToolUpdateResult::Unmodified
                 }
             }
-            MouseEventMsg::UpdateDrag(dir) => {
+            MouseEventType::UpdateDrag => {
                 if let Some(r) = &mut self.line {
-                    r.direction = Some(dir);
+                    r.direction = Some(event.pos);
                     ToolUpdateResult::Redraw
                 } else {
                     ToolUpdateResult::Unmodified

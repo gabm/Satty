@@ -2,7 +2,7 @@ use std::f64::consts::PI;
 
 use crate::{
     math::{self, Vec2D},
-    sketch_board::{KeyEventMsg, MouseEventMsg},
+    sketch_board::{KeyEventMsg, MouseEventMsg, MouseEventType},
 };
 use anyhow::Result;
 use pangocairo::cairo::{Context, ImageSurface};
@@ -343,10 +343,10 @@ impl Tool for CropTool {
     }
 
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
-        match event {
-            MouseEventMsg::BeginDrag(pos) => self.begin_drag(pos),
-            MouseEventMsg::EndDrag(dir) => self.end_drag(dir),
-            MouseEventMsg::UpdateDrag(dir) => self.update_drag(dir),
+        match event.type_ {
+            MouseEventType::BeginDrag => self.begin_drag(event.pos),
+            MouseEventType::EndDrag => self.end_drag(event.pos),
+            MouseEventType::UpdateDrag => self.update_drag(event.pos),
             _ => ToolUpdateResult::Unmodified,
         }
     }

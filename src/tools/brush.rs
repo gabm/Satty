@@ -2,7 +2,7 @@ use std::f64::consts::PI;
 
 use crate::{
     math::Vec2D,
-    sketch_board::{MouseButton, MouseEventMsg},
+    sketch_board::{MouseButton, MouseEventMsg, MouseEventType},
     style::Style,
 };
 
@@ -61,20 +61,20 @@ impl Drawable for BrushDrawable {
 
 impl Tool for BrushTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
-        match event {
-            MouseEventMsg::BeginDrag(pos) => {
+        match event.type_ {
+            MouseEventType::BeginDrag => {
                 self.drawable = Some(BrushDrawable {
-                    start: pos,
+                    start: event.pos,
                     points: Vec::new(),
                     style: self.style,
                 });
 
                 ToolUpdateResult::Redraw
             }
-            MouseEventMsg::EndDrag(dir) => {
+            MouseEventType::EndDrag => {
                 if let Some(brush) = &mut self.drawable {
                     // add last point
-                    brush.points.push(Vec2D::new(dir.x, dir.y));
+                    brush.points.push(event.pos);
 
                     // commit
                     let result = brush.clone_box();
@@ -85,20 +85,20 @@ impl Tool for BrushTool {
                     ToolUpdateResult::Unmodified
                 }
             }
-            MouseEventMsg::UpdateDrag(dir) => {
+            MouseEventType::UpdateDrag => {
                 if let Some(brush) = &mut self.drawable {
                     // add point
-                    brush.points.push(Vec2D::new(dir.x, dir.y));
+                    brush.points.push(event.pos);
 
                     ToolUpdateResult::Redraw
                 } else {
                     ToolUpdateResult::Unmodified
                 }
             }
-            MouseEventMsg::Click(pos, button) => {
-                if button == MouseButton::Primary {
+            MouseEventType::Click => {
+                if event.button == MouseButton::Primary {
                     let brush = Box::new(BrushDrawable {
-                        start: pos,
+                        start: event.pos,
                         points: Vec::new(),
                         style: self.style,
                     });

@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use pangocairo::pango::{FontDescription, SCALE};
 
-use crate::sketch_board::MouseButton;
+use crate::sketch_board::{MouseButton, MouseEventType};
 use crate::style::Style;
 use crate::{math::Vec2D, sketch_board::MouseEventMsg};
 
@@ -97,11 +97,11 @@ impl Tool for MarkerTool {
     }
 
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
-        match event {
-            MouseEventMsg::Click(pos, button) => {
-                if button == MouseButton::Primary {
+        match event.type_ {
+            MouseEventType::Click => {
+                if event.button == MouseButton::Primary {
                     let marker = Marker {
-                        pos,
+                        pos: event.pos,
                         number: *self.next_number.borrow(),
                         style: self.style,
                         tool_next_number: self.next_number.clone(),
