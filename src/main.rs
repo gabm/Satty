@@ -204,7 +204,7 @@ impl Component for App {
         Self::apply_style();
 
         // Toast
-        let toast = Toast::builder().launch(2000).detach();
+        let toast = Toast::builder().launch(3000).detach();
 
         // SketchBoard
         let sketch_board_config = SketchBoardConfig {
