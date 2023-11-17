@@ -25,6 +25,24 @@ impl Vec2D {
     pub fn norm2(&self) -> f64 {
         self.x * self.x + self.y * self.y
     }
+
+    pub fn snapped_vector_15deg(&self) -> Vec2D {
+        let current_angle = (self.y / self.x).atan();
+        let current_norm2 = self.norm2();
+        let new_angle = (current_angle / 0.26179938782).round() * 0.2617993878;
+
+        let a = (current_norm2 / (new_angle.tan().powi(2) + 1.0)).sqrt();
+        let b = (current_norm2 - a * a).sqrt();
+        if self.x >= 0.0 && self.y >= 0.0 {
+            Vec2D::new(a, b)
+        } else if self.x < 0.0 && self.y >= 0.0 {
+            Vec2D::new(-a, b)
+        } else if self.x >= 0.0 && self.y < 0.0 {
+            Vec2D::new(a, -b)
+        } else {
+            Vec2D::new(-a, -b)
+        }
+    }
 }
 
 impl Add for Vec2D {

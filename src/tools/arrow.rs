@@ -2,7 +2,7 @@ use std::f64::consts::PI;
 
 use anyhow::Result;
 use pangocairo::cairo::{Context, ImageSurface};
-use relm4::gtk::gdk::Key;
+use relm4::gtk::gdk::{Key, ModifierType};
 
 use crate::{
     math::Vec2D,
@@ -45,7 +45,11 @@ impl Tool for ArrowTool {
 
                         ToolUpdateResult::Redraw
                     } else {
-                        a.end = Some(a.start + event.pos);
+                        if event.modifier.intersects(ModifierType::SHIFT_MASK) {
+                            a.end = Some(a.start + event.pos.snapped_vector_15deg());
+                        } else {
+                            a.end = Some(a.start + event.pos);
+                        }
                         let result = a.clone_box();
                         self.arrow = None;
 
@@ -60,7 +64,11 @@ impl Tool for ArrowTool {
                     if event.pos == Vec2D::zero() {
                         return ToolUpdateResult::Unmodified;
                     }
-                    a.end = Some(a.start + event.pos);
+                    if event.modifier.intersects(ModifierType::SHIFT_MASK) {
+                        a.end = Some(a.start + event.pos.snapped_vector_15deg());
+                    } else {
+                        a.end = Some(a.start + event.pos);
+                    }
 
                     ToolUpdateResult::Redraw
                 } else {

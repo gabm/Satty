@@ -1,6 +1,8 @@
+use std::f64::consts::PI;
+
 use anyhow::Result;
 use pangocairo::cairo::{Context, ImageSurface};
-use relm4::gtk::gdk::Key;
+use relm4::gtk::gdk::{ffi::GDK_SHIFT_MASK, Key, ModifierType};
 
 use crate::{
     math::Vec2D,
@@ -66,7 +68,11 @@ impl Tool for LineTool {
 
                         ToolUpdateResult::Redraw
                     } else {
-                        a.direction = Some(event.pos);
+                        if event.modifier.intersects(ModifierType::SHIFT_MASK) {
+                            a.direction = Some(event.pos.snapped_vector_15deg());
+                        } else {
+                            a.direction = Some(event.pos);
+                        }
                         let result = a.clone_box();
                         self.line = None;
 
@@ -78,7 +84,11 @@ impl Tool for LineTool {
             }
             MouseEventType::UpdateDrag => {
                 if let Some(r) = &mut self.line {
-                    r.direction = Some(event.pos);
+                    if event.modifier.intersects(ModifierType::SHIFT_MASK) {
+                        r.direction = Some(event.pos.snapped_vector_15deg());
+                    } else {
+                        r.direction = Some(event.pos);
+                    }
                     ToolUpdateResult::Redraw
                 } else {
                     ToolUpdateResult::Unmodified
