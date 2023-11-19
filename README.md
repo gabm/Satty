@@ -22,6 +22,18 @@ You can get the official Arch Linux package from the AUR:
 yay -S satty-bin
 ```
 
+### Gentoo
+
+You can get the Gentoo package from the Guru overlay:
+
+```
+eselect repository enable guru
+emerge --sync guru
+emerge -av satty
+```
+
+Pending PR for Gentoo overlay: https://github.com/gentoo/gentoo/pull/33908
+
 ### Prebuilt Sources
 
 You can download a prebuilt binary for x86-64 on the [Satty Releases](https://github.com/gabm/satty/releases) page.
@@ -87,7 +99,7 @@ Satty is based on GTK-4 and Adwaita.
 - libgtk-4-1
 - libadwaita-1-0
 
-### Arch Linux
+### Arch Linux & Gentoo
 
 - pango 
 - glib2
@@ -95,7 +107,6 @@ Satty is based on GTK-4 and Adwaita.
 - libadwaita
 - gtk4
 - gdk-pixbuf2
-
 
 ## License
 
