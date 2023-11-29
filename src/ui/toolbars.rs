@@ -22,6 +22,7 @@ pub struct ToolsToolbar {
 
 pub struct ToolsToolbarConfig {
     pub show_save_button: bool,
+    pub init_tool: Tools,
 }
 
 pub struct StyleToolbar {
@@ -198,13 +199,15 @@ impl SimpleComponent for ToolsToolbar {
 
         // Tools Action for selecting tools
         let sender_tmp: ComponentSender<ToolsToolbar> = sender.clone();
-        let tool_action: RelmAction<ToolsAction> =
-            RelmAction::new_stateful_with_target_value(&Tools::Pointer, move |_, state, value| {
+        let tool_action: RelmAction<ToolsAction> = RelmAction::new_stateful_with_target_value(
+            &model.config.init_tool,
+            move |_, state, value| {
                 *state = value;
                 sender_tmp
                     .output_sender()
                     .emit(ToolbarEvent::ToolSelected(*state));
-            });
+            },
+        );
 
         let mut group = RelmActionGroup::<ToolsToolbarActionGroup>::new();
         group.add_action(tool_action);
@@ -238,7 +241,7 @@ impl StyleToolbar {
                 .choose_rgba_future(root.as_ref(), current_color.as_ref())
                 .await
                 .ok()
-                .and_then(|c| Some(Color::from_gdk(c)));
+                .map(Color::from_gdk);
 
             sender.input(StyleToolbarInput::ColorDialogFinished(color));
         });

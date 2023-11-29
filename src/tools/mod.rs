@@ -9,6 +9,7 @@ use pangocairo::cairo::ImageSurface;
 use relm4::gtk::cairo::Context;
 
 use crate::{
+    command_line,
     sketch_board::{InputEvent, KeyEventMsg, MouseEventMsg},
     style::Style,
 };
@@ -189,5 +190,21 @@ impl FromVariant for Tools {
             8 => Some(Tools::Brush),
             _ => None,
         })
+    }
+}
+
+impl From<command_line::Tools> for Tools {
+    fn from(tool: command_line::Tools) -> Self {
+        match tool {
+            command_line::Tools::Pointer => Self::Pointer,
+            command_line::Tools::Crop => Self::Crop,
+            command_line::Tools::Line => Self::Line,
+            command_line::Tools::Arrow => Self::Arrow,
+            command_line::Tools::Rectangle => Self::Rectangle,
+            command_line::Tools::Text => Self::Text,
+            command_line::Tools::Marker => Self::Marker,
+            command_line::Tools::Blur => Self::Blur,
+            command_line::Tools::Brush => Self::Brush,
+        }
     }
 }
