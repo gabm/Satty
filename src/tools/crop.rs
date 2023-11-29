@@ -36,10 +36,8 @@ impl Crop {
     }
 
     pub fn get_rectangle(&self) -> Option<(Vec2D, Vec2D)> {
-        self.size.and_then(|size| {
-            let (pos, size) = math::rect_ensure_positive_size(self.pos, size);
-            Some((pos, size))
-        })
+        self.size
+            .map(|size| math::rect_ensure_positive_size(self.pos, size))
     }
 }
 
@@ -154,15 +152,9 @@ impl CropTool {
         }
     }
     fn test_handle_hit(&self, mouse_pos: Vec2D) -> Option<(CropHandle, Vec2D, Vec2D)> {
-        let crop = match &self.crop {
-            Some(c) => c,
-            None => return None,
-        };
+        let crop = self.crop.as_ref()?;
 
-        let crop_size = match crop.size {
-            Some(s) => s,
-            None => return None,
-        };
+        let crop_size = crop.size?;
         let crop_pos = crop.pos;
 
         const MAX_DISTANCE2: f64 = (Crop::HANDLE_BORDER + Crop::HANDLE_RADIUS)
@@ -301,14 +293,12 @@ impl CropTool {
     }
 
     fn end_drag(&mut self, direction: Vec2D) -> ToolUpdateResult {
-        let crop = match &mut self.crop {
-            Some(c) => c,
-            None => return ToolUpdateResult::Unmodified,
+        let Some(crop) = &mut self.crop else {
+            return ToolUpdateResult::Unmodified;
         };
 
-        let action = match &self.action {
-            Some(a) => a,
-            None => return ToolUpdateResult::Unmodified,
+        let Some(action) = &self.action else {
+            return ToolUpdateResult::Unmodified;
         };
 
         match action {

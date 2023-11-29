@@ -35,7 +35,7 @@ impl Drawable for BrushDrawable {
         cx.set_source_rgba(r, g, b, a);
         cx.set_line_join(pangocairo::cairo::LineJoin::Bevel);
 
-        if self.points.len() == 0 {
+        if self.points.is_empty() {
             cx.arc(
                 self.start.x,
                 self.start.y,
@@ -44,7 +44,7 @@ impl Drawable for BrushDrawable {
                 2.0 * PI,
             );
             cx.fill()?;
-        } else if self.points.len() > 0 {
+        } else {
             cx.move_to(self.start.x, self.start.y);
 
             for p in &self.points {
