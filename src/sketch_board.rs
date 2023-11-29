@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::fs;
+use std::io::{self, Write};
 use std::rc::Rc;
 
 use gdk_pixbuf::Pixbuf;
@@ -146,23 +147,7 @@ impl SketchBoard {
     }
 
     fn handle_save(&self, sender: ComponentSender<Self>) {
-        let output_filename = match &self.config.output_filename {
-            None => {
-                println!("No Output filename specified!");
-                return;
-            }
-            Some(o) => o,
-        };
-
-        if !output_filename.ends_with(".png") {
-            let msg = "The only supported format is png, but the filename does not end in png";
-            println!("{msg}");
-            sender
-                .output_sender()
-                .emit(SketchBoardOutput::ShowToast(msg.to_string()));
-            return;
-        }
-
+        let msg: String;
         let texture = match self.renderer.render_to_texture(&self.active_tool) {
             Ok(t) => t,
             Err(e) => {
@@ -173,9 +158,28 @@ impl SketchBoard {
 
         let data = texture.save_to_png_bytes();
 
-        let msg = match fs::write(output_filename, data) {
-            Err(e) => format!("Error while saving file: {e}"),
-            Ok(_) => format!("File saved to '{}'.", output_filename),
+        match &self.config.output_filename {
+            None => {
+                msg = match io::stdout().write_all(&data) {
+                    Err(e) => format!("Error while writing file to stdout: {e}"),
+                    Ok(_) => format!("File saved to stdout"),
+                };
+            }
+            Some(o) => {
+                if !o.ends_with(".png") {
+                    msg = "The only supported format is png, but the filename does not end in png"
+                        .to_string();
+                    println!("{msg}");
+                    sender
+                        .output_sender()
+                        .emit(SketchBoardOutput::ShowToast(msg.to_string()));
+                    return;
+                }
+                msg = match fs::write(o, data) {
+                    Err(e) => format!("Error while saving file: {e}"),
+                    Ok(_) => format!("File saved to '{}'.", o),
+                };
+            }
         };
 
         sender

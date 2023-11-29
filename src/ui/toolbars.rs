@@ -16,13 +16,9 @@ use relm4::{
     prelude::*,
 };
 
-pub struct ToolsToolbar {
-    config: ToolsToolbarConfig,
-}
+pub struct ToolsToolbar {}
 
-pub struct ToolsToolbarConfig {
-    pub show_save_button: bool,
-}
+pub struct ToolsToolbarConfig {}
 
 pub struct StyleToolbar {
     custom_color: Color,
@@ -181,19 +177,17 @@ impl SimpleComponent for ToolsToolbar {
                 set_icon_name: "save-regular",
                 set_tooltip: "Save (Ctrl+S)",
                 connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::SaveFile);},
-
-                set_visible: model.config.show_save_button
             },
 
         },
     }
 
     fn init(
-        config: Self::Init,
+        _config: Self::Init,
         root: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let model = ToolsToolbar { config };
+        let model = ToolsToolbar {};
         let widgets = view_output!();
 
         // Tools Action for selecting tools

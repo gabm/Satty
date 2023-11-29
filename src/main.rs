@@ -224,9 +224,7 @@ impl Component for App {
 
         // Toolbars
         let tools_toolbar = ToolsToolbar::builder()
-            .launch(ToolsToolbarConfig {
-                show_save_button: config.args.output_filename.is_some(),
-            })
+            .launch(ToolsToolbarConfig {})
             .forward(sketch_board.sender(), |e| SketchBoardInput::ToolbarEvent(e));
 
         let style_toolbar = StyleToolbar::builder()
