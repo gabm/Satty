@@ -41,6 +41,7 @@ pub enum MouseButton {
     Secondary,
     Middle,
 }
+
 #[derive(Debug, Clone, Copy)]
 pub struct KeyEventMsg {
     pub key: Key,
@@ -102,9 +103,8 @@ impl InputEvent {
     }
 
     fn remap_event_coordinates(&mut self, scale: f64) {
-        match self {
-            InputEvent::MouseEvent(me) => Self::screen2image(&mut me.pos, scale),
-            _ => (),
+        if let InputEvent::MouseEvent(me) = self {
+            Self::screen2image(&mut me.pos, scale)
         };
     }
 }
@@ -113,6 +113,7 @@ pub struct SketchBoardConfig {
     pub original_image: Pixbuf,
     pub output_filename: Option<String>,
     pub early_exit: bool,
+    pub init_tool: Tools,
 }
 
 pub struct SketchBoard {
@@ -201,7 +202,6 @@ impl SketchBoard {
             }
             None => {
                 println!("Cannot save to clipboard");
-                return;
             }
         }
     }
@@ -418,7 +418,7 @@ impl Component for SketchBoard {
 
         let model = Self {
             handler: DrawHandler::new(),
-            active_tool: tools.get(&Tools::Pointer),
+            active_tool: tools.get(&config.init_tool),
             style: Style::default(),
             renderer: Renderer::new(config.original_image.clone(), tools.get_crop_tool()),
             scale_factor: 1.0,

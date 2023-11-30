@@ -61,7 +61,7 @@ impl App {
         DisplayManager::get()
             .default_display()
             .and_then(|display| display.monitor_at_surface(&surface))
-            .and_then(|monitor| Some(monitor.geometry()))
+            .map(|monitor| monitor.geometry())
     }
 
     fn resize_window_initial(&self, root: &Window, sender: ComponentSender<Self>) {
@@ -211,6 +211,7 @@ impl Component for App {
             original_image: config.image.clone(),
             output_filename: config.args.output_filename.clone(),
             early_exit: config.args.early_exit,
+            init_tool: config.args.init_tool.into(),
         };
 
         let sketch_board = SketchBoard::builder().launch(sketch_board_config).forward(
@@ -226,12 +227,13 @@ impl Component for App {
         let tools_toolbar = ToolsToolbar::builder()
             .launch(ToolsToolbarConfig {
                 show_save_button: config.args.output_filename.is_some(),
+                init_tool: config.args.init_tool.into(),
             })
-            .forward(sketch_board.sender(), |e| SketchBoardInput::ToolbarEvent(e));
+            .forward(sketch_board.sender(), SketchBoardInput::ToolbarEvent);
 
         let style_toolbar = StyleToolbar::builder()
             .launch(())
-            .forward(sketch_board.sender(), |e| SketchBoardInput::ToolbarEvent(e));
+            .forward(sketch_board.sender(), SketchBoardInput::ToolbarEvent);
 
         // Model
         let model = App {
@@ -251,7 +253,7 @@ impl Component for App {
 }
 
 fn load_image(filename: &str) -> Result<Pixbuf> {
-    Ok(Pixbuf::from_file(filename).context("couldn't load image")?)
+    Pixbuf::from_file(filename).context("couldn't load image")
 }
 
 fn run_satty(args: CommandLine) -> Result<()> {

@@ -21,9 +21,10 @@ pub struct Color {
     pub a: u8,
 }
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]
 pub enum Size {
     Small = 0,
+    #[default]
     Medium = 1,
     Large = 2,
 }
@@ -31,12 +32,6 @@ pub enum Size {
 impl Default for Color {
     fn default() -> Self {
         Self::orange()
-    }
-}
-
-impl Default for Size {
-    fn default() -> Self {
-        Size::Medium
     }
 }
 
@@ -53,8 +48,7 @@ impl ToVariant for Color {
 
 impl FromVariant for Color {
     fn from_variant(variant: &Variant) -> Option<Self> {
-        <(u8, u8, u8, u8)>::from_variant(&variant)
-            .and_then(|(r, g, b, a)| Some(Self { r, g, b, a }))
+        <(u8, u8, u8, u8)>::from_variant(variant).map(|(r, g, b, a)| Self { r, g, b, a })
     }
 }
 
@@ -92,7 +86,7 @@ impl Color {
         Self::new(200, 37, 184, 255)
     }
 
-    pub fn to_rgba_f64(&self) -> (f64, f64, f64, f64) {
+    pub fn to_rgba_f64(self) -> (f64, f64, f64, f64) {
         (
             (self.r as f64) / 255.0,
             (self.g as f64) / 255.0,
@@ -100,7 +94,7 @@ impl Color {
             (self.a as f64) / 255.0,
         )
     }
-    pub fn to_rgba_u32(&self) -> u32 {
+    pub fn to_rgba_u32(self) -> u32 {
         ((self.r as u32) << 24) | ((self.g as u32) << 16) | ((self.b as u32) << 8) | (self.a as u32)
     }
 }
@@ -116,16 +110,17 @@ impl From<RGBA> for Color {
     }
 }
 
-impl Into<RGBA> for Color {
-    fn into(self) -> RGBA {
-        RGBA::new(
-            self.r as f32 / 255.0,
-            self.g as f32 / 255.0,
-            self.b as f32 / 255.0,
-            self.a as f32 / 255.0,
+impl From<Color> for RGBA {
+    fn from(color: Color) -> Self {
+        Self::new(
+            color.r as f32 / 255.0,
+            color.g as f32 / 255.0,
+            color.b as f32 / 255.0,
+            color.a as f32 / 255.0,
         )
     }
 }
+
 impl StaticVariantType for Size {
     fn static_variant_type() -> Cow<'static, VariantTy> {
         Cow::Borrowed(VariantTy::UINT32)
@@ -150,24 +145,24 @@ impl FromVariant for Size {
 }
 
 impl Size {
-    pub fn to_text_size(&self) -> i32 {
-        match *self {
+    pub fn to_text_size(self) -> i32 {
+        match self {
             Size::Small => 12 * SCALE,
             Size::Medium => 18 * SCALE,
             Size::Large => 32 * SCALE,
         }
     }
 
-    pub fn to_line_width(&self) -> f64 {
-        match *self {
+    pub fn to_line_width(self) -> f64 {
+        match self {
             Size::Small => 2.0,
             Size::Medium => 3.0,
             Size::Large => 5.0,
         }
     }
 
-    pub fn to_blur_factor(&self) -> f64 {
-        match *self {
+    pub fn to_blur_factor(self) -> f64 {
+        match self {
             Size::Small => 6.0,
             Size::Medium => 10.0,
             Size::Large => 20.0,

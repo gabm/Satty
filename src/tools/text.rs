@@ -246,7 +246,7 @@ impl TextTool {
 
         match action {
             Action::Delete => {
-                let mut end_cursor_itr = start_cursor_itr.clone();
+                let mut end_cursor_itr = start_cursor_itr;
 
                 match action_scope {
                     ActionScope::ForwardChar => end_cursor_itr.forward_char(),
@@ -257,13 +257,13 @@ impl TextTool {
 
                 if text_buffer.delete_interactive(&mut start_cursor_itr, &mut end_cursor_itr, true)
                 {
-                    return ToolUpdateResult::Redraw;
+                    ToolUpdateResult::Redraw
                 } else {
-                    return ToolUpdateResult::Unmodified;
+                    ToolUpdateResult::Unmodified
                 }
             }
             Action::MoveCursor => {
-                let mut cursor_itr = start_cursor_itr.clone();
+                let mut cursor_itr = start_cursor_itr;
                 match action_scope {
                     ActionScope::ForwardChar => cursor_itr.forward_char(),
                     ActionScope::BackwardChar => cursor_itr.backward_char(),
@@ -275,9 +275,9 @@ impl TextTool {
                 let new_cursor_itr = text_buffer.iter_at_mark(&text_buffer.get_insert());
 
                 if new_cursor_itr != start_cursor_itr {
-                    return ToolUpdateResult::Redraw;
+                    ToolUpdateResult::Redraw
                 } else {
-                    return ToolUpdateResult::Unmodified;
+                    ToolUpdateResult::Unmodified
                 }
             }
         }

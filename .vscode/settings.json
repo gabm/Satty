@@ -1,5 +1,4 @@
 {
-    "rust-analyzer.linkedProjects": [
-        "./Cargo.toml"
-    ]
+  "rust-analyzer.linkedProjects": ["./Cargo.toml"],
+  "rust-analyzer.checkOnSave.command": "clippy"
 }
