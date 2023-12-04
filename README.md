@@ -53,13 +53,17 @@ Usage: satty [OPTIONS] --filename <FILENAME>
 
 Options:
   -f, --filename <FILENAME>
-          Path to input image or '-' to read from stdin.
+          Path to input image or '-' to read from stdin
       --fullscreen
-          Start Satty in fullscreen mode.
+          Start Satty in fullscreen mode
       --output-filename <OUTPUT_FILENAME>
-          Filename to use for saving action, omit to disable saving to file.
+          Filename to use for saving action, omit to disable saving to file
       --early-exit
-          Exit directly after copy/save action.
+          Exit directly after copy/save action
+      --init-tool <TOOL>
+          Select the tool on startup [default: pointer] [possible values: pointer, crop, line, arrow, rectangle, text, marker, blur, brush]
+      --copy-command <COPY_COMMAND>
+          Configure the command to be called on copy, for example `wl-copy`
   -h, --help
           Print help
   -V, --version
