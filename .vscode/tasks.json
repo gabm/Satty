@@ -12,7 +12,9 @@
                 "/home/gabm/Pictures/Screenshots/satty-20231116-10:35:51.png",
                 //"--fullscreen",
                 "--output-filename",
-                "/tmp/out.png"
+                "/tmp/out.png",
+                "--copy-command",
+                "wl-copy",
             ],
             "problemMatcher": [
                 "$rustc"

@@ -1,5 +1,7 @@
 use std::cell::RefCell;
 use std::fs;
+use std::io::Write;
+use std::process::{Command, Stdio};
 use std::rc::Rc;
 
 use gdk_pixbuf::Pixbuf;
@@ -112,6 +114,7 @@ impl InputEvent {
 pub struct SketchBoardConfig {
     pub original_image: Pixbuf,
     pub output_filename: Option<String>,
+    pub copy_command: Option<String>,
     pub early_exit: bool,
     pub init_tool: Tools,
 }
@@ -193,15 +196,33 @@ impl SketchBoard {
             }
         };
 
-        match DisplayManager::get().default_display() {
-            Some(display) => {
-                display.clipboard().set_texture(&texture);
+        if let Some(command) = &self.config.copy_command {
+            let mut child = Command::new(command)
+                .stdin(Stdio::piped())
+                .stdout(Stdio::null())
+                .spawn()
+                .unwrap();
+
+            let child_stdin = child.stdin.as_mut().unwrap();
+            child_stdin
+                .write_all(texture.save_to_png_bytes().as_ref())
+                .unwrap();
+            if child.wait().unwrap().success() {
                 sender.output_sender().emit(SketchBoardOutput::ShowToast(
                     "Copied to clipboard.".to_string(),
                 ));
             }
-            None => {
-                println!("Cannot save to clipboard");
+        } else {
+            match DisplayManager::get().default_display() {
+                Some(display) => {
+                    display.clipboard().set_texture(&texture);
+                    sender.output_sender().emit(SketchBoardOutput::ShowToast(
+                        "Copied to clipboard.".to_string(),
+                    ));
+                }
+                None => {
+                    println!("Cannot save to clipboard");
+                }
             }
         }
     }

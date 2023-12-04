@@ -210,6 +210,7 @@ impl Component for App {
         let sketch_board_config = SketchBoardConfig {
             original_image: config.image.clone(),
             output_filename: config.args.output_filename.clone(),
+            copy_command: config.args.copy_command.clone(),
             early_exit: config.args.early_exit,
             init_tool: config.args.init_tool.into(),
         };

@@ -22,6 +22,10 @@ pub struct CommandLine {
     /// Select the tool on startup
     #[arg(long, default_value_t, value_name = "TOOL")]
     pub init_tool: Tools,
+
+    /// Configure the command to be called on copy, for example `wl-copy`
+    #[arg(long)]
+    pub copy_command: Option<String>,
 }
 
 impl CommandLine {
