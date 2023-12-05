@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use std::cell::RefCell;
 use std::fs;
 use std::io::Write;
@@ -8,7 +9,7 @@ use gdk_pixbuf::Pixbuf;
 use gtk::prelude::*;
 
 use relm4::drawing::DrawHandler;
-use relm4::gtk::gdk::{DisplayManager, Key, ModifierType};
+use relm4::gtk::gdk::{DisplayManager, Key, MemoryTexture, ModifierType};
 use relm4::{gtk, Component, ComponentParts, ComponentSender};
 
 use crate::math::Vec2D;
@@ -187,6 +188,35 @@ impl SketchBoard {
             .emit(SketchBoardOutput::ShowToast(msg));
     }
 
+    fn save_to_clipboard(&self, texture: &MemoryTexture) -> anyhow::Result<()> {
+        let display = DisplayManager::get()
+            .default_display()
+            .ok_or(anyhow!("Cannot open default display for clipboard."))?;
+        display.clipboard().set_texture(texture);
+
+        Ok(())
+    }
+
+    fn save_to_external_process(
+        &self,
+        texture: &MemoryTexture,
+        command: &str,
+    ) -> anyhow::Result<()> {
+        let mut child = Command::new(command)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            .spawn()?;
+
+        let child_stdin = child.stdin.as_mut().unwrap();
+        child_stdin.write_all(texture.save_to_png_bytes().as_ref())?;
+
+        if !child.wait()?.success() {
+            return Err(anyhow!("Writing to process '{command}' failed."));
+        }
+
+        Ok(())
+    }
+
     fn handle_copy_clipboard(&self, sender: ComponentSender<Self>) {
         let texture = match self.renderer.render_to_texture(&self.active_tool) {
             Ok(t) => t,
@@ -196,34 +226,17 @@ impl SketchBoard {
             }
         };
 
-        if let Some(command) = &self.config.copy_command {
-            let mut child = Command::new(command)
-                .stdin(Stdio::piped())
-                .stdout(Stdio::null())
-                .spawn()
-                .unwrap();
-
-            let child_stdin = child.stdin.as_mut().unwrap();
-            child_stdin
-                .write_all(texture.save_to_png_bytes().as_ref())
-                .unwrap();
-            if child.wait().unwrap().success() {
-                sender.output_sender().emit(SketchBoardOutput::ShowToast(
-                    "Copied to clipboard.".to_string(),
-                ));
-            }
+        let result = if let Some(command) = &self.config.copy_command {
+            self.save_to_external_process(&texture, command)
         } else {
-            match DisplayManager::get().default_display() {
-                Some(display) => {
-                    display.clipboard().set_texture(&texture);
-                    sender.output_sender().emit(SketchBoardOutput::ShowToast(
-                        "Copied to clipboard.".to_string(),
-                    ));
-                }
-                None => {
-                    println!("Cannot save to clipboard");
-                }
-            }
+            self.save_to_clipboard(&texture)
+        };
+
+        match result {
+            Err(e) => println!("Error saving {e}"),
+            Ok(()) => sender.output_sender().emit(SketchBoardOutput::ShowToast(
+                "Copied to clipboard.".to_string(),
+            )),
         }
     }
 
