@@ -1,6 +1,6 @@
 [package]
 name = "satty"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2021"
 authors = ["Matthias Gabriel <gabm+aur@mailbox.org>"]
 description = "A screenshot annotation tool inspired by Swappy and Flameshot."
