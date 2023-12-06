@@ -241,36 +241,19 @@ impl Component for App {
             .name("key_controller")
             .propagation_phase(gtk::PropagationPhase::Capture)
             .build();
-        //key_controller.connect_key_released(move |kc, key, raw, modi| {
-        //println!("{:?}", key);
-        //});
+
+        key_controller.connect_key_released(move |_, key, raw, modifier| {
+            sketch_board_sender.emit(SketchBoardInput::new_key_event(
+                sketch_board::KeyEventMsg::new(key, raw, modifier),
+            ))
+        });
+
         let sketch_board_sender = sketch_board.sender().clone();
         let key_controller_im_context = IMMulticontext::new();
         key_controller_im_context.connect_commit(move |_cx, txt| {
             sketch_board_sender.emit(SketchBoardInput::new_text_event(
                 sketch_board::TextEventMsg::Commit(txt.to_string()),
             ))
-        });
-
-        let sketch_board_sender = sketch_board.sender().clone();
-        key_controller_im_context.connect_preedit_changed(move |cx| {
-            sketch_board_sender.emit(SketchBoardInput::new_text_event(
-                sketch_board::TextEventMsg::PreeditUpdate(Some(cx.preedit_string().0.to_string())),
-            ))
-        });
-
-        let sketch_board_sender = sketch_board.sender().clone();
-        key_controller_im_context.connect_preedit_end(move |_cx| {
-            sketch_board_sender.emit(SketchBoardInput::new_text_event(
-                sketch_board::TextEventMsg::PreeditUpdate(None),
-            ))
-        });
-
-        let sketch_board_sender = sketch_board.sender().clone();
-        key_controller_im_context.connect_preedit_start(move |cx| {
-            sketch_board_sender.emit(SketchBoardInput::new_text_event(
-                sketch_board::TextEventMsg::PreeditUpdate(Some(cx.preedit_string().0.to_string())),
-            ));
         });
 
         key_controller.set_im_context(Some(&key_controller_im_context));

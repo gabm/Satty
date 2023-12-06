@@ -12,7 +12,7 @@ use relm4::gtk::prelude::*;
 
 use crate::{
     math::Vec2D,
-    sketch_board::{KeyEventMsg, MouseButton, MouseEventMsg, MouseEventType},
+    sketch_board::{KeyEventMsg, MouseButton, MouseEventMsg, MouseEventType, TextEventMsg},
     style::Style,
 };
 
@@ -95,11 +95,10 @@ impl Tool for TextTool {
     fn handle_text_event(&mut self, event: crate::sketch_board::TextEventMsg) -> ToolUpdateResult {
         if let Some(t) = &mut self.text {
             match event {
-                crate::sketch_board::TextEventMsg::Commit(text) => {
+                TextEventMsg::Commit(text) => {
                     t.text_buffer.insert_at_cursor(&text);
                     ToolUpdateResult::Redraw
                 }
-                crate::sketch_board::TextEventMsg::PreeditUpdate(_) => ToolUpdateResult::Unmodified,
             }
         } else {
             ToolUpdateResult::Unmodified
@@ -186,11 +185,6 @@ impl Tool for TextTool {
                 let mut cursor_itr = t.text_buffer.iter_at_mark(&t.text_buffer.get_insert());
                 cursor_itr.forward_line();
                 t.text_buffer.place_cursor(&cursor_itr);
-                return ToolUpdateResult::Redraw;
-            } else if let Some(c) = event.key.to_unicode() {
-                let mut buf = [0; 4];
-                t.text_buffer.insert_at_cursor(c.encode_utf8(&mut buf));
-
                 return ToolUpdateResult::Redraw;
             }
         };

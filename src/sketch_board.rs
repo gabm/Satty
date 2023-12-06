@@ -55,7 +55,6 @@ pub struct KeyEventMsg {
 #[derive(Debug, Clone)]
 pub enum TextEventMsg {
     Commit(String),
-    PreeditUpdate(Option<String>),
 }
 
 #[derive(Debug, Clone, Copy)]
