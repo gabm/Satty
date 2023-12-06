@@ -18,7 +18,7 @@ use crate::style::Style;
 use crate::tools::{Tool, ToolEvent, ToolUpdateResult, Tools, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum SketchBoardInput {
     InputEvent(InputEvent),
     Resize(Vec2D),
@@ -30,10 +30,11 @@ pub enum SketchBoardOutput {
     ShowToast(String),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum InputEvent {
     MouseEvent(MouseEventMsg),
     KeyEvent(KeyEventMsg),
+    TextEvent(TextEventMsg),
 }
 
 // from https://flatuicolors.com/palette/au
@@ -50,6 +51,11 @@ pub struct KeyEventMsg {
     pub key: Key,
     pub code: u32,
     pub modifier: ModifierType,
+}
+#[derive(Debug, Clone)]
+pub enum TextEventMsg {
+    Commit(String),
+    PreeditUpdate(Option<String>),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -85,6 +91,10 @@ impl SketchBoardInput {
     }
     pub fn new_key_event(event: KeyEventMsg) -> SketchBoardInput {
         SketchBoardInput::InputEvent(InputEvent::KeyEvent(event))
+    }
+
+    pub fn new_text_event(event: TextEventMsg) -> SketchBoardInput {
+        SketchBoardInput::InputEvent(InputEvent::TextEvent(event))
     }
 }
 

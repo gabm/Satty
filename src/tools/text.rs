@@ -92,6 +92,20 @@ impl Tool for TextTool {
         }
     }
 
+    fn handle_text_event(&mut self, event: crate::sketch_board::TextEventMsg) -> ToolUpdateResult {
+        if let Some(t) = &mut self.text {
+            match event {
+                crate::sketch_board::TextEventMsg::Commit(text) => {
+                    t.text_buffer.insert_at_cursor(&text);
+                    ToolUpdateResult::Redraw
+                }
+                crate::sketch_board::TextEventMsg::PreeditUpdate(_) => ToolUpdateResult::Unmodified,
+            }
+        } else {
+            ToolUpdateResult::Unmodified
+        }
+    }
+
     fn handle_key_event(&mut self, event: KeyEventMsg) -> ToolUpdateResult {
         if let Some(t) = &mut self.text {
             if event.key == Key::Return {

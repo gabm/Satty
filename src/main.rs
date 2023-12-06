@@ -5,6 +5,7 @@ use command_line::CommandLine;
 use gdk_pixbuf::{Pixbuf, PixbufLoader};
 use gtk::prelude::*;
 use relm4::gtk::gdk::Rectangle;
+use relm4::gtk::{EventControllerKey, IMMulticontext};
 
 use relm4::{
     gtk::{self, gdk::DisplayManager, CssProvider, Inhibit, Window},
@@ -160,12 +161,12 @@ impl Component for App {
 
             // this should be inside Sketchboard, but doesn't seem so work there. We hook it here
             // and send the messages there
-            add_controller = gtk::EventControllerKey {
+            /*add_controller = gtk::EventControllerKey {
                 connect_key_pressed[sketch_board_sender] => move | _, key, code, modifier | {
                     sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
                     Inhibit(false)
                 }
-            },
+            },*/
 
             gtk::Overlay {
                 add_overlay = model.tools_toolbar.widget(),
@@ -235,6 +236,45 @@ impl Component for App {
         let style_toolbar = StyleToolbar::builder()
             .launch(())
             .forward(sketch_board.sender(), SketchBoardInput::ToolbarEvent);
+
+        let key_controller = EventControllerKey::builder()
+            .name("key_controller")
+            .propagation_phase(gtk::PropagationPhase::Capture)
+            .build();
+        //key_controller.connect_key_released(move |kc, key, raw, modi| {
+        //println!("{:?}", key);
+        //});
+        let sketch_board_sender = sketch_board.sender().clone();
+        let key_controller_im_context = IMMulticontext::new();
+        key_controller_im_context.connect_commit(move |_cx, txt| {
+            sketch_board_sender.emit(SketchBoardInput::new_text_event(
+                sketch_board::TextEventMsg::Commit(txt.to_string()),
+            ))
+        });
+
+        let sketch_board_sender = sketch_board.sender().clone();
+        key_controller_im_context.connect_preedit_changed(move |cx| {
+            sketch_board_sender.emit(SketchBoardInput::new_text_event(
+                sketch_board::TextEventMsg::PreeditUpdate(Some(cx.preedit_string().0.to_string())),
+            ))
+        });
+
+        let sketch_board_sender = sketch_board.sender().clone();
+        key_controller_im_context.connect_preedit_end(move |_cx| {
+            sketch_board_sender.emit(SketchBoardInput::new_text_event(
+                sketch_board::TextEventMsg::PreeditUpdate(None),
+            ))
+        });
+
+        let sketch_board_sender = sketch_board.sender().clone();
+        key_controller_im_context.connect_preedit_start(move |cx| {
+            sketch_board_sender.emit(SketchBoardInput::new_text_event(
+                sketch_board::TextEventMsg::PreeditUpdate(Some(cx.preedit_string().0.to_string())),
+            ));
+        });
+
+        key_controller.set_im_context(Some(&key_controller_im_context));
+        root.add_controller(key_controller.clone());
 
         // Model
         let model = App {

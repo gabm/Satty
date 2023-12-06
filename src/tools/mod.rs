@@ -9,8 +9,7 @@ use pangocairo::cairo::ImageSurface;
 use relm4::gtk::cairo::Context;
 
 use crate::{
-    command_line,
-    sketch_board::{InputEvent, KeyEventMsg, MouseEventMsg},
+    sketch_board::{InputEvent, KeyEventMsg, MouseEventMsg, TextEventMsg},
     style::Style,
 };
 
@@ -53,7 +52,13 @@ pub trait Tool {
         match event {
             InputEvent::MouseEvent(e) => self.handle_mouse_event(e),
             InputEvent::KeyEvent(e) => self.handle_key_event(e),
+            InputEvent::TextEvent(e) => self.handle_text_event(e),
         }
+    }
+
+    fn handle_text_event(&mut self, event: TextEventMsg) -> ToolUpdateResult {
+        let _ = event;
+        ToolUpdateResult::Unmodified
     }
 
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
