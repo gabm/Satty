@@ -21,6 +21,9 @@ jobs:
     container:
       image: ghcr.io/gtk-rs/gtk4-rs/gtk4:latest
 
+    permissions:
+      contents: write
+
     steps:
       - name: Install dependencies
         if: matrix.os == 'ubuntu-latest'
