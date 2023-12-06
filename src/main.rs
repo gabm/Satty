@@ -5,7 +5,6 @@ use command_line::CommandLine;
 use gdk_pixbuf::{Pixbuf, PixbufLoader};
 use gtk::prelude::*;
 use relm4::gtk::gdk::Rectangle;
-use relm4::gtk::{EventControllerKey, IMMulticontext};
 
 use relm4::{
     gtk::{self, gdk::DisplayManager, CssProvider, Inhibit, Window},
@@ -26,8 +25,8 @@ mod style;
 mod tools;
 mod ui;
 
-use crate::sketch_board::SketchBoardConfig;
 use crate::sketch_board::{KeyEventMsg, SketchBoard, SketchBoardInput};
+use crate::sketch_board::{SketchBoardConfig, TextEventMsg};
 
 use crate::ui::toolbars::ToolsToolbarConfig;
 
@@ -161,12 +160,21 @@ impl Component for App {
 
             // this should be inside Sketchboard, but doesn't seem so work there. We hook it here
             // and send the messages there
-            /*add_controller = gtk::EventControllerKey {
+            add_controller = gtk::EventControllerKey {
                 connect_key_pressed[sketch_board_sender] => move | _, key, code, modifier | {
                     sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
                     Inhibit(false)
+                },
+
+                #[wrap(Some)]
+                set_im_context = &gtk::IMMulticontext {
+                    connect_commit[sketch_board_sender] => move |_cx, txt| {
+                        sketch_board_sender.emit(SketchBoardInput::new_text_event(
+                            TextEventMsg::Commit(txt.to_string()),
+                        ))
+                    }
                 }
-            },*/
+            },
 
             gtk::Overlay {
                 add_overlay = model.tools_toolbar.widget(),
@@ -236,28 +244,6 @@ impl Component for App {
         let style_toolbar = StyleToolbar::builder()
             .launch(())
             .forward(sketch_board.sender(), SketchBoardInput::ToolbarEvent);
-
-        let key_controller = EventControllerKey::builder()
-            .name("key_controller")
-            .propagation_phase(gtk::PropagationPhase::Capture)
-            .build();
-
-        key_controller.connect_key_released(move |_, key, raw, modifier| {
-            sketch_board_sender.emit(SketchBoardInput::new_key_event(
-                sketch_board::KeyEventMsg::new(key, raw, modifier),
-            ))
-        });
-
-        let sketch_board_sender = sketch_board.sender().clone();
-        let key_controller_im_context = IMMulticontext::new();
-        key_controller_im_context.connect_commit(move |_cx, txt| {
-            sketch_board_sender.emit(SketchBoardInput::new_text_event(
-                sketch_board::TextEventMsg::Commit(txt.to_string()),
-            ))
-        });
-
-        key_controller.set_im_context(Some(&key_controller_im_context));
-        root.add_controller(key_controller.clone());
 
         // Model
         let model = App {
