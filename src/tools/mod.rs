@@ -9,6 +9,7 @@ use pangocairo::cairo::ImageSurface;
 use relm4::gtk::cairo::Context;
 
 use crate::{
+    command_line,
     sketch_board::{InputEvent, KeyEventMsg, MouseEventMsg, TextEventMsg},
     style::Style,
 };
