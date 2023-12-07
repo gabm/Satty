@@ -50,7 +50,14 @@ impl Drawable for Text {
         pangocairo::show_layout(cx, &layout);
 
         if self.editing {
-            let (cursor, _) = layout.cursor_pos(self.text_buffer.cursor_position());
+            // GTK is working with UTF-8 and character positions, pango is working with UTF-8 but byte positions.
+            // here we transform one into the other!
+            let (cursor_byte_pos, _) = text
+                .char_indices()
+                .nth((self.text_buffer.cursor_position()) as usize)
+                .unwrap_or((text.bytes().count(), 'X'));
+
+            let (cursor, _) = layout.cursor_pos(cursor_byte_pos as i32);
 
             let cursor_pos =
                 self.pos + Vec2D::new((cursor.x() / SCALE) as f64, (cursor.y() / SCALE) as f64);
