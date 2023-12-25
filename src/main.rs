@@ -138,7 +138,7 @@ impl App {
             Some(display) => {
                 gtk::style_context_add_provider_for_display(&display, &css_provider, 1)
             }
-            None => println!("Cannot apply style"),
+            None => eprintln!("Cannot apply style"),
         }
     }
 }
@@ -277,7 +277,7 @@ fn main() -> Result<()> {
 
     match run_satty(args) {
         Err(e) => {
-            println!("Error: {e}");
+            eprintln!("Error: {e}");
             Err(e)
         }
         Ok(v) => Ok(v),

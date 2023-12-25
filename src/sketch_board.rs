@@ -142,7 +142,7 @@ impl SketchBoard {
             .renderer
             .render_to_window(&cx, self.scale_factor, &self.active_tool)
         {
-            println!("Error drawing: {:?}", e);
+            eprintln!("Error drawing: {:?}", e);
         }
     }
 
@@ -151,7 +151,7 @@ impl SketchBoard {
         let texture = match self.renderer.render_to_texture(&self.active_tool) {
             Ok(t) => t,
             Err(e) => {
-                println!("Error while creating texture: {e}");
+                eprintln!("Error while creating texture: {e}");
                 return;
             }
         };
@@ -169,7 +169,7 @@ impl SketchBoard {
                 if !o.ends_with(".png") {
                     msg = "The only supported format is png, but the filename does not end in png"
                         .to_string();
-                    println!("{msg}");
+                    eprintln!("{msg}");
                     sender
                         .output_sender()
                         .emit(SketchBoardOutput::ShowToast(msg.to_string()));
@@ -191,7 +191,7 @@ impl SketchBoard {
         let texture = match self.renderer.render_to_texture(&self.active_tool) {
             Ok(t) => t,
             Err(e) => {
-                println!("Error while creating texture: {e}");
+                eprintln!("Error while creating texture: {e}");
                 return;
             }
         };
@@ -204,7 +204,7 @@ impl SketchBoard {
                 ));
             }
             None => {
-                println!("Cannot save to clipboard");
+                eprintln!("Cannot save to clipboard");
                 return;
             }
         }
@@ -402,7 +402,7 @@ impl Component for SketchBoard {
             }
         };
 
-        //println!("Event={:?} Result={:?}", msg, result);
+        //eprintln!("Event={:?} Result={:?}", msg, result);
         match result {
             ToolUpdateResult::Commit(drawable) => {
                 self.renderer.commit(drawable);
