@@ -25,10 +25,16 @@ gdk-pixbuf = "0.17.2"
 
 # error handling
 anyhow = "1.0"
+thiserror = "1.0"
 
 # command line
 clap = { version = "4.4.10", features = ["derive"] }
 
+# configuration file
+xdg = "^2.5"
+toml = "0.8.8"
+serde = "1.0"
+serde_derive = "1.0"
 
 [dependencies.relm4-icons]
 version = "0.6.0"

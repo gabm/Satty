@@ -1,7 +1,7 @@
 use std::io::Read;
 use std::{io, time::Duration};
 
-use command_line::CommandLine;
+use configuration::Configuration;
 use gdk_pixbuf::{Pixbuf, PixbufLoader};
 use gtk::prelude::*;
 use relm4::gtk::gdk::Rectangle;
@@ -18,6 +18,7 @@ use ui::toast::Toast;
 use ui::toolbars::{StyleToolbar, ToolsToolbar};
 
 mod command_line;
+mod configuration;
 mod math;
 mod renderer;
 mod sketch_board;
@@ -32,7 +33,7 @@ use crate::ui::toolbars::ToolsToolbarConfig;
 
 struct AppConfig {
     image: Pixbuf,
-    args: CommandLine,
+    config: Configuration,
 }
 
 struct App {
@@ -209,10 +210,10 @@ impl Component for App {
         // SketchBoard
         let sketch_board_config = SketchBoardConfig {
             original_image: config.image.clone(),
-            output_filename: config.args.output_filename.clone(),
-            copy_command: config.args.copy_command.clone(),
-            early_exit: config.args.early_exit,
-            init_tool: config.args.init_tool.into(),
+            output_filename: config.config.output_filename.clone(),
+            copy_command: config.config.copy_command.clone(),
+            early_exit: config.config.early_exit,
+            init_tool: config.config.initial_tool,
         };
 
         let sketch_board = SketchBoard::builder().launch(sketch_board_config).forward(
@@ -227,8 +228,8 @@ impl Component for App {
         // Toolbars
         let tools_toolbar = ToolsToolbar::builder()
             .launch(ToolsToolbarConfig {
-                show_save_button: config.args.output_filename.is_some(),
-                init_tool: config.args.init_tool.into(),
+                show_save_button: config.config.output_filename.is_some(),
+                init_tool: config.config.initial_tool,
             })
             .forward(sketch_board.sender(), SketchBoardInput::ToolbarEvent);
 
@@ -241,7 +242,7 @@ impl Component for App {
             original_image_width: config.image.width(),
             original_image_height: config.image.height(),
             sketch_board,
-            initially_fullscreen: config.args.fullscreen,
+            initially_fullscreen: config.config.fullscreen,
             toast,
             tools_toolbar,
             style_toolbar,
@@ -257,8 +258,8 @@ fn load_image(filename: &str) -> Result<Pixbuf> {
     Pixbuf::from_file(filename).context("couldn't load image")
 }
 
-fn run_satty(args: CommandLine) -> Result<()> {
-    let image = if args.filename == "-" {
+fn run_satty(config: Configuration) -> Result<()> {
+    let image = if config.input_filename == "-" {
         let mut buf = Vec::<u8>::new();
         io::stdin().lock().read_to_end(&mut buf)?;
         let pb_loader = PixbufLoader::new();
@@ -268,19 +269,19 @@ fn run_satty(args: CommandLine) -> Result<()> {
             .pixbuf()
             .ok_or(anyhow!("Conversion to Pixbuf failed"))?
     } else {
-        load_image(&args.filename)?
+        load_image(&config.input_filename)?
     };
 
     let app = RelmApp::new("com.gabm.satty").with_args(vec![]);
     relm4_icons::initialize_icons();
-    app.run::<App>(AppConfig { args, image });
+    app.run::<App>(AppConfig { image, config });
     Ok(())
 }
 
 fn main() -> Result<()> {
-    let args = CommandLine::do_parse();
+    let config = Configuration::load();
 
-    match run_satty(args) {
+    match run_satty(config) {
         Err(e) => {
             println!("Error: {e}");
             Err(e)

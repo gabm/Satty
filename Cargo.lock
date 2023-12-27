@@ -1150,7 +1150,12 @@ dependencies = [
  "pangocairo",
  "relm4",
  "relm4-icons",
+ "serde",
+ "serde_derive",
+ "thiserror",
  "tokio",
+ "toml",
+ "xdg",
 ]
 
 [[package]]
@@ -1692,6 +1697,12 @@ checksum = "9b5c3db89721d50d0e2a673f5043fc4722f76dcc352d7b1ab8b8288bed4ed2c5"
 dependencies = [
  "memchr",
 ]
+
+[[package]]
+name = "xdg"
+version = "2.5.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "213b7324336b53d2414b2db8537e56544d981803139155afa84f76eeebb7a546"
 
 [[package]]
 name = "zvariant"
