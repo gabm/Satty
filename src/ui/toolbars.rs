@@ -12,7 +12,7 @@ use gdk_pixbuf::{
 };
 use relm4::{
     actions::{ActionablePlus, RelmAction, RelmActionGroup},
-    gtk::{prelude::*, Align, ColorDialog, Window},
+    gtk::{prelude::*, Align, ColorChooserDialog, ResponseType},
     prelude::*,
 };
 
@@ -228,22 +228,29 @@ pub enum ColorButtons {
 }
 
 impl StyleToolbar {
-    fn show_color_dialog(&self, sender: ComponentSender<StyleToolbar>, root: Option<Window>) {
+    fn show_color_dialog(&self, sender: ComponentSender<StyleToolbar>) {
         let current_color = Some(self.custom_color.into());
         relm4::spawn_local(async move {
-            let dialog = ColorDialog::builder()
+            let dialog = ColorChooserDialog::builder()
                 .modal(true)
                 .title("Choose Color")
-                .with_alpha(true)
+                .hide_on_close(true)
                 .build();
+            dialog.set_use_alpha(true);
+            if let Some(color) = current_color.as_ref() {
+                dialog.set_rgba(color);
+            }
 
-            let color = dialog
-                .choose_rgba_future(root.as_ref(), current_color.as_ref())
-                .await
-                .ok()
-                .map(Color::from_gdk);
+            let dialog_copy = dialog.clone();
+            dialog.connect_response(move |_, r| {
+                if r == ResponseType::Ok {
+                    dialog_copy.hide();
+                    let color = Color::from_gdk(dialog_copy.rgba());
+                    sender.input(StyleToolbarInput::ColorDialogFinished(Some(color)));
+                }
+            });
 
-            sender.input(StyleToolbarInput::ColorDialogFinished(color));
+            dialog.show();
         });
     }
 
@@ -371,10 +378,10 @@ impl Component for StyleToolbar {
         },
     }
 
-    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
+    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
         match message {
             StyleToolbarInput::ShowColorDialog => {
-                self.show_color_dialog(sender, root.toplevel_window());
+                self.show_color_dialog(sender);
             }
             StyleToolbarInput::ColorDialogFinished(color) => {
                 if let Some(color) = color {
