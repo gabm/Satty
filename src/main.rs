@@ -283,7 +283,7 @@ fn main() -> Result<()> {
 
     match run_satty(config) {
         Err(e) => {
-            println!("Error: {e}");
+            eprintln!("Error: {e}");
             Err(e)
         }
         Ok(v) => Ok(v),
