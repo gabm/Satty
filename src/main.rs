@@ -243,10 +243,6 @@ impl Component for App {
     }
 }
 
-fn load_image(filename: &str) -> Result<Pixbuf> {
-    Pixbuf::from_file(filename).context("couldn't load image")
-}
-
 fn run_satty(config: Configuration) -> Result<()> {
     let image = if config.input_filename == "-" {
         let mut buf = Vec::<u8>::new();
@@ -258,7 +254,7 @@ fn run_satty(config: Configuration) -> Result<()> {
             .pixbuf()
             .ok_or(anyhow!("Conversion to Pixbuf failed"))?
     } else {
-        load_image(&config.input_filename)?
+        Pixbuf::from_file(&config.input_filename).context("couldn't load image")?
     };
 
     let app = RelmApp::new("com.gabm.satty").with_args(vec![]);
