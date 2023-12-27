@@ -5,18 +5,19 @@ use std::io::Write;
 use std::process::{Command, Stdio};
 use std::rc::Rc;
 
-use gdk_pixbuf::Pixbuf;
 use gtk::prelude::*;
 
 use relm4::drawing::DrawHandler;
 use relm4::gtk::gdk::{DisplayManager, Key, MemoryTexture, ModifierType};
 use relm4::{gtk, Component, ComponentParts, ComponentSender};
 
+use crate::configuration::Configuration;
 use crate::math::Vec2D;
 use crate::renderer::Renderer;
 use crate::style::Style;
-use crate::tools::{Tool, ToolEvent, ToolUpdateResult, Tools, ToolsManager};
+use crate::tools::{Tool, ToolEvent, ToolUpdateResult, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
+use crate::AppConfig;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SketchBoardInput {
@@ -112,32 +113,24 @@ impl InputEvent {
     }
 }
 
-pub struct SketchBoardConfig {
-    pub original_image: Pixbuf,
-    pub output_filename: Option<String>,
-    pub copy_command: Option<String>,
-    pub early_exit: bool,
-    pub init_tool: Tools,
-}
-
 pub struct SketchBoard {
     handler: DrawHandler,
     active_tool: Rc<RefCell<dyn Tool>>,
     tools: ToolsManager,
     style: Style,
-    config: SketchBoardConfig,
     renderer: Renderer,
+    config: Configuration,
+    image_dimensions: Vec2D,
     scale_factor: f64,
 }
 
 impl SketchBoard {
     pub fn calculate_scale_factor(&mut self, new_dimensions: Vec2D) {
-        let aspect_ratio =
-            self.config.original_image.width() as f64 / self.config.original_image.height() as f64;
+        let aspect_ratio = self.image_dimensions.x / self.image_dimensions.y;
         self.scale_factor = if new_dimensions.x / aspect_ratio <= new_dimensions.y {
-            new_dimensions.x / aspect_ratio / self.config.original_image.height() as f64
+            new_dimensions.x / aspect_ratio / self.image_dimensions.y
         } else {
-            new_dimensions.y * aspect_ratio / self.config.original_image.width() as f64
+            new_dimensions.y * aspect_ratio / self.image_dimensions.x
         };
     }
     fn refresh_screen(&mut self) {
@@ -331,7 +324,7 @@ impl Component for SketchBoard {
     type CommandOutput = ();
     type Input = SketchBoardInput;
     type Output = SketchBoardOutput;
-    type Init = SketchBoardConfig;
+    type Init = AppConfig;
 
     view! {
         gtk::Box {
@@ -444,20 +437,25 @@ impl Component for SketchBoard {
     }
 
     fn init(
-        config: Self::Init,
+        app_config: Self::Init,
         root: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
+        let config = app_config.config;
         let tools = ToolsManager::new();
 
         let model = Self {
+            image_dimensions: Vec2D::new(
+                app_config.image.width() as f64,
+                app_config.image.height() as f64,
+            ),
             handler: DrawHandler::new(),
-            active_tool: tools.get(&config.init_tool),
+            active_tool: tools.get(&config.initial_tool),
             style: Style::default(),
-            renderer: Renderer::new(config.original_image.clone(), tools.get_crop_tool()),
+            renderer: Renderer::new(app_config.image, tools.get_crop_tool()),
             scale_factor: 1.0,
-            config,
             tools,
+            config,
         };
 
         let area = model.handler.drawing_area();

@@ -22,6 +22,7 @@ enum ConfigurationFileError {
     TomlDecoding(#[from] toml::de::Error),
 }
 
+#[derive(Clone)]
 pub struct Configuration {
     pub input_filename: String,
     pub output_filename: Option<String>,

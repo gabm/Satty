@@ -26,24 +26,25 @@ mod style;
 mod tools;
 mod ui;
 
-use crate::sketch_board::SketchBoardConfig;
 use crate::sketch_board::{KeyEventMsg, SketchBoard, SketchBoardInput};
 
-use crate::ui::toolbars::ToolsToolbarConfig;
-
-struct AppConfig {
+// the AppConfig is meant to be read-only and reflects the
+// settings specified through the Configuration file,
+// command line and so on. The whole struct or party of it
+// can easily be cloned and saved.
+#[derive(Clone)]
+pub struct AppConfig {
     image: Pixbuf,
     config: Configuration,
 }
 
 struct App {
-    original_image_width: i32,
-    original_image_height: i32,
+    image_dimensions: (i32, i32),
     sketch_board: Controller<SketchBoard>,
-    initially_fullscreen: bool,
     toast: Controller<Toast>,
     tools_toolbar: Controller<ToolsToolbar>,
     style_toolbar: Controller<StyleToolbar>,
+    config: Configuration,
 }
 
 #[derive(Debug)]
@@ -69,7 +70,7 @@ impl App {
         let monitor_size = match Self::get_monitor_size(root) {
             Some(s) => s,
             None => {
-                root.set_default_size(self.original_image_width, self.original_image_height);
+                root.set_default_size(self.image_dimensions.0, self.image_dimensions.1);
                 return;
             }
         };
@@ -77,14 +78,14 @@ impl App {
         let reduced_monitor_width = monitor_size.width() as f64 * 0.8;
         let reduced_monitor_height = monitor_size.height() as f64 * 0.8;
 
-        let image_width = self.original_image_width as f64;
-        let image_height = self.original_image_height as f64;
+        let image_width = self.image_dimensions.0 as f64;
+        let image_height = self.image_dimensions.1 as f64;
 
         // create a window that uses 80% of the available space max
         // if necessary, scale down image
         if reduced_monitor_width > image_width && reduced_monitor_height > image_height {
             // set window to exact size
-            root.set_default_size(self.original_image_width, self.original_image_height);
+            root.set_default_size(self.image_dimensions.0, self.image_dimensions.1);
         } else {
             // scale down and use windowed mode
             let aspect_ratio = image_width / image_height;
@@ -104,7 +105,7 @@ impl App {
 
         root.set_resizable(false);
 
-        if self.initially_fullscreen {
+        if self.config.fullscreen {
             root.fullscreen();
         }
 
@@ -198,7 +199,7 @@ impl Component for App {
     }
 
     fn init(
-        config: Self::Init,
+        app_config: Self::Init,
         root: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
@@ -208,15 +209,7 @@ impl Component for App {
         let toast = Toast::builder().launch(3000).detach();
 
         // SketchBoard
-        let sketch_board_config = SketchBoardConfig {
-            original_image: config.image.clone(),
-            output_filename: config.config.output_filename.clone(),
-            copy_command: config.config.copy_command.clone(),
-            early_exit: config.config.early_exit,
-            init_tool: config.config.initial_tool,
-        };
-
-        let sketch_board = SketchBoard::builder().launch(sketch_board_config).forward(
+        let sketch_board = SketchBoard::builder().launch(app_config.clone()).forward(
             toast.sender(),
             |t| match t {
                 SketchBoardOutput::ShowToast(msg) => ui::toast::ToastMessage::Show(msg),
@@ -227,10 +220,7 @@ impl Component for App {
 
         // Toolbars
         let tools_toolbar = ToolsToolbar::builder()
-            .launch(ToolsToolbarConfig {
-                show_save_button: config.config.output_filename.is_some(),
-                init_tool: config.config.initial_tool,
-            })
+            .launch(app_config.config.clone())
             .forward(sketch_board.sender(), SketchBoardInput::ToolbarEvent);
 
         let style_toolbar = StyleToolbar::builder()
@@ -239,13 +229,12 @@ impl Component for App {
 
         // Model
         let model = App {
-            original_image_width: config.image.width(),
-            original_image_height: config.image.height(),
+            image_dimensions: (app_config.image.width(), app_config.image.height()),
             sketch_board,
-            initially_fullscreen: config.config.fullscreen,
             toast,
             tools_toolbar,
             style_toolbar,
+            config: app_config.config,
         };
 
         let widgets = view_output!();
