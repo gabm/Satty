@@ -20,18 +20,16 @@ pub struct CommandLine {
     pub early_exit: bool,
 
     /// Select the tool on startup
-    #[arg(long, default_value_t, value_name = "TOOL")]
-    pub init_tool: Tools,
+    #[arg(long, value_name = "TOOL", visible_alias = "init-tool")]
+    pub initial_tool: Option<Tools>,
 
     /// Configure the command to be called on copy, for example `wl-copy`
     #[arg(long)]
     pub copy_command: Option<String>,
-}
 
-impl CommandLine {
-    pub fn do_parse() -> Self {
-        Self::parse()
-    }
+    /// Increase or decrease the size of the annotations
+    #[arg(long)]
+    pub annotation_size_factor: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
