@@ -71,7 +71,7 @@ impl ColorPalette {
         self.custom
     }
 
-    fn merge(&mut self, file_palette: &ColorPaletteFile) {
+    fn merge(&mut self, file_palette: ColorPaletteFile) {
         if let Some(v) = file_palette.first {
             self.first = v.into();
         }
@@ -116,59 +116,59 @@ impl Configuration {
             }
         };
 
-        *APP_CONFIG.write() = Self::merge(file, command_line)
+        APP_CONFIG.write().merge(file, command_line);
     }
-    fn merge(file: Option<ConfigurationFile>, command_line: CommandLine) -> Self {
-        let mut result = Self {
-            input_filename: command_line.filename,
-            ..Configuration::default()
-        };
+    fn merge_general(&mut self, general: ConfiguationFileGeneral) {
+        if let Some(v) = general.fullscreen {
+            self.fullscreen = v;
+        }
+        if let Some(v) = general.early_exit {
+            self.early_exit = v;
+        }
+        if let Some(v) = general.initial_tool {
+            self.initial_tool = v;
+        }
+        if let Some(v) = general.copy_command {
+            self.copy_command = Some(v);
+        }
+        // output_filename is not yet supported
+        if let Some(v) = general.annotation_size_factor {
+            self.annotation_size_factor = v;
+        }
+    }
+    fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
+        // input_filename is required and needs to be overwritten
+        self.input_filename = command_line.filename;
 
         // overwrite with all specified values from config file
         if let Some(file) = file {
-            if let Some(v) = file.fullscreen {
-                result.fullscreen = v;
-            }
-            if let Some(v) = file.early_exit {
-                result.early_exit = v;
-            }
-            if let Some(v) = file.initial_tool {
-                result.initial_tool = v;
-            }
-            if let Some(v) = file.copy_command {
-                result.copy_command = Some(v);
-            }
-            // output_filename is not yet supported
-            if let Some(v) = file.annotation_size_factor {
-                result.annotation_size_factor = v;
+            if let Some(general) = file.general {
+                self.merge_general(general);
             }
             if let Some(v) = file.color_palette {
-                result.color_palette.merge(&v);
+                self.color_palette.merge(v);
             }
         }
 
         // overwrite with all specified values from command line
         if command_line.fullscreen {
-            result.fullscreen = command_line.fullscreen;
+            self.fullscreen = command_line.fullscreen;
         }
         if command_line.early_exit {
-            result.early_exit = command_line.early_exit;
+            self.early_exit = command_line.early_exit;
         }
         if let Some(v) = command_line.initial_tool {
-            result.initial_tool = v.into();
+            self.initial_tool = v.into();
         }
         if let Some(v) = command_line.copy_command {
-            result.copy_command = Some(v);
+            self.copy_command = Some(v);
         }
         if let Some(v) = command_line.output_filename {
-            result.output_filename = Some(v);
+            self.output_filename = Some(v);
         }
         if let Some(v) = command_line.annotation_size_factor {
-            result.annotation_size_factor = v;
+            self.annotation_size_factor = v;
         }
-
-        // return result
-        result
     }
 
     pub fn early_exit(&self) -> bool {
@@ -235,12 +235,18 @@ impl Default for ColorPalette {
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct ConfigurationFile {
+    general: Option<ConfiguationFileGeneral>,
+    color_palette: Option<ColorPaletteFile>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+struct ConfiguationFileGeneral {
     fullscreen: Option<bool>,
     early_exit: Option<bool>,
     initial_tool: Option<Tools>,
     copy_command: Option<String>,
     annotation_size_factor: Option<f64>,
-    color_palette: Option<ColorPaletteFile>,
 }
 
 #[derive(Deserialize)]
