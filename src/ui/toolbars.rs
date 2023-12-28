@@ -13,7 +13,7 @@ use gdk_pixbuf::{
 };
 use relm4::{
     actions::{ActionablePlus, RelmAction, RelmActionGroup},
-    gtk::{prelude::*, Align, ColorChooserDialog, ResponseType},
+    gtk::{gdk::RGBA, prelude::*, Align, ColorChooserDialog, ResponseType, Window},
     prelude::*,
 };
 
@@ -222,19 +222,24 @@ pub enum ColorButtons {
 }
 
 impl StyleToolbar {
-    fn show_color_dialog(&self, sender: ComponentSender<StyleToolbar>) {
-        let current_color = Some(self.custom_color.into());
+    fn show_color_dialog(&self, sender: ComponentSender<StyleToolbar>, root: Option<Window>) {
+        let current_color: RGBA = self.custom_color.into();
         relm4::spawn_local(async move {
-            let dialog = ColorChooserDialog::builder()
+            let mut builder = ColorChooserDialog::builder()
                 .modal(true)
                 .title("Choose Color")
                 .hide_on_close(true)
-                .build();
-            dialog.set_use_alpha(true);
-            if let Some(color) = current_color.as_ref() {
-                dialog.set_rgba(color);
+                .rgba(&current_color);
+
+            if let Some(w) = root {
+                builder = builder.transient_for(&w);
             }
 
+            // build dialog and configure further
+            let dialog = builder.build();
+            dialog.set_use_alpha(true);
+
+            // set callback for result
             let dialog_copy = dialog.clone();
             dialog.connect_response(move |_, r| {
                 if r == ResponseType::Ok {
@@ -367,10 +372,10 @@ impl Component for StyleToolbar {
         },
     }
 
-    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, _root: &Self::Root) {
+    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             StyleToolbarInput::ShowColorDialog => {
-                self.show_color_dialog(sender);
+                self.show_color_dialog(sender, root.toplevel_window());
             }
             StyleToolbarInput::ColorDialogFinished(color) => {
                 if let Some(color) = color {
