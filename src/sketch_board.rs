@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use chrono::format::strftime;
+
 use gdk_pixbuf::Pixbuf;
 use std::cell::RefCell;
 use std::fs;
