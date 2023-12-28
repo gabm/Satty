@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use chrono::format::strftime;
 use gdk_pixbuf::Pixbuf;
 use std::cell::RefCell;
 use std::fs;
@@ -150,6 +151,9 @@ impl SketchBoard {
             }
             Some(o) => o.clone(),
         };
+
+        // run the output filename by "chrono date format"
+        let output_filename = format!("{}", chrono::Local::now().format(&output_filename));
 
         if !output_filename.ends_with(".png") {
             let msg = "The only supported format is png, but the filename does not end in png";

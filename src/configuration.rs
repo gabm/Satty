@@ -131,7 +131,9 @@ impl Configuration {
         if let Some(v) = general.copy_command {
             self.copy_command = Some(v);
         }
-        // output_filename is not yet supported
+        if let Some(v) = general.output_filename {
+            self.output_filename = Some(v);
+        }
         if let Some(v) = general.annotation_size_factor {
             self.annotation_size_factor = v;
         }
@@ -247,6 +249,7 @@ struct ConfiguationFileGeneral {
     initial_tool: Option<Tools>,
     copy_command: Option<String>,
     annotation_size_factor: Option<f64>,
+    output_filename: Option<String>,
 }
 
 #[derive(Deserialize)]
