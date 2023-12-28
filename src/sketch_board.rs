@@ -144,7 +144,7 @@ impl SketchBoard {
     }
 
     fn handle_save(&self, sender: ComponentSender<Self>) {
-        let output_filename = match &self.config.output_filename {
+        let output_filename = match self.config.output_filename() {
             None => {
                 println!("No Output filename specified!");
                 return;
@@ -219,7 +219,7 @@ impl SketchBoard {
             }
         };
 
-        let result = if let Some(command) = &self.config.copy_command {
+        let result = if let Some(command) = self.config.copy_command() {
             self.save_to_external_process(&texture, command)
         } else {
             self.save_to_clipboard(&texture)
@@ -301,14 +301,14 @@ impl SketchBoard {
             }
             ToolbarEvent::SaveFile => {
                 self.handle_save(sender);
-                if self.config.early_exit {
+                if self.config.early_exit() {
                     relm4::main_application().quit();
                 }
                 ToolUpdateResult::Unmodified
             }
             ToolbarEvent::CopyClipboard => {
                 self.handle_copy_clipboard(sender);
-                if self.config.early_exit {
+                if self.config.early_exit() {
                     relm4::main_application().quit();
                 }
                 ToolUpdateResult::Unmodified
@@ -394,13 +394,13 @@ impl Component for SketchBoard {
                         self.handle_redo()
                     } else if ke.key == Key::s && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_save(sender);
-                        if self.config.early_exit {
+                        if self.config.early_exit() {
                             relm4::main_application().quit();
                         }
                         ToolUpdateResult::Unmodified
                     } else if ke.key == Key::c && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_copy_clipboard(sender);
-                        if self.config.early_exit {
+                        if self.config.early_exit() {
                             relm4::main_application().quit();
                         }
                         ToolUpdateResult::Unmodified
@@ -450,7 +450,7 @@ impl Component for SketchBoard {
                 app_config.image.height() as f64,
             ),
             handler: DrawHandler::new(),
-            active_tool: tools.get(&config.initial_tool),
+            active_tool: tools.get(&config.initial_tool()),
             style: Style::default(),
             renderer: Renderer::new(app_config.image, tools.get_crop_tool()),
             scale_factor: 1.0,

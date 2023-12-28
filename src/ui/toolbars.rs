@@ -179,7 +179,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_tooltip: "Save (Ctrl+S)",
                 connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::SaveFile);},
 
-                set_visible: model.config.output_filename.is_some()
+                set_visible: model.config.output_filename().is_some()
             },
 
         },
@@ -196,7 +196,7 @@ impl SimpleComponent for ToolsToolbar {
         // Tools Action for selecting tools
         let sender_tmp: ComponentSender<ToolsToolbar> = sender.clone();
         let tool_action: RelmAction<ToolsAction> = RelmAction::new_stateful_with_target_value(
-            &model.config.initial_tool,
+            &model.config.initial_tool(),
             move |_, state, value| {
                 *state = value;
                 sender_tmp

@@ -24,12 +24,12 @@ enum ConfigurationFileError {
 
 #[derive(Clone)]
 pub struct Configuration {
-    pub input_filename: String,
-    pub output_filename: Option<String>,
-    pub fullscreen: bool,
-    pub early_exit: bool,
-    pub initial_tool: Tools,
-    pub copy_command: Option<String>,
+    input_filename: String,
+    output_filename: Option<String>,
+    fullscreen: bool,
+    early_exit: bool,
+    initial_tool: Tools,
+    copy_command: Option<String>,
 }
 
 impl Configuration {
@@ -99,6 +99,30 @@ impl Configuration {
 
         // return result
         result
+    }
+
+    pub fn early_exit(&self) -> bool {
+        self.early_exit
+    }
+
+    pub fn initial_tool(&self) -> Tools {
+        self.initial_tool
+    }
+
+    pub fn copy_command(&self) -> Option<&String> {
+        self.copy_command.as_ref()
+    }
+
+    pub fn fullscreen(&self) -> bool {
+        self.fullscreen
+    }
+
+    pub fn output_filename(&self) -> Option<&String> {
+        self.output_filename.as_ref()
+    }
+
+    pub fn input_filename(&self) -> &str {
+        self.input_filename.as_ref()
     }
 }
 

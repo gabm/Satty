@@ -105,7 +105,7 @@ impl App {
 
         root.set_resizable(false);
 
-        if self.config.fullscreen {
+        if self.config.fullscreen() {
             root.fullscreen();
         }
 
@@ -244,7 +244,7 @@ impl Component for App {
 }
 
 fn run_satty(config: Configuration) -> Result<()> {
-    let image = if config.input_filename == "-" {
+    let image = if config.input_filename() == "-" {
         let mut buf = Vec::<u8>::new();
         io::stdin().lock().read_to_end(&mut buf)?;
         let pb_loader = PixbufLoader::new();
@@ -254,7 +254,7 @@ fn run_satty(config: Configuration) -> Result<()> {
             .pixbuf()
             .ok_or(anyhow!("Conversion to Pixbuf failed"))?
     } else {
-        Pixbuf::from_file(&config.input_filename).context("couldn't load image")?
+        Pixbuf::from_file(config.input_filename()).context("couldn't load image")?
     };
 
     let app = RelmApp::new("com.gabm.satty").with_args(vec![]);
