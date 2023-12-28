@@ -38,57 +38,57 @@ pub struct Configuration {
 }
 
 pub struct ColorPalette {
-    first_color: Color,
-    second_color: Color,
-    third_color: Color,
-    fourth_color: Color,
-    fith_color: Color,
-    custom_color: Color,
+    first: Color,
+    second: Color,
+    third: Color,
+    fourth: Color,
+    fith: Color,
+    custom: Color,
 }
 
 impl ColorPalette {
-    pub fn first_color(&self) -> Color {
-        self.first_color
+    pub fn first(&self) -> Color {
+        self.first
     }
 
-    pub fn second_color(&self) -> Color {
-        self.second_color
+    pub fn second(&self) -> Color {
+        self.second
     }
 
-    pub fn third_color(&self) -> Color {
-        self.third_color
+    pub fn third(&self) -> Color {
+        self.third
     }
 
-    pub fn fourth_color(&self) -> Color {
-        self.fourth_color
+    pub fn fourth(&self) -> Color {
+        self.fourth
     }
 
-    pub fn fith_color(&self) -> Color {
-        self.fith_color
+    pub fn fith(&self) -> Color {
+        self.fith
     }
 
-    pub fn custom_color(&self) -> Color {
-        self.custom_color
+    pub fn custom(&self) -> Color {
+        self.custom
     }
 
     fn merge(&mut self, file_palette: &ColorPaletteFile) {
-        if let Some(v) = file_palette.first_color {
-            self.first_color = v.into();
+        if let Some(v) = file_palette.first {
+            self.first = v.into();
         }
-        if let Some(v) = file_palette.second_color {
-            self.second_color = v.into();
+        if let Some(v) = file_palette.second {
+            self.second = v.into();
         }
-        if let Some(v) = file_palette.third_color {
-            self.third_color = v.into();
+        if let Some(v) = file_palette.third {
+            self.third = v.into();
         }
-        if let Some(v) = file_palette.fourth_color {
-            self.fourth_color = v.into();
+        if let Some(v) = file_palette.fourth {
+            self.fourth = v.into();
         }
-        if let Some(v) = file_palette.fith_color {
-            self.fith_color = v.into();
+        if let Some(v) = file_palette.fith {
+            self.fith = v.into();
         }
-        if let Some(v) = file_palette.custom_color {
-            self.custom_color = v.into();
+        if let Some(v) = file_palette.custom {
+            self.custom = v.into();
         }
     }
 }
@@ -222,12 +222,12 @@ impl Default for Configuration {
 impl Default for ColorPalette {
     fn default() -> Self {
         Self {
-            first_color: Color::orange(),
-            second_color: Color::red(),
-            third_color: Color::green(),
-            fourth_color: Color::blue(),
-            fith_color: Color::cove(),
-            custom_color: Color::pink(),
+            first: Color::orange(),
+            second: Color::red(),
+            third: Color::green(),
+            fourth: Color::blue(),
+            fith: Color::cove(),
+            custom: Color::pink(),
         }
     }
 }
@@ -246,12 +246,12 @@ struct ConfigurationFile {
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct ColorPaletteFile {
-    first_color: Option<HexColor>,
-    second_color: Option<HexColor>,
-    third_color: Option<HexColor>,
-    fourth_color: Option<HexColor>,
-    fith_color: Option<HexColor>,
-    custom_color: Option<HexColor>,
+    first: Option<HexColor>,
+    second: Option<HexColor>,
+    third: Option<HexColor>,
+    fourth: Option<HexColor>,
+    fith: Option<HexColor>,
+    custom: Option<HexColor>,
 }
 
 impl ConfigurationFile {

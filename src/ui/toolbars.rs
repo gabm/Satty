@@ -251,11 +251,11 @@ impl StyleToolbar {
     fn map_button_to_color(&self, button: ColorButtons) -> Color {
         let config = APP_CONFIG.read();
         match button {
-            ColorButtons::First => config.color_palette().first_color(),
-            ColorButtons::Second => config.color_palette().second_color(),
-            ColorButtons::Third => config.color_palette().third_color(),
-            ColorButtons::Fourth => config.color_palette().fourth_color(),
-            ColorButtons::Fith => config.color_palette().fith_color(),
+            ColorButtons::First => config.color_palette().first(),
+            ColorButtons::Second => config.color_palette().second(),
+            ColorButtons::Third => config.color_palette().third(),
+            ColorButtons::Fourth => config.color_palette().fourth(),
+            ColorButtons::Fith => config.color_palette().fith(),
             ColorButtons::Custom => self.custom_color,
         }
     }
@@ -281,7 +281,7 @@ impl Component for StyleToolbar {
                 set_focusable: false,
                 set_hexpand: false,
 
-                create_icon(APP_CONFIG.read().color_palette().first_color()),
+                create_icon(APP_CONFIG.read().color_palette().first()),
 
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::First,
             },
@@ -289,7 +289,7 @@ impl Component for StyleToolbar {
                 set_focusable: false,
                 set_hexpand: false,
 
-                create_icon(APP_CONFIG.read().color_palette().second_color()),
+                create_icon(APP_CONFIG.read().color_palette().second()),
 
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Second,
             },
@@ -297,7 +297,7 @@ impl Component for StyleToolbar {
                 set_focusable: false,
                 set_hexpand: false,
 
-                create_icon(APP_CONFIG.read().color_palette().third_color()),
+                create_icon(APP_CONFIG.read().color_palette().third()),
 
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Third,
             },
@@ -305,7 +305,7 @@ impl Component for StyleToolbar {
                 set_focusable: false,
                 set_hexpand: false,
 
-                create_icon(APP_CONFIG.read().color_palette().fourth_color()),
+                create_icon(APP_CONFIG.read().color_palette().fourth()),
 
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Fourth
             },
@@ -313,7 +313,7 @@ impl Component for StyleToolbar {
                 set_focusable: false,
                 set_hexpand: false,
 
-                create_icon(APP_CONFIG.read().color_palette().fith_color()),
+                create_icon(APP_CONFIG.read().color_palette().fith()),
 
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Fith,
             },
@@ -421,7 +421,7 @@ impl Component for StyleToolbar {
                     .emit(ToolbarEvent::SizeSelected(*state));
             });
 
-        let custom_color = APP_CONFIG.read().color_palette().custom_color();
+        let custom_color = APP_CONFIG.read().color_palette().custom();
         let custom_color_pixbuf = create_icon_pixbuf(custom_color);
 
         // create model
