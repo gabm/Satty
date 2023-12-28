@@ -70,6 +70,27 @@ impl ColorPalette {
     pub fn custom_color(&self) -> Color {
         self.custom_color
     }
+
+    fn merge(&mut self, file_palette: &ColorPaletteFile) {
+        if let Some(v) = file_palette.first_color {
+            self.first_color = v.into();
+        }
+        if let Some(v) = file_palette.second_color {
+            self.second_color = v.into();
+        }
+        if let Some(v) = file_palette.third_color {
+            self.third_color = v.into();
+        }
+        if let Some(v) = file_palette.fourth_color {
+            self.fourth_color = v.into();
+        }
+        if let Some(v) = file_palette.fith_color {
+            self.fith_color = v.into();
+        }
+        if let Some(v) = file_palette.custom_color {
+            self.custom_color = v.into();
+        }
+    }
 }
 
 impl Configuration {
@@ -122,7 +143,7 @@ impl Configuration {
                 result.annotation_size_factor = v;
             }
             if let Some(v) = file.color_palette {
-                result.color_palette = v.into();
+                result.color_palette.merge(&v);
             }
         }
 
@@ -225,12 +246,12 @@ struct ConfigurationFile {
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct ColorPaletteFile {
-    first_color: HexColor,
-    second_color: HexColor,
-    third_color: HexColor,
-    fourth_color: HexColor,
-    fith_color: HexColor,
-    custom_color: HexColor,
+    first_color: Option<HexColor>,
+    second_color: Option<HexColor>,
+    third_color: Option<HexColor>,
+    fourth_color: Option<HexColor>,
+    fith_color: Option<HexColor>,
+    custom_color: Option<HexColor>,
 }
 
 impl ConfigurationFile {
@@ -243,18 +264,5 @@ impl ConfigurationFile {
 
         let content = fs::read_to_string(config_file_path)?;
         Ok(Some(toml::from_str::<ConfigurationFile>(&content)?))
-    }
-}
-
-impl From<ColorPaletteFile> for ColorPalette {
-    fn from(value: ColorPaletteFile) -> Self {
-        Self {
-            first_color: value.first_color.into(),
-            second_color: value.second_color.into(),
-            third_color: value.third_color.into(),
-            fourth_color: value.fourth_color.into(),
-            fith_color: value.fith_color.into(),
-            custom_color: value.custom_color.into(),
-        }
     }
 }
