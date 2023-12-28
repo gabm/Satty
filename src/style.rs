@@ -34,7 +34,7 @@ pub enum Size {
 
 impl Default for Color {
     fn default() -> Self {
-        Self::orange()
+        APP_CONFIG.read().color_palette().first()
     }
 }
 
