@@ -4,6 +4,7 @@ use gdk_pixbuf::{
     glib::{FromVariant, Variant, VariantTy},
     prelude::{StaticVariantType, ToVariant},
 };
+use hex_color::HexColor;
 use pangocairo::pango::SCALE;
 use relm4::gtk::gdk::RGBA;
 
@@ -120,6 +121,12 @@ impl From<Color> for RGBA {
             color.b as f32 / 255.0,
             color.a as f32 / 255.0,
         )
+    }
+}
+
+impl From<HexColor> for Color {
+    fn from(value: HexColor) -> Self {
+        Self::new(value.r, value.g, value.b, value.a)
     }
 }
 

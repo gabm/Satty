@@ -283,7 +283,6 @@ impl Component for StyleToolbar {
 
                 create_icon(APP_CONFIG.read().color_palette().first_color()),
 
-                set_tooltip: "Orange",
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::First,
             },
             gtk::ToggleButton {
@@ -292,7 +291,6 @@ impl Component for StyleToolbar {
 
                 create_icon(APP_CONFIG.read().color_palette().second_color()),
 
-                set_tooltip: "Red",
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Second,
             },
             gtk::ToggleButton {
@@ -301,7 +299,6 @@ impl Component for StyleToolbar {
 
                 create_icon(APP_CONFIG.read().color_palette().third_color()),
 
-                set_tooltip: "Green",
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Third,
             },
             gtk::ToggleButton {
@@ -310,7 +307,6 @@ impl Component for StyleToolbar {
 
                 create_icon(APP_CONFIG.read().color_palette().fourth_color()),
 
-                set_tooltip: "Blue",
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Fourth
             },
             gtk::ToggleButton {
@@ -318,7 +314,6 @@ impl Component for StyleToolbar {
                 set_hexpand: false,
 
                 create_icon(APP_CONFIG.read().color_palette().fith_color()),
-                set_tooltip: "Cove",
 
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Fith,
             },
@@ -331,7 +326,6 @@ impl Component for StyleToolbar {
                     #[watch]
                     set_from_pixbuf: Some(&model.custom_color_pixbuf)
                 },
-                set_tooltip: "Custom color",
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Custom,
             },
             gtk::Button {

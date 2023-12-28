@@ -246,12 +246,6 @@ impl ConfigurationFile {
     }
 }
 
-impl From<HexColor> for Color {
-    fn from(value: HexColor) -> Self {
-        Self::new(value.r, value.g, value.b, value.a)
-    }
-}
-
 impl From<ColorPaletteFile> for ColorPalette {
     fn from(value: ColorPaletteFile) -> Self {
         Self {
