@@ -1,7 +1,7 @@
 use std::io::Read;
 use std::{io, time::Duration};
 
-use configuration::Configuration;
+use configuration::{Configuration, APP_CONFIG};
 use gdk_pixbuf::{Pixbuf, PixbufLoader};
 use gtk::prelude::*;
 use relm4::gtk::gdk::Rectangle;
@@ -28,23 +28,12 @@ mod ui;
 
 use crate::sketch_board::{KeyEventMsg, SketchBoard, SketchBoardInput};
 
-// the AppConfig is meant to be read-only and reflects the
-// settings specified through the Configuration file,
-// command line and so on. The whole struct or party of it
-// can easily be cloned and saved.
-#[derive(Clone)]
-pub struct AppConfig {
-    image: Pixbuf,
-    config: Configuration,
-}
-
 struct App {
     image_dimensions: (i32, i32),
     sketch_board: Controller<SketchBoard>,
     toast: Controller<Toast>,
     tools_toolbar: Controller<ToolsToolbar>,
     style_toolbar: Controller<StyleToolbar>,
-    config: Configuration,
 }
 
 #[derive(Debug)]
@@ -105,7 +94,7 @@ impl App {
 
         root.set_resizable(false);
 
-        if self.config.fullscreen() {
+        if APP_CONFIG.read().fullscreen() {
             root.fullscreen();
         }
 
@@ -147,7 +136,7 @@ impl App {
 
 #[relm4::component]
 impl Component for App {
-    type Init = AppConfig;
+    type Init = Pixbuf;
     type Input = AppInput;
     type Output = ();
     type CommandOutput = AppCommandOutput;
@@ -199,28 +188,30 @@ impl Component for App {
     }
 
     fn init(
-        app_config: Self::Init,
+        image: Self::Init,
         root: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         Self::apply_style();
 
+        let image_dimensions = (image.width(), image.height());
+
         // Toast
         let toast = Toast::builder().launch(3000).detach();
 
         // SketchBoard
-        let sketch_board = SketchBoard::builder().launch(app_config.clone()).forward(
-            toast.sender(),
-            |t| match t {
-                SketchBoardOutput::ShowToast(msg) => ui::toast::ToastMessage::Show(msg),
-            },
-        );
+        let sketch_board =
+            SketchBoard::builder()
+                .launch(image)
+                .forward(toast.sender(), |t| match t {
+                    SketchBoardOutput::ShowToast(msg) => ui::toast::ToastMessage::Show(msg),
+                });
 
         let sketch_board_sender = sketch_board.sender().clone();
 
         // Toolbars
         let tools_toolbar = ToolsToolbar::builder()
-            .launch(app_config.config.clone())
+            .launch(())
             .forward(sketch_board.sender(), SketchBoardInput::ToolbarEvent);
 
         let style_toolbar = StyleToolbar::builder()
@@ -229,12 +220,11 @@ impl Component for App {
 
         // Model
         let model = App {
-            image_dimensions: (app_config.image.width(), app_config.image.height()),
             sketch_board,
             toast,
             tools_toolbar,
             style_toolbar,
-            config: app_config.config,
+            image_dimensions,
         };
 
         let widgets = view_output!();
@@ -243,7 +233,8 @@ impl Component for App {
     }
 }
 
-fn run_satty(config: Configuration) -> Result<()> {
+fn run_satty() -> Result<()> {
+    let config = APP_CONFIG.read();
     let image = if config.input_filename() == "-" {
         let mut buf = Vec::<u8>::new();
         io::stdin().lock().read_to_end(&mut buf)?;
@@ -259,14 +250,17 @@ fn run_satty(config: Configuration) -> Result<()> {
 
     let app = RelmApp::new("com.gabm.satty").with_args(vec![]);
     relm4_icons::initialize_icons();
-    app.run::<App>(AppConfig { image, config });
+    app.run::<App>(image);
     Ok(())
 }
 
 fn main() -> Result<()> {
-    let config = Configuration::load();
+    // populate the APP_CONFIG from commandline and
+    // config file. this might exit, if an error occured.
+    Configuration::load();
 
-    match run_satty(config) {
+    // run the application
+    match run_satty() {
         Err(e) => {
             eprintln!("Error: {e}");
             Err(e)

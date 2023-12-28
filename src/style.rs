@@ -7,6 +7,8 @@ use gdk_pixbuf::{
 use pangocairo::pango::SCALE;
 use relm4::gtk::gdk::RGBA;
 
+use crate::configuration::APP_CONFIG;
+
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Style {
     pub color: Color,
@@ -146,26 +148,31 @@ impl FromVariant for Size {
 
 impl Size {
     pub fn to_text_size(self) -> i32 {
+        let size_factor = APP_CONFIG.read().annotation_size_factor();
+
         match self {
-            Size::Small => 12 * SCALE,
-            Size::Medium => 18 * SCALE,
-            Size::Large => 32 * SCALE,
+            Size::Small => (12.0 * SCALE as f64 * size_factor) as i32,
+            Size::Medium => (18.0 * SCALE as f64 * size_factor) as i32,
+            Size::Large => (32.0 * SCALE as f64 * size_factor) as i32,
         }
     }
 
     pub fn to_line_width(self) -> f64 {
+        let size_factor = APP_CONFIG.read().annotation_size_factor();
+
         match self {
-            Size::Small => 2.0,
-            Size::Medium => 3.0,
-            Size::Large => 5.0,
+            Size::Small => 2.0 * size_factor,
+            Size::Medium => 3.0 * size_factor,
+            Size::Large => 5.0 * size_factor,
         }
     }
 
     pub fn to_blur_factor(self) -> f64 {
+        let size_factor = APP_CONFIG.read().annotation_size_factor();
         match self {
-            Size::Small => 6.0,
-            Size::Medium => 10.0,
-            Size::Large => 20.0,
+            Size::Small => 6.0 * size_factor,
+            Size::Medium => 10.0 * size_factor,
+            Size::Large => 20.0 * size_factor,
         }
     }
 }

@@ -26,6 +26,10 @@ pub struct CommandLine {
     /// Configure the command to be called on copy, for example `wl-copy`
     #[arg(long)]
     pub copy_command: Option<String>,
+
+    /// Increase or decrease the size of the annotations
+    #[arg(long)]
+    pub annotation_size_factor: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]

@@ -1,4 +1,5 @@
 use anyhow::anyhow;
+use gdk_pixbuf::Pixbuf;
 use std::cell::RefCell;
 use std::fs;
 use std::io::Write;
@@ -11,13 +12,12 @@ use relm4::drawing::DrawHandler;
 use relm4::gtk::gdk::{DisplayManager, Key, MemoryTexture, ModifierType};
 use relm4::{gtk, Component, ComponentParts, ComponentSender};
 
-use crate::configuration::Configuration;
+use crate::configuration::APP_CONFIG;
 use crate::math::Vec2D;
 use crate::renderer::Renderer;
 use crate::style::Style;
 use crate::tools::{Tool, ToolEvent, ToolUpdateResult, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
-use crate::AppConfig;
 
 #[derive(Debug, Clone, Copy)]
 pub enum SketchBoardInput {
@@ -119,7 +119,6 @@ pub struct SketchBoard {
     tools: ToolsManager,
     style: Style,
     renderer: Renderer,
-    config: Configuration,
     image_dimensions: Vec2D,
     scale_factor: f64,
 }
@@ -144,12 +143,12 @@ impl SketchBoard {
     }
 
     fn handle_save(&self, sender: ComponentSender<Self>) {
-        let output_filename = match self.config.output_filename() {
+        let output_filename = match APP_CONFIG.read().output_filename() {
             None => {
                 println!("No Output filename specified!");
                 return;
             }
-            Some(o) => o,
+            Some(o) => o.clone(),
         };
 
         if !output_filename.ends_with(".png") {
@@ -171,9 +170,9 @@ impl SketchBoard {
 
         let data = texture.save_to_png_bytes();
 
-        let msg = match fs::write(output_filename, data) {
+        let msg = match fs::write(&output_filename, data) {
             Err(e) => format!("Error while saving file: {e}"),
-            Ok(_) => format!("File saved to '{}'.", output_filename),
+            Ok(_) => format!("File saved to '{}'.", &output_filename),
         };
 
         sender
@@ -219,7 +218,7 @@ impl SketchBoard {
             }
         };
 
-        let result = if let Some(command) = self.config.copy_command() {
+        let result = if let Some(command) = APP_CONFIG.read().copy_command() {
             self.save_to_external_process(&texture, command)
         } else {
             self.save_to_clipboard(&texture)
@@ -301,14 +300,14 @@ impl SketchBoard {
             }
             ToolbarEvent::SaveFile => {
                 self.handle_save(sender);
-                if self.config.early_exit() {
+                if APP_CONFIG.read().early_exit() {
                     relm4::main_application().quit();
                 }
                 ToolUpdateResult::Unmodified
             }
             ToolbarEvent::CopyClipboard => {
                 self.handle_copy_clipboard(sender);
-                if self.config.early_exit() {
+                if APP_CONFIG.read().early_exit() {
                     relm4::main_application().quit();
                 }
                 ToolUpdateResult::Unmodified
@@ -324,7 +323,7 @@ impl Component for SketchBoard {
     type CommandOutput = ();
     type Input = SketchBoardInput;
     type Output = SketchBoardOutput;
-    type Init = AppConfig;
+    type Init = Pixbuf;
 
     view! {
         gtk::Box {
@@ -394,13 +393,13 @@ impl Component for SketchBoard {
                         self.handle_redo()
                     } else if ke.key == Key::s && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_save(sender);
-                        if self.config.early_exit() {
+                        if APP_CONFIG.read().early_exit() {
                             relm4::main_application().quit();
                         }
                         ToolUpdateResult::Unmodified
                     } else if ke.key == Key::c && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_copy_clipboard(sender);
-                        if self.config.early_exit() {
+                        if APP_CONFIG.read().early_exit() {
                             relm4::main_application().quit();
                         }
                         ToolUpdateResult::Unmodified
@@ -437,25 +436,21 @@ impl Component for SketchBoard {
     }
 
     fn init(
-        app_config: Self::Init,
+        image: Self::Init,
         root: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let config = app_config.config;
+        let config = APP_CONFIG.read();
         let tools = ToolsManager::new();
 
         let model = Self {
-            image_dimensions: Vec2D::new(
-                app_config.image.width() as f64,
-                app_config.image.height() as f64,
-            ),
+            image_dimensions: Vec2D::new(image.width() as f64, image.height() as f64),
             handler: DrawHandler::new(),
             active_tool: tools.get(&config.initial_tool()),
             style: Style::default(),
-            renderer: Renderer::new(app_config.image, tools.get_crop_tool()),
+            renderer: Renderer::new(image, tools.get_crop_tool()),
             scale_factor: 1.0,
             tools,
-            config,
         };
 
         let area = model.handler.drawing_area();

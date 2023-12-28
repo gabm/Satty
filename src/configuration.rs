@@ -4,11 +4,14 @@ use std::{
 };
 
 use clap::Parser;
+use relm4::SharedState;
 use serde_derive::Deserialize;
 use thiserror::Error;
 use xdg::{BaseDirectories, BaseDirectoriesError};
 
 use crate::{command_line::CommandLine, tools::Tools};
+
+pub static APP_CONFIG: SharedState<Configuration> = SharedState::new();
 
 #[derive(Error, Debug)]
 enum ConfigurationFileError {
@@ -30,10 +33,11 @@ pub struct Configuration {
     early_exit: bool,
     initial_tool: Tools,
     copy_command: Option<String>,
+    annotation_size_factor: f64,
 }
 
 impl Configuration {
-    pub fn load() -> Self {
+    pub fn load() {
         // parse commandline options and exit if error
         let command_line = match CommandLine::try_parse() {
             Ok(cmd) => cmd,
@@ -55,7 +59,7 @@ impl Configuration {
             }
         };
 
-        Self::merge(file, command_line)
+        *APP_CONFIG.write() = Self::merge(file, command_line)
     }
     fn merge(file: Option<ConfigurationFile>, command_line: CommandLine) -> Self {
         let mut result = Self {
@@ -78,6 +82,9 @@ impl Configuration {
                 result.copy_command = Some(v);
             }
             // output_filename is not yet supported
+            if let Some(v) = file.annotation_size_factor {
+                result.annotation_size_factor = v;
+            }
         }
 
         // overwrite with all specified values from command line
@@ -95,6 +102,9 @@ impl Configuration {
         }
         if let Some(v) = command_line.output_filename {
             result.output_filename = Some(v);
+        }
+        if let Some(v) = command_line.annotation_size_factor {
+            result.annotation_size_factor = v;
         }
 
         // return result
@@ -124,6 +134,10 @@ impl Configuration {
     pub fn input_filename(&self) -> &str {
         self.input_filename.as_ref()
     }
+
+    pub fn annotation_size_factor(&self) -> f64 {
+        self.annotation_size_factor
+    }
 }
 
 impl Default for Configuration {
@@ -135,6 +149,7 @@ impl Default for Configuration {
             early_exit: false,
             initial_tool: Tools::Pointer,
             copy_command: None,
+            annotation_size_factor: 1.0f64,
         }
     }
 }
@@ -146,6 +161,7 @@ struct ConfigurationFile {
     early_exit: Option<bool>,
     initial_tool: Option<Tools>,
     copy_command: Option<String>,
+    annotation_size_factor: Option<f64>,
 }
 
 impl ConfigurationFile {

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use crate::{
-    configuration::Configuration,
+    configuration::APP_CONFIG,
     style::{Color, Size},
     tools::Tools,
 };
@@ -17,9 +17,7 @@ use relm4::{
     prelude::*,
 };
 
-pub struct ToolsToolbar {
-    config: Configuration,
-}
+pub struct ToolsToolbar {}
 
 pub struct StyleToolbar {
     custom_color: Color,
@@ -56,7 +54,7 @@ fn create_icon(color: Color) -> gtk::Image {
 
 #[relm4::component(pub)]
 impl SimpleComponent for ToolsToolbar {
-    type Init = Configuration;
+    type Init = ();
     type Input = ();
     type Output = ToolbarEvent;
 
@@ -179,24 +177,24 @@ impl SimpleComponent for ToolsToolbar {
                 set_tooltip: "Save (Ctrl+S)",
                 connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::SaveFile);},
 
-                set_visible: model.config.output_filename().is_some()
+                set_visible: APP_CONFIG.read().output_filename().is_some()
             },
 
         },
     }
 
     fn init(
-        config: Self::Init,
+        _: Self::Init,
         root: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let model = ToolsToolbar { config };
+        let model = ToolsToolbar {};
         let widgets = view_output!();
 
         // Tools Action for selecting tools
         let sender_tmp: ComponentSender<ToolsToolbar> = sender.clone();
         let tool_action: RelmAction<ToolsAction> = RelmAction::new_stateful_with_target_value(
-            &model.config.initial_tool(),
+            &APP_CONFIG.read().initial_tool(),
             move |_, state, value| {
                 *state = value;
                 sender_tmp
