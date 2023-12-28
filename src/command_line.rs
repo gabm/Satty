@@ -20,8 +20,8 @@ pub struct CommandLine {
     pub early_exit: bool,
 
     /// Select the tool on startup
-    #[arg(long, value_name = "TOOL")]
-    pub init_tool: Option<Tools>,
+    #[arg(long, value_name = "TOOL", visible_alias = "init-tool")]
+    pub initial_tool: Option<Tools>,
 
     /// Configure the command to be called on copy, for example `wl-copy`
     #[arg(long)]

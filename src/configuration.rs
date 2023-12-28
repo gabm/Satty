@@ -87,7 +87,7 @@ impl Configuration {
         if command_line.early_exit {
             result.early_exit = command_line.early_exit;
         }
-        if let Some(v) = command_line.init_tool {
+        if let Some(v) = command_line.initial_tool {
             result.initial_tool = v.into();
         }
         if let Some(v) = command_line.copy_command {
