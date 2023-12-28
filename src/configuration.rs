@@ -44,7 +44,7 @@ impl Configuration {
         let file = match ConfigurationFile::try_read() {
             Ok(c) => c,
             Err(e) => {
-                eprintln!("Error reading config file {e}");
+                eprintln!("Error reading config file: {e}");
 
                 // swallow broken pipes
                 let _ = std::io::stdout().lock().flush();
@@ -140,6 +140,7 @@ impl Default for Configuration {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct ConfigurationFile {
     fullscreen: Option<bool>,
     early_exit: Option<bool>,

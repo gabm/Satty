@@ -15,8 +15,6 @@
                 "/tmp/out.png",
                 "--copy-command",
                 "wl-copy",
-                "--init-tool",
-                "crop"
             ],
             "problemMatcher": [
                 "$rustc"
