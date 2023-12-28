@@ -12,13 +12,13 @@ use crate::{command_line::CommandLine, tools::Tools};
 
 #[derive(Error, Debug)]
 enum ConfigurationFileError {
-    #[error("XDG context error")]
+    #[error("XDG context error: {0}")]
     Xdg(#[from] BaseDirectoriesError),
 
-    #[error("Error reading file")]
+    #[error("Error reading file: {0}")]
     ReadFile(#[from] io::Error),
 
-    #[error("Decoding toml failed")]
+    #[error("Decoding toml failed: {0}")]
     TomlDecoding(#[from] toml::de::Error),
 }
 
@@ -44,7 +44,7 @@ impl Configuration {
         let file = match ConfigurationFile::try_read() {
             Ok(c) => c,
             Err(e) => {
-                eprintln!("Error reading config file {}", e);
+                eprintln!("Error reading config file {e}");
 
                 // swallow broken pipes
                 let _ = std::io::stdout().lock().flush();
