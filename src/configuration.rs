@@ -42,7 +42,7 @@ pub struct ColorPalette {
     second: Color,
     third: Color,
     fourth: Color,
-    fith: Color,
+    fifth: Color,
     custom: Color,
 }
 
@@ -63,8 +63,8 @@ impl ColorPalette {
         self.fourth
     }
 
-    pub fn fith(&self) -> Color {
-        self.fith
+    pub fn fifth(&self) -> Color {
+        self.fifth
     }
 
     pub fn custom(&self) -> Color {
@@ -84,8 +84,8 @@ impl ColorPalette {
         if let Some(v) = file_palette.fourth {
             self.fourth = v.into();
         }
-        if let Some(v) = file_palette.fith {
-            self.fith = v.into();
+        if let Some(v) = file_palette.fifth {
+            self.fifth = v.into();
         }
         if let Some(v) = file_palette.custom {
             self.custom = v.into();
@@ -226,7 +226,7 @@ impl Default for ColorPalette {
             second: Color::red(),
             third: Color::green(),
             fourth: Color::blue(),
-            fith: Color::cove(),
+            fifth: Color::cove(),
             custom: Color::pink(),
         }
     }
@@ -250,7 +250,7 @@ struct ColorPaletteFile {
     second: Option<HexColor>,
     third: Option<HexColor>,
     fourth: Option<HexColor>,
-    fith: Option<HexColor>,
+    fifth: Option<HexColor>,
     custom: Option<HexColor>,
 }
 

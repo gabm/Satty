@@ -255,7 +255,7 @@ impl StyleToolbar {
             ColorButtons::Second => config.color_palette().second(),
             ColorButtons::Third => config.color_palette().third(),
             ColorButtons::Fourth => config.color_palette().fourth(),
-            ColorButtons::Fith => config.color_palette().fith(),
+            ColorButtons::Fith => config.color_palette().fifth(),
             ColorButtons::Custom => self.custom_color,
         }
     }
@@ -313,7 +313,7 @@ impl Component for StyleToolbar {
                 set_focusable: false,
                 set_hexpand: false,
 
-                create_icon(APP_CONFIG.read().color_palette().fith()),
+                create_icon(APP_CONFIG.read().color_palette().fifth()),
 
                 ActionablePlus::set_action::<ColorAction>: ColorButtons::Fith,
             },
