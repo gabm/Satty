@@ -34,6 +34,14 @@ emerge -av satty
 
 Pending PR for Gentoo overlay: https://github.com/gentoo/gentoo/pull/33908
 
+### Alpine Linux
+
+Satty is available in [Alpine Testing](https://pkgs.alpinelinux.org/packages?name=satty&branch=edge&repo=&arch=&maintainer=). You can install it by uncommenting the testing repo in `/etc/apk/repositories` and then run:
+
+```
+apk add satty
+```
+
 ### Prebuilt Sources
 
 You can download a prebuilt binary for x86-64 on the [Satty Releases](https://github.com/gabm/satty/releases) page.
