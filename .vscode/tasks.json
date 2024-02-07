@@ -2,14 +2,13 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "type": "cargo",
-            "command": "run",
+            "type": "shell",
+            "command": "cargo",
             "args": [
+                "run",
                 "--",
                 "--filename",
-                //"/home/gabm/Pictures/Screenshots/swappy-20230921-054340.png",
-                //"/home/gabm/Pictures/Wallpaper/torres_1.jpg",
-                "/home/gabm/Pictures/Screenshots/satty-20231116-10:35:51.png",
+                "/home/gabm/Pictures/Screenshots/satty-20240109-22:19:08.png",
                 //"--fullscreen",
                 "--output-filename",
                 "/tmp/out.png",
