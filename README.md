@@ -43,15 +43,39 @@ You can download a prebuilt binary for x86-64 on the [Satty Releases](https://gi
 
 Start by providing a filename or a screenshot via stdin and annotate using the available tools. Save to clipboard or file when finished. Tools and Interface have been kept simple.
 
-All configuration is done via the command line interface:
+All configuration is done either at the config file in `XDG_CONFIG_DIR/.config/satty/config.toml` or via the command line interface. In case both are specified, the command line options always override the configuration file.
+
+### Configuration File
+
+```toml
+[general]
+fullscreen = true
+early-exit = true
+initial-tool = "brush"
+copy-command = "wl-copy"
+annotation-size-factor = 2
+output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
+
+[color-palette]
+first= "#00ffff"
+second= "#a52a2a"
+third= "#dc143c"
+fourth= "#ff1493"
+fifth= "#ffd700"
+custom= "#008000"
+```
+
+### Command Line
 
 ```sh
 » satty --help                
-A screenshot annotation tool inspired by Swappy and Flameshot.
+Modern Screenshot Annotation. A Screenshot Annotation Tool inspired by Swappy and Flameshot.
 
 Usage: satty [OPTIONS] --filename <FILENAME>
 
 Options:
+  -c, --config <CONFIG>
+          Path to the config file. Otherwise will be read from XDG_CONFIG_DIR/satty/config.toml
   -f, --filename <FILENAME>
           Path to input image or '-' to read from stdin
       --fullscreen
@@ -60,10 +84,12 @@ Options:
           Filename to use for saving action, omit to disable saving to file
       --early-exit
           Exit directly after copy/save action
-      --init-tool <TOOL>
-          Select the tool on startup [default: pointer] [possible values: pointer, crop, line, arrow, rectangle, text, marker, blur, brush]
+      --initial-tool <TOOL>
+          Select the tool on startup [aliases: init-tool] [possible values: pointer, crop, line, arrow, rectangle, text, marker, blur, brush]
       --copy-command <COPY_COMMAND>
           Configure the command to be called on copy, for example `wl-copy`
+      --annotation-size-factor <ANNOTATION_SIZE_FACTOR>
+          Increase or decrease the size of the annotations
   -h, --help
           Print help
   -V, --version
