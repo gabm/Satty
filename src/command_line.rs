@@ -15,7 +15,8 @@ pub struct CommandLine {
     #[arg(long)]
     pub fullscreen: bool,
 
-    /// Filename to use for saving action, omit to disable saving to file
+    /// Filename to use for saving action. Omit to disable saving to file. Might contain format
+    /// specifiers: https://docs.rs/chrono/latest/chrono/format/strftime/index.html.
     #[arg(long)]
     pub output_filename: Option<String>,
 

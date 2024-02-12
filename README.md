@@ -49,13 +49,20 @@ All configuration is done either at the config file in `XDG_CONFIG_DIR/.config/s
 
 ```toml
 [general]
+# Start Satty in fullscreen mode
 fullscreen = true
+# Exit directly after copy/save action
 early-exit = true
+# Select the tool on startup [possible values: pointer, crop, line, arrow, rectangle, text, marker, blur, brush]
 initial-tool = "brush"
+# Configure the command to be called on copy, for example `wl-copy`
 copy-command = "wl-copy"
+# Increase or decrease the size of the annotations
 annotation-size-factor = 2
+# Filename to use for saving action. Omit to disable saving to file. Might contain format specifiers: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
 output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
 
+# custom colours for the colour palette
 [color-palette]
 first= "#00ffff"
 second= "#a52a2a"
@@ -81,7 +88,7 @@ Options:
       --fullscreen
           Start Satty in fullscreen mode
       --output-filename <OUTPUT_FILENAME>
-          Filename to use for saving action, omit to disable saving to file
+      Filename to use for saving action. Omit to disable saving to file. Might contain format specifiers: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
       --early-exit
           Exit directly after copy/save action
       --initial-tool <TOOL>
