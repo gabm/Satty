@@ -3,6 +3,10 @@ use clap::{Parser, ValueEnum};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct CommandLine {
+    /// Path to the config file. Otherwise will be read from XDG_CONFIG_DIR/satty/config.toml
+    #[arg(short, long)]
+    pub config: Option<String>,
+
     /// Path to input image or '-' to read from stdin
     #[arg(short, long)]
     pub filename: String,

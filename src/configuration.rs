@@ -1,6 +1,7 @@
 use std::{
     fs,
     io::{self, Write},
+    path::Path,
 };
 
 use clap::Parser;
@@ -102,7 +103,7 @@ impl Configuration {
         };
 
         // read configuration file and exit on error
-        let file = match ConfigurationFile::try_read() {
+        let file = match ConfigurationFile::try_read(&command_line.config) {
             Ok(c) => c,
             Err(e) => {
                 eprintln!("Error reading config file: {e}");
@@ -264,14 +265,29 @@ struct ColorPaletteFile {
 }
 
 impl ConfigurationFile {
-    fn try_read() -> Result<Option<ConfigurationFile>, ConfigurationFileError> {
+    fn try_read(
+        specified_path: &Option<String>,
+    ) -> Result<Option<ConfigurationFile>, ConfigurationFileError> {
+        match specified_path {
+            None => Self::try_read_xdg(),
+            Some(p) => Self::try_read_path(p),
+        }
+    }
+
+    fn try_read_xdg() -> Result<Option<ConfigurationFile>, ConfigurationFileError> {
         let dirs = BaseDirectories::with_prefix("satty")?;
         let config_file_path = dirs.get_config_file("config.toml");
         if !config_file_path.exists() {
             return Ok(None);
         }
 
-        let content = fs::read_to_string(config_file_path)?;
+        Self::try_read_path(config_file_path)
+    }
+
+    fn try_read_path<P: AsRef<Path>>(
+        path: P,
+    ) -> Result<Option<ConfigurationFile>, ConfigurationFileError> {
+        let content = fs::read_to_string(path)?;
         Ok(Some(toml::from_str::<ConfigurationFile>(&content)?))
     }
 }
