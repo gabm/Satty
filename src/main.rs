@@ -1,7 +1,7 @@
 use std::io::Read;
 use std::{io, time::Duration};
 
-use command_line::CommandLine;
+use configuration::{Configuration, APP_CONFIG};
 use gdk_pixbuf::{Pixbuf, PixbufLoader};
 use gtk::prelude::*;
 use relm4::gtk::gdk::Rectangle;
@@ -18,6 +18,7 @@ use ui::toast::Toast;
 use ui::toolbars::{StyleToolbar, ToolsToolbar};
 
 mod command_line;
+mod configuration;
 mod math;
 mod renderer;
 mod sketch_board;
@@ -25,21 +26,11 @@ mod style;
 mod tools;
 mod ui;
 
-use crate::sketch_board::SketchBoardConfig;
 use crate::sketch_board::{KeyEventMsg, SketchBoard, SketchBoardInput};
 
-use crate::ui::toolbars::ToolsToolbarConfig;
-
-struct AppConfig {
-    image: Pixbuf,
-    args: CommandLine,
-}
-
 struct App {
-    original_image_width: i32,
-    original_image_height: i32,
+    image_dimensions: (i32, i32),
     sketch_board: Controller<SketchBoard>,
-    initially_fullscreen: bool,
     toast: Controller<Toast>,
     tools_toolbar: Controller<ToolsToolbar>,
     style_toolbar: Controller<StyleToolbar>,
@@ -68,7 +59,7 @@ impl App {
         let monitor_size = match Self::get_monitor_size(root) {
             Some(s) => s,
             None => {
-                root.set_default_size(self.original_image_width, self.original_image_height);
+                root.set_default_size(self.image_dimensions.0, self.image_dimensions.1);
                 return;
             }
         };
@@ -76,14 +67,14 @@ impl App {
         let reduced_monitor_width = monitor_size.width() as f64 * 0.8;
         let reduced_monitor_height = monitor_size.height() as f64 * 0.8;
 
-        let image_width = self.original_image_width as f64;
-        let image_height = self.original_image_height as f64;
+        let image_width = self.image_dimensions.0 as f64;
+        let image_height = self.image_dimensions.1 as f64;
 
         // create a window that uses 80% of the available space max
         // if necessary, scale down image
         if reduced_monitor_width > image_width && reduced_monitor_height > image_height {
             // set window to exact size
-            root.set_default_size(self.original_image_width, self.original_image_height);
+            root.set_default_size(self.image_dimensions.0, self.image_dimensions.1);
         } else {
             // scale down and use windowed mode
             let aspect_ratio = image_width / image_height;
@@ -103,7 +94,7 @@ impl App {
 
         root.set_resizable(false);
 
-        if self.initially_fullscreen {
+        if APP_CONFIG.read().fullscreen() {
             root.fullscreen();
         }
 
@@ -145,7 +136,7 @@ impl App {
 
 #[relm4::component]
 impl Component for App {
-    type Init = AppConfig;
+    type Init = Pixbuf;
     type Input = AppInput;
     type Output = ();
     type CommandOutput = AppCommandOutput;
@@ -197,39 +188,30 @@ impl Component for App {
     }
 
     fn init(
-        config: Self::Init,
+        image: Self::Init,
         root: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         Self::apply_style();
 
+        let image_dimensions = (image.width(), image.height());
+
         // Toast
         let toast = Toast::builder().launch(3000).detach();
 
         // SketchBoard
-        let sketch_board_config = SketchBoardConfig {
-            original_image: config.image.clone(),
-            output_filename: config.args.output_filename.clone(),
-            copy_command: config.args.copy_command.clone(),
-            early_exit: config.args.early_exit,
-            init_tool: config.args.init_tool.into(),
-        };
-
-        let sketch_board = SketchBoard::builder().launch(sketch_board_config).forward(
-            toast.sender(),
-            |t| match t {
-                SketchBoardOutput::ShowToast(msg) => ui::toast::ToastMessage::Show(msg),
-            },
-        );
+        let sketch_board =
+            SketchBoard::builder()
+                .launch(image)
+                .forward(toast.sender(), |t| match t {
+                    SketchBoardOutput::ShowToast(msg) => ui::toast::ToastMessage::Show(msg),
+                });
 
         let sketch_board_sender = sketch_board.sender().clone();
 
         // Toolbars
         let tools_toolbar = ToolsToolbar::builder()
-            .launch(ToolsToolbarConfig {
-                show_save_button: config.args.output_filename.is_some(),
-                init_tool: config.args.init_tool.into(),
-            })
+            .launch(())
             .forward(sketch_board.sender(), SketchBoardInput::ToolbarEvent);
 
         let style_toolbar = StyleToolbar::builder()
@@ -238,13 +220,11 @@ impl Component for App {
 
         // Model
         let model = App {
-            original_image_width: config.image.width(),
-            original_image_height: config.image.height(),
             sketch_board,
-            initially_fullscreen: config.args.fullscreen,
             toast,
             tools_toolbar,
             style_toolbar,
+            image_dimensions,
         };
 
         let widgets = view_output!();
@@ -253,12 +233,9 @@ impl Component for App {
     }
 }
 
-fn load_image(filename: &str) -> Result<Pixbuf> {
-    Pixbuf::from_file(filename).context("couldn't load image")
-}
-
-fn run_satty(args: CommandLine) -> Result<()> {
-    let image = if args.filename == "-" {
+fn run_satty() -> Result<()> {
+    let config = APP_CONFIG.read();
+    let image = if config.input_filename() == "-" {
         let mut buf = Vec::<u8>::new();
         io::stdin().lock().read_to_end(&mut buf)?;
         let pb_loader = PixbufLoader::new();
@@ -268,21 +245,24 @@ fn run_satty(args: CommandLine) -> Result<()> {
             .pixbuf()
             .ok_or(anyhow!("Conversion to Pixbuf failed"))?
     } else {
-        load_image(&args.filename)?
+        Pixbuf::from_file(config.input_filename()).context("couldn't load image")?
     };
 
     let app = RelmApp::new("com.gabm.satty").with_args(vec![]);
     relm4_icons::initialize_icons();
-    app.run::<App>(AppConfig { args, image });
+    app.run::<App>(image);
     Ok(())
 }
 
 fn main() -> Result<()> {
-    let args = CommandLine::do_parse();
+    // populate the APP_CONFIG from commandline and
+    // config file. this might exit, if an error occured.
+    Configuration::load();
 
-    match run_satty(args) {
+    // run the application
+    match run_satty() {
         Err(e) => {
-            println!("Error: {e}");
+            eprintln!("Error: {e}");
             Err(e)
         }
         Ok(v) => Ok(v),

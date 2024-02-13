@@ -7,6 +7,7 @@ use gdk_pixbuf::{
 };
 use pangocairo::cairo::ImageSurface;
 use relm4::gtk::cairo::Context;
+use serde_derive::Deserialize;
 
 use crate::{
     command_line,
@@ -111,7 +112,8 @@ pub use text::TextTool;
 
 use self::{brush::BrushTool, marker::MarkerTool, pointer::PointerTool};
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Tools {
     Pointer = 0,
     Crop = 1,

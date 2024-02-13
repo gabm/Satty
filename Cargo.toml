@@ -3,7 +3,7 @@ name = "satty"
 version = "0.8.3"
 edition = "2021"
 authors = ["Matthias Gabriel <gabm+aur@mailbox.org>"]
-description = "A screenshot annotation tool inspired by Swappy and Flameshot."
+description = "Modern Screenshot Annotation. A Screenshot Annotation Tool inspired by Swappy and Flameshot."
 homepage = "https://github.com/gabm/satty"
 repository = "https://github.com/gabm/satty"
 license = "MPL-2.0"
@@ -25,9 +25,18 @@ gdk-pixbuf = "0.17.2"
 
 # error handling
 anyhow = "1.0"
+thiserror = "1.0"
 
 # command line
 clap = { version = "4.4.10", features = ["derive"] }
+
+# configuration file
+xdg = "^2.5"
+toml = "0.8.8"
+serde = "1.0"
+serde_derive = "1.0"
+hex_color = {version = "3", features = ["serde"]}
+chrono = "0.4.31"
 
 
 [dependencies.relm4-icons]

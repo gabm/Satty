@@ -3,6 +3,10 @@ use clap::{Parser, ValueEnum};
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 pub struct CommandLine {
+    /// Path to the config file. Otherwise will be read from XDG_CONFIG_DIR/satty/config.toml
+    #[arg(short, long)]
+    pub config: Option<String>,
+
     /// Path to input image or '-' to read from stdin
     #[arg(short, long)]
     pub filename: String,
@@ -11,7 +15,8 @@ pub struct CommandLine {
     #[arg(long)]
     pub fullscreen: bool,
 
-    /// Filename to use for saving action, omit to disable saving to file
+    /// Filename to use for saving action. Omit to disable saving to file. Might contain format
+    /// specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>.
     #[arg(long)]
     pub output_filename: Option<String>,
 
@@ -20,18 +25,16 @@ pub struct CommandLine {
     pub early_exit: bool,
 
     /// Select the tool on startup
-    #[arg(long, default_value_t, value_name = "TOOL")]
-    pub init_tool: Tools,
+    #[arg(long, value_name = "TOOL", visible_alias = "init-tool")]
+    pub initial_tool: Option<Tools>,
 
     /// Configure the command to be called on copy, for example `wl-copy`
     #[arg(long)]
     pub copy_command: Option<String>,
-}
 
-impl CommandLine {
-    pub fn do_parse() -> Self {
-        Self::parse()
-    }
+    /// Increase or decrease the size of the annotations
+    #[arg(long)]
+    pub annotation_size_factor: Option<f64>,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
