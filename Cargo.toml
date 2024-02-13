@@ -19,7 +19,6 @@ include = [
 
 [dependencies]
 relm4 = { version = "0.6.2", features = ["macros", "libadwaita", "gnome_42"] }
-pangocairo = "0.17.10"
 tokio = { version = "1.32.0", features = ["full"] }
 gdk-pixbuf = "0.17.2"
 
@@ -38,6 +37,14 @@ serde_derive = "1.0"
 hex_color = {version = "3", features = ["serde"]}
 chrono = "0.4.31"
 
+# opengl rendering backend
+femtovg = "0.8"
+libloading = "0.8"
+epoxy = "0.1.0"
+glow = "0.13.1"
+glib-macros = "0.19.2"
+glib = "0.19.2"
+resource = "0.5.0"  # font emedding
 
 [dependencies.relm4-icons]
 version = "0.6.0"

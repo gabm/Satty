@@ -1,5 +1,5 @@
 use anyhow::Result;
-use pangocairo::cairo::{Context, ImageSurface};
+use femtovg::{FontId, Path};
 use relm4::gtk::gdk::{Key, ModifierType};
 
 use crate::{
@@ -24,23 +24,25 @@ pub struct Line {
 }
 
 impl Drawable for Line {
-    fn draw(&self, cx: &Context, _surface: &ImageSurface) -> Result<()> {
+    fn draw(
+        &self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        _font: FontId,
+    ) -> Result<()> {
         let direction = match self.direction {
             Some(d) => d,
             None => return Ok(()), // exit early if no direction
         };
 
-        let (r, g, b, a) = self.style.color.to_rgba_f64();
+        canvas.save();
 
-        cx.save()?;
+        let mut path = Path::new();
+        path.move_to(self.start.x, self.start.y);
+        path.line_to(self.start.x + direction.x, self.start.y + direction.y);
 
-        cx.set_line_width(self.style.size.to_line_width());
-        cx.set_source_rgba(r, g, b, a);
-        cx.move_to(self.start.x, self.start.y);
-        cx.rel_line_to(direction.x, direction.y);
-        cx.stroke()?;
+        canvas.stroke_path(&path, &self.style.into());
 
-        cx.restore()?;
+        canvas.restore();
 
         Ok(())
     }

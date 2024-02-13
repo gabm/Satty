@@ -1,4 +1,5 @@
 use std::io::Read;
+use std::ptr;
 use std::{io, time::Duration};
 
 use configuration::{Configuration, APP_CONFIG};
@@ -19,8 +20,8 @@ use ui::toolbars::{StyleToolbar, StyleToolbarInput, ToolsToolbar, ToolsToolbarIn
 
 mod command_line;
 mod configuration;
+mod femtovg_area;
 mod math;
-mod renderer;
 mod sketch_board;
 mod style;
 mod tools;
@@ -263,8 +264,33 @@ impl Component for App {
     }
 }
 
+fn load_gl() -> Result<()> {
+    // Load GL pointers from epoxy (GL context management library used by GTK).
+    #[cfg(target_os = "macos")]
+    let library = unsafe { libloading::os::unix::Library::new("libepoxy.0.dylib") }?;
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let library = unsafe { libloading::os::unix::Library::new("libepoxy.so.0") }?;
+    #[cfg(windows)]
+    let library = libloading::os::windows::Library::open_already_loaded("libepoxy-0.dll")
+        .or_else(|_| libloading::os::windows::Library::open_already_loaded("epoxy-0.dll"))?;
+
+    epoxy::load_with(|name| {
+        unsafe { library.get::<_>(name.as_bytes()) }
+            .map(|symbol| *symbol)
+            .unwrap_or(ptr::null())
+    });
+
+    Ok(())
+}
+
 fn run_satty() -> Result<()> {
+    // load OpenGL
+    load_gl()?;
+
+    // load app config
     let config = APP_CONFIG.read();
+
+    // load input image
     let image = if config.input_filename() == "-" {
         let mut buf = Vec::<u8>::new();
         io::stdin().lock().read_to_end(&mut buf)?;
@@ -278,6 +304,7 @@ fn run_satty() -> Result<()> {
         Pixbuf::from_file(config.input_filename()).context("couldn't load image")?
     };
 
+    // start GUI
     let app = RelmApp::new("com.gabm.satty").with_args(vec![]);
     relm4_icons::initialize_icons();
     app.run::<App>(image);

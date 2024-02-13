@@ -34,7 +34,7 @@ pub struct CommandLine {
 
     /// Increase or decrease the size of the annotations
     #[arg(long)]
-    pub annotation_size_factor: Option<f64>,
+    pub annotation_size_factor: Option<f32>,
 
     /// After copying the screenshot, save it to a file as well
     #[arg(long)]

@@ -1,11 +1,11 @@
 use std::borrow::Cow;
 
+use femtovg::Paint;
 use gdk_pixbuf::{
     glib::{FromVariant, Variant, VariantTy},
     prelude::{StaticVariantType, ToVariant},
 };
 use hex_color::HexColor;
-use pangocairo::pango::SCALE;
 use relm4::gtk::gdk::RGBA;
 
 use crate::configuration::APP_CONFIG;
@@ -124,9 +124,30 @@ impl From<Color> for RGBA {
     }
 }
 
+impl From<Color> for femtovg::Color {
+    fn from(value: Color) -> Self {
+        femtovg::Color {
+            r: value.r as f32 / 255.0,
+            g: value.g as f32 / 255.0,
+            b: value.b as f32 / 255.0,
+            a: value.a as f32 / 255.0,
+        }
+    }
+}
+
 impl From<HexColor> for Color {
     fn from(value: HexColor) -> Self {
         Self::new(value.r, value.g, value.b, value.a)
+    }
+}
+
+impl From<Style> for Paint {
+    fn from(value: Style) -> Self {
+        Paint::default()
+            .with_anti_alias(true)
+            .with_font_size(value.size.to_text_size() as f32)
+            .with_color(value.color.into())
+            .with_line_width(value.size.to_line_width())
     }
 }
 
@@ -158,28 +179,28 @@ impl Size {
         let size_factor = APP_CONFIG.read().annotation_size_factor();
 
         match self {
-            Size::Small => (12.0 * SCALE as f64 * size_factor) as i32,
-            Size::Medium => (18.0 * SCALE as f64 * size_factor) as i32,
-            Size::Large => (32.0 * SCALE as f64 * size_factor) as i32,
+            Size::Small => (36.0 * size_factor) as i32,
+            Size::Medium => (54.0 * size_factor) as i32,
+            Size::Large => (96.0 * size_factor) as i32,
         }
     }
 
-    pub fn to_line_width(self) -> f64 {
+    pub fn to_line_width(self) -> f32 {
         let size_factor = APP_CONFIG.read().annotation_size_factor();
 
         match self {
-            Size::Small => 2.0 * size_factor,
-            Size::Medium => 3.0 * size_factor,
-            Size::Large => 5.0 * size_factor,
+            Size::Small => 3.0 * size_factor,
+            Size::Medium => 5.0 * size_factor,
+            Size::Large => 7.0 * size_factor,
         }
     }
 
-    pub fn to_blur_factor(self) -> f64 {
+    pub fn to_blur_factor(self) -> f32 {
         let size_factor = APP_CONFIG.read().annotation_size_factor();
         match self {
-            Size::Small => 6.0 * size_factor,
-            Size::Medium => 10.0 * size_factor,
-            Size::Large => 20.0 * size_factor,
+            Size::Small => 10.0 * size_factor,
+            Size::Medium => 20.0 * size_factor,
+            Size::Large => 30.0 * size_factor,
         }
     }
 }

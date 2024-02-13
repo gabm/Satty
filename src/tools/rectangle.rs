@@ -1,5 +1,5 @@
 use anyhow::Result;
-use pangocairo::cairo::{Context, ImageSurface};
+use femtovg::{FontId, Path};
 use relm4::gtk::gdk::Key;
 
 use crate::{
@@ -18,27 +18,22 @@ pub struct Rectangle {
 }
 
 impl Drawable for Rectangle {
-    fn draw(&self, cx: &Context, _surface: &ImageSurface) -> Result<()> {
+    fn draw(
+        &self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        _font: FontId,
+    ) -> Result<()> {
         let size = match self.size {
             Some(s) => s,
             None => return Ok(()), // early exit if none
         };
 
-        let (r, g, b, a) = self.style.color.to_rgba_f64();
+        canvas.save();
+        let mut path = Path::new();
+        path.rect(self.top_left.x, self.top_left.y, size.x, size.y);
 
-        cx.save()?;
-
-        // set style
-        cx.set_line_width(self.style.size.to_line_width());
-        cx.set_source_rgba(r, g, b, a);
-
-        // make rect
-        cx.rectangle(self.top_left.x, self.top_left.y, size.x, size.y);
-
-        // draw
-        cx.stroke()?;
-
-        cx.restore()?;
+        canvas.stroke_path(&path, &self.style.into());
+        canvas.restore();
 
         Ok(())
     }

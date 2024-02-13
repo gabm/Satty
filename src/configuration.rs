@@ -34,7 +34,7 @@ pub struct Configuration {
     early_exit: bool,
     initial_tool: Tools,
     copy_command: Option<String>,
-    annotation_size_factor: f64,
+    annotation_size_factor: f32,
     save_after_copy: bool,
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
@@ -212,7 +212,7 @@ impl Configuration {
         self.input_filename.as_ref()
     }
 
-    pub fn annotation_size_factor(&self) -> f64 {
+    pub fn annotation_size_factor(&self) -> f32 {
         self.annotation_size_factor
     }
 
@@ -238,7 +238,7 @@ impl Default for Configuration {
             early_exit: false,
             initial_tool: Tools::Pointer,
             copy_command: None,
-            annotation_size_factor: 1.0f64,
+            annotation_size_factor: 1.0,
             save_after_copy: false,
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
@@ -273,7 +273,7 @@ struct ConfiguationFileGeneral {
     early_exit: Option<bool>,
     initial_tool: Option<Tools>,
     copy_command: Option<String>,
-    annotation_size_factor: Option<f64>,
+    annotation_size_factor: Option<f32>,
     output_filename: Option<String>,
     save_after_copy: Option<bool>,
     default_hide_toolbars: Option<bool>,
