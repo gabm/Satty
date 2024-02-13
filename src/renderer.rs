@@ -14,20 +14,33 @@ use crate::tools::Drawable;
 use crate::tools::Tool;
 
 pub struct Renderer {
-    original_image: Pixbuf,
+    original_image: ImageSurface,
     crop_tool: Rc<RefCell<CropTool>>,
     drawables: Vec<Box<dyn Drawable>>,
     redo_stack: Vec<Box<dyn Drawable>>,
 }
 
 impl Renderer {
-    pub fn new(original_image: Pixbuf, crop_tool: Rc<RefCell<CropTool>>) -> Self {
-        Self {
-            original_image,
+    pub fn new(original_image: Pixbuf, crop_tool: Rc<RefCell<CropTool>>) -> Result<Self> {
+        let original_image_surface = ImageSurface::create(
+            Format::ARgb32,
+            original_image.width(),
+            original_image.height(),
+        )?;
+
+        // render background image
+        let cx: Context = Context::new(original_image_surface.clone())?;
+        cx.set_operator(Operator::Over);
+
+        cx.set_source_pixbuf(&original_image, 0.0, 0.0);
+        cx.paint()?;
+
+        Ok(Self {
+            original_image: original_image_surface,
             drawables: Vec::new(),
             redo_stack: Vec::new(),
             crop_tool,
-        }
+        })
     }
 
     pub fn render_full_size(
@@ -45,7 +58,7 @@ impl Renderer {
         cx.set_operator(Operator::Over);
 
         // render background image
-        cx.set_source_pixbuf(&self.original_image, 0.0, 0.0);
+        cx.set_source_surface(&self.original_image, 0.0, 0.0)?;
         cx.paint()?;
 
         // render comitted drawables

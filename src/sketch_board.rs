@@ -452,7 +452,7 @@ impl Component for SketchBoard {
             handler: DrawHandler::new(),
             active_tool: tools.get(&config.initial_tool()),
             style: Style::default(),
-            renderer: Renderer::new(image, tools.get_crop_tool()),
+            renderer: Renderer::new(image, tools.get_crop_tool()).expect("Can't create renderer"),
             scale_factor: 1.0,
             tools,
         };
