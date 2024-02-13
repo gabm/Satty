@@ -29,18 +29,11 @@ export def main [version: string] {
     # tag a new git version
     git_tag $requested_version_tag
 
-    # build artifact
-    build_artifact
-
     ## from here on we go online!
     # push
     git_push 
 
-    # create release
-    github_release $requested_version_tag
-
-    # upload artifact
-    upload_artifact $requested_version_tag
+    # the rest is being handled by the github release action
 }
 
 
@@ -82,21 +75,6 @@ def update_cargo_lock [] {
 def git_commit [tag: string] {
     "Commiting..." | echo_section_headline
     git commit -am $"Updating version to ($tag)"
-}
-
-def github_release [tag: string] {
-    $"Creating GitHub release ($tag)" | echo_section_headline    
-    gh release create $tag    
-}
-
-def build_artifact [] {
-    "Building Artifact" | echo_section_headline
-    make package
-}
-
-def upload_artifact [tag: string] {
-    "Uploading Artifact" | echo_section_headline
-    gh release upload $tag $"satty-($tag)-x86_64.tar.gz"
 }
 
 def version_parse []: string -> list<int> {
