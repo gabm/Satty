@@ -241,6 +241,11 @@ impl Component for App {
             .launch(())
             .forward(sketch_board.sender(), SketchBoardInput::ToolbarEvent);
 
+        if APP_CONFIG.read().default_hide_toolbars() {
+            tools_toolbar.widget().hide();
+            style_toolbar.widget().hide();
+        }
+
         // Model
         let model = App {
             sketch_board,

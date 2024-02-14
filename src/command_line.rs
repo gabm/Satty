@@ -39,6 +39,10 @@ pub struct CommandLine {
     /// After copying the screenshot, save it to a file as well
     #[arg(long)]
     pub save_after_copy: bool,
+
+    /// Hide toolbars by default
+    #[arg(short, long)]
+    pub default_hide_toolbars: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]

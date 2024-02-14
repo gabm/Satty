@@ -37,6 +37,7 @@ pub struct Configuration {
     annotation_size_factor: f64,
     save_after_copy: bool,
     color_palette: ColorPalette,
+    default_hide_toolbars: bool,
 }
 
 pub struct ColorPalette {
@@ -139,9 +140,16 @@ impl Configuration {
         if let Some(v) = general.annotation_size_factor {
             self.annotation_size_factor = v;
         }
+<<<<<<< HEAD
         if let Some(v) = general.save_after_copy {
             self.save_after_copy = v;
         }
+||||||| parent of 6fb3d68 (feat: add support for configuring "default-hide-toolbars")
+=======
+        if let Some(v) = general.default_hide_toolbars {
+            self.default_hide_toolbars = v;
+        }
+>>>>>>> 6fb3d68 (feat: add support for configuring "default-hide-toolbars")
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
         // input_filename is required and needs to be overwritten
@@ -163,6 +171,9 @@ impl Configuration {
         }
         if command_line.early_exit {
             self.early_exit = command_line.early_exit;
+        }
+        if command_line.default_hide_toolbars {
+            self.default_hide_toolbars = command_line.default_hide_toolbars;
         }
         if let Some(v) = command_line.initial_tool {
             self.initial_tool = v.into();
@@ -216,6 +227,10 @@ impl Configuration {
     pub fn color_palette(&self) -> &ColorPalette {
         &self.color_palette
     }
+
+    pub fn default_hide_toolbars(&self) -> bool {
+        self.default_hide_toolbars
+    }
 }
 
 impl Default for Configuration {
@@ -230,6 +245,7 @@ impl Default for Configuration {
             annotation_size_factor: 1.0f64,
             save_after_copy: false,
             color_palette: ColorPalette::default(),
+            default_hide_toolbars: false,
         }
     }
 }
@@ -264,6 +280,7 @@ struct ConfiguationFileGeneral {
     annotation_size_factor: Option<f64>,
     output_filename: Option<String>,
     save_after_copy: Option<bool>,
+    default_hide_toolbars: Option<bool>,
 }
 
 #[derive(Deserialize)]
