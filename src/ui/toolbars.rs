@@ -34,6 +34,13 @@ pub enum ToolbarEvent {
     Undo,
     SaveFile,
     CopyClipboard,
+    Show,
+    Hide,
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum ToolsToolbarInput {
+    ToggleDisplay(bool),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -41,6 +48,7 @@ pub enum StyleToolbarInput {
     ColorButtonSelected(ColorButtons),
     ShowColorDialog,
     ColorDialogFinished(Option<Color>),
+    ToggleDisplay(bool),
 }
 
 fn create_icon_pixbuf(color: Color) -> Pixbuf {
@@ -55,7 +63,7 @@ fn create_icon(color: Color) -> gtk::Image {
 #[relm4::component(pub)]
 impl SimpleComponent for ToolsToolbar {
     type Init = ();
-    type Input = ();
+    type Input = ToolsToolbarInput;
     type Output = ToolbarEvent;
 
     view! {
@@ -397,6 +405,14 @@ impl Component for StyleToolbar {
                 sender
                     .output_sender()
                     .emit(ToolbarEvent::ColorSelected(color));
+            }
+
+            StyleToolbarInput::ToggleDisplay(is_showed) => {
+                if is_showed {
+                    sender.output_sender().emit(ToolbarEvent::Hide);
+                } else {
+                    sender.output_sender().emit(ToolbarEvent::Show);
+                }
             }
         }
     }
