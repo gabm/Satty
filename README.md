@@ -1,4 +1,4 @@
-# <img src="assets/satty.svg" height="42"> Satty: Modern Screenshot Annotation. 
+# <img src="assets/satty.svg" height="42"> Satty: Modern Screenshot Annotation.
 
 Satty is a screenshot annotation tool inspired by [Swappy](https://github.com/jtheoof/swappy) and [Flameshot](https://flameshot.org/).
 
@@ -69,6 +69,8 @@ copy-command = "wl-copy"
 annotation-size-factor = 2
 # Filename to use for saving action. Omit to disable saving to file. Might contain format specifiers: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
 output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
+# Also save screenshot to a file after copy action
+save-on-copy = false
 
 # custom colours for the colour palette
 [color-palette]
@@ -83,7 +85,7 @@ custom= "#008000"
 ### Command Line
 
 ```sh
-» satty --help                
+» satty --help
 Modern Screenshot Annotation. A Screenshot Annotation Tool inspired by Swappy and Flameshot.
 
 Usage: satty [OPTIONS] --filename <FILENAME>
@@ -105,6 +107,8 @@ Options:
           Configure the command to be called on copy, for example `wl-copy`
       --annotation-size-factor <ANNOTATION_SIZE_FACTOR>
           Increase or decrease the size of the annotations
+      --save-on-copy
+          Also save screenshot to a file after copy action
   -h, --help
           Print help
   -V, --version
@@ -135,7 +139,7 @@ PREFIX=/use/local make install
 PREFIX=/use/local make uninstall
 ```
 
-## Dependencies 
+## Dependencies
 
 Satty is based on GTK-4 and Adwaita.
 
@@ -146,7 +150,7 @@ Satty is based on GTK-4 and Adwaita.
 
 ### Arch Linux & Gentoo
 
-- pango 
+- pango
 - glib2
 - cairo
 - libadwaita
