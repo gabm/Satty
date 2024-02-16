@@ -242,7 +242,7 @@ impl SketchBoard {
                 if APP_CONFIG.read().save_after_copy() {
                     self.handle_save_texture(sender, &texture);
                 };
-            },
+            }
         }
     }
 
