@@ -144,6 +144,18 @@ impl SketchBoard {
     }
 
     fn handle_save(&self, sender: ComponentSender<Self>) {
+        let texture = match self.renderer.render_to_texture(&self.active_tool) {
+            Ok(t) => t,
+            Err(e) => {
+                println!("Error while creating texture: {e}");
+                return;
+            }
+        };
+
+        self.handle_save_texture(sender, &texture);
+    }
+
+    fn handle_save_texture(&self, sender: ComponentSender<Self>, texture: &MemoryTexture) {
         let output_filename = match APP_CONFIG.read().output_filename() {
             None => {
                 println!("No Output filename specified!");
@@ -163,14 +175,6 @@ impl SketchBoard {
                 .emit(SketchBoardOutput::ShowToast(msg.to_string()));
             return;
         }
-
-        let texture = match self.renderer.render_to_texture(&self.active_tool) {
-            Ok(t) => t,
-            Err(e) => {
-                println!("Error while creating texture: {e}");
-                return;
-            }
-        };
 
         let data = texture.save_to_png_bytes();
 
@@ -236,7 +240,7 @@ impl SketchBoard {
                 ));
 
                 if APP_CONFIG.read().save_on_copy() {
-                    self.handle_save(sender);
+                    self.handle_save_texture(sender, &texture);
                 };
             },
         }
