@@ -35,7 +35,7 @@ pub struct Configuration {
     initial_tool: Tools,
     copy_command: Option<String>,
     annotation_size_factor: f64,
-    save_on_copy: bool,
+    save_after_copy: bool,
     color_palette: ColorPalette,
 }
 
@@ -139,8 +139,8 @@ impl Configuration {
         if let Some(v) = general.annotation_size_factor {
             self.annotation_size_factor = v;
         }
-        if let Some(v) = general.save_on_copy {
-            self.save_on_copy = v;
+        if let Some(v) = general.save_after_copy {
+            self.save_after_copy = v;
         }
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
@@ -176,8 +176,8 @@ impl Configuration {
         if let Some(v) = command_line.annotation_size_factor {
             self.annotation_size_factor = v;
         }
-        if command_line.save_on_copy {
-            self.save_on_copy = command_line.save_on_copy;
+        if command_line.save_after_copy {
+            self.save_after_copy = command_line.save_after_copy;
         }
     }
 
@@ -209,8 +209,8 @@ impl Configuration {
         self.annotation_size_factor
     }
 
-    pub fn save_on_copy(&self) -> bool {
-        self.save_on_copy
+    pub fn save_after_copy(&self) -> bool {
+        self.save_after_copy
     }
 
     pub fn color_palette(&self) -> &ColorPalette {
@@ -228,7 +228,7 @@ impl Default for Configuration {
             initial_tool: Tools::Pointer,
             copy_command: None,
             annotation_size_factor: 1.0f64,
-            save_on_copy: false,
+            save_after_copy: false,
             color_palette: ColorPalette::default(),
         }
     }
@@ -263,7 +263,7 @@ struct ConfiguationFileGeneral {
     copy_command: Option<String>,
     annotation_size_factor: Option<f64>,
     output_filename: Option<String>,
-    save_on_copy: Option<bool>,
+    save_after_copy: Option<bool>,
 }
 
 #[derive(Deserialize)]

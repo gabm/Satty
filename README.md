@@ -69,8 +69,8 @@ copy-command = "wl-copy"
 annotation-size-factor = 2
 # Filename to use for saving action. Omit to disable saving to file. Might contain format specifiers: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
 output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
-# Also save screenshot to a file after copy action
-save-on-copy = false
+# After copying the screenshot, save it to a file as well
+save-after-copy = false
 
 # custom colours for the colour palette
 [color-palette]
@@ -107,8 +107,8 @@ Options:
           Configure the command to be called on copy, for example `wl-copy`
       --annotation-size-factor <ANNOTATION_SIZE_FACTOR>
           Increase or decrease the size of the annotations
-      --save-on-copy
-          Also save screenshot to a file after copy action
+      --save-after-copy
+          After copying the screenshot, save it to a file as well
   -h, --help
           Print help
   -V, --version
