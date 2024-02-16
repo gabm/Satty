@@ -230,9 +230,15 @@ impl SketchBoard {
 
         match result {
             Err(e) => println!("Error saving {e}"),
-            Ok(()) => sender.output_sender().emit(SketchBoardOutput::ShowToast(
-                "Copied to clipboard.".to_string(),
-            )),
+            Ok(()) => {
+                sender.output_sender().emit(SketchBoardOutput::ShowToast(
+                    "Copied to clipboard.".to_string(),
+                ));
+
+                if APP_CONFIG.read().save_on_copy() {
+                    self.handle_save(sender);
+                };
+            },
         }
     }
 
