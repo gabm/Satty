@@ -140,16 +140,12 @@ impl Configuration {
         if let Some(v) = general.annotation_size_factor {
             self.annotation_size_factor = v;
         }
-<<<<<<< HEAD
         if let Some(v) = general.save_after_copy {
             self.save_after_copy = v;
         }
-||||||| parent of 6fb3d68 (feat: add support for configuring "default-hide-toolbars")
-=======
         if let Some(v) = general.default_hide_toolbars {
             self.default_hide_toolbars = v;
         }
->>>>>>> 6fb3d68 (feat: add support for configuring "default-hide-toolbars")
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
         // input_filename is required and needs to be overwritten

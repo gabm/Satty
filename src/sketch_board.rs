@@ -264,7 +264,10 @@ impl SketchBoard {
     }
 
     // Toolbars = Tools Toolbar + Style Toolbar
-    fn handle_toggle_toolbars_display(&mut self, sender: ComponentSender<Self>) -> ToolUpdateResult {
+    fn handle_toggle_toolbars_display(
+        &mut self,
+        sender: ComponentSender<Self>,
+    ) -> ToolUpdateResult {
         sender
             .output_sender()
             .emit(SketchBoardOutput::ToggleToolbarsDisplay);
