@@ -35,6 +35,10 @@ pub struct CommandLine {
     /// Increase or decrease the size of the annotations
     #[arg(long)]
     pub annotation_size_factor: Option<f64>,
+
+    /// After copying the screenshot, save it to a file as well
+    #[arg(long)]
+    pub save_after_copy: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
