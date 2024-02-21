@@ -69,14 +69,10 @@ copy-command = "wl-copy"
 annotation-size-factor = 2
 # Filename to use for saving action. Omit to disable saving to file. Might contain format specifiers: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
 output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
-<<<<<<< HEAD
 # After copying the screenshot, save it to a file as well
 save-after-copy = false
-||||||| parent of f4facc6 (doc(README): update README)
-=======
 # Hide toolbars by default
 default-hide-toolbars = false
->>>>>>> f4facc6 (doc(README): update README)
 
 # custom colours for the colour palette
 [color-palette]
@@ -117,7 +113,6 @@ Options:
           After copying the screenshot, save it to a file as well
   -d, --default-hide-toolbars
           Hide toolbars by default
->>>>>>> f4facc6 (doc(README): update README)
   -h, --help
           Print help
   -V, --version
