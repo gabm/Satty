@@ -165,7 +165,6 @@ impl Component for App {
                     let im_context = controller.im_context().unwrap();
                     im_context.focus_in();
                     if !im_context.filter_keypress(controller.current_event().unwrap()) {
-                        println!("key pressed: {:?}", key);
                         sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
                     }
                     Inhibit(false)
@@ -174,7 +173,6 @@ impl Component for App {
                 #[wrap(Some)]
                 set_im_context = &gtk::IMMulticontext {
                     connect_commit[sketch_board_sender] => move |_cx, txt| {
-                        println!("commit: {}", txt.to_string());
                         sketch_board_sender.emit(SketchBoardInput::new_text_event(
                             TextEventMsg::Commit(txt.to_string()),
                         ))
