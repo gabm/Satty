@@ -340,10 +340,6 @@ impl SketchBoard {
             }
             ToolbarEvent::Undo => self.handle_undo(),
             ToolbarEvent::Redo => self.handle_redo(),
-
-            ToolbarEvent::Show => ToolUpdateResult::Unmodified,
-            // TODO: disable all action for sketch board when hidden toolbars
-            ToolbarEvent::Hide => ToolUpdateResult::Unmodified,
         }
     }
 }

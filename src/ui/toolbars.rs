@@ -17,12 +17,15 @@ use relm4::{
     prelude::*,
 };
 
-pub struct ToolsToolbar {}
+pub struct ToolsToolbar {
+    visible: bool,
+}
 
 pub struct StyleToolbar {
     custom_color: Color,
     custom_color_pixbuf: Pixbuf,
     color_action: SimpleAction,
+    visible: bool,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -34,13 +37,11 @@ pub enum ToolbarEvent {
     Undo,
     SaveFile,
     CopyClipboard,
-    Show,
-    Hide,
 }
 
 #[derive(Debug, Copy, Clone)]
 pub enum ToolsToolbarInput {
-    ToggleDisplay(bool),
+    ToggleVisibility,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -48,7 +49,7 @@ pub enum StyleToolbarInput {
     ColorButtonSelected(ColorButtons),
     ShowColorDialog,
     ColorDialogFinished(Option<Color>),
-    ToggleDisplay(bool),
+    ToggleVisibility,
 }
 
 fn create_icon_pixbuf(color: Color) -> Pixbuf {
@@ -74,6 +75,9 @@ impl SimpleComponent for ToolsToolbar {
             set_halign: Align::Center,
             add_css_class: "toolbar",
             add_css_class: "toolbar-top",
+
+            #[watch]
+            set_visible: model.visible,
 
 
             gtk::Button {
@@ -191,12 +195,22 @@ impl SimpleComponent for ToolsToolbar {
         },
     }
 
+    fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
+        match message {
+            ToolsToolbarInput::ToggleVisibility => {
+                self.visible = !self.visible;
+            }
+        }
+    }
+
     fn init(
         _: Self::Init,
         root: &Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let model = ToolsToolbar {};
+        let model = ToolsToolbar {
+            visible: !APP_CONFIG.read().default_hide_toolbars(),
+        };
         let widgets = view_output!();
 
         // Tools Action for selecting tools
@@ -289,6 +303,9 @@ impl Component for StyleToolbar {
             set_halign: Align::Center,
             add_css_class: "toolbar",
             add_css_class: "toolbar-bottom",
+
+            #[watch]
+            set_visible: model.visible,
 
             gtk::ToggleButton {
                 set_focusable: false,
@@ -407,12 +424,8 @@ impl Component for StyleToolbar {
                     .emit(ToolbarEvent::ColorSelected(color));
             }
 
-            StyleToolbarInput::ToggleDisplay(is_showed) => {
-                if is_showed {
-                    sender.output_sender().emit(ToolbarEvent::Hide);
-                } else {
-                    sender.output_sender().emit(ToolbarEvent::Show);
-                }
+            StyleToolbarInput::ToggleVisibility => {
+                self.visible = !self.visible;
             }
         }
     }
@@ -450,6 +463,7 @@ impl Component for StyleToolbar {
             custom_color,
             custom_color_pixbuf,
             color_action: SimpleAction::from(color_action.clone()),
+            visible: !APP_CONFIG.read().default_hide_toolbars(),
         };
 
         // create widgets

@@ -134,24 +134,6 @@ impl App {
             None => println!("Cannot apply style"),
         }
     }
-
-    fn toggle_toolbars_display(&self) {
-        let is_showed =
-            self.tools_toolbar.widget().get_visible() && self.style_toolbar.widget().get_visible();
-        if is_showed {
-            self.tools_toolbar.widget().hide();
-            self.style_toolbar.widget().hide();
-        } else {
-            self.tools_toolbar.widget().show();
-            self.style_toolbar.widget().show();
-        }
-        self.tools_toolbar
-            .sender()
-            .emit(ToolsToolbarInput::ToggleDisplay(is_showed));
-        self.style_toolbar
-            .sender()
-            .emit(StyleToolbarInput::ToggleDisplay(is_showed));
-    }
 }
 
 #[relm4::component]
@@ -194,7 +176,14 @@ impl Component for App {
         match message {
             AppInput::Realized => self.resize_window_initial(root, sender),
             AppInput::ShowToast(msg) => self.toast.emit(ui::toast::ToastMessage::Show(msg)),
-            AppInput::ToggleToolbarsDisplay => self.toggle_toolbars_display(),
+            AppInput::ToggleToolbarsDisplay => {
+                self.tools_toolbar
+                    .sender()
+                    .emit(ToolsToolbarInput::ToggleVisibility);
+                self.style_toolbar
+                    .sender()
+                    .emit(StyleToolbarInput::ToggleVisibility);
+            }
         }
     }
 
@@ -240,11 +229,6 @@ impl Component for App {
         let style_toolbar = StyleToolbar::builder()
             .launch(())
             .forward(sketch_board.sender(), SketchBoardInput::ToolbarEvent);
-
-        if APP_CONFIG.read().default_hide_toolbars() {
-            tools_toolbar.widget().hide();
-            style_toolbar.widget().hide();
-        }
 
         // Model
         let model = App {
