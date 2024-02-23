@@ -26,6 +26,7 @@ mod style;
 mod tools;
 mod ui;
 
+use crate::sketch_board::TextEventMsg;
 use crate::sketch_board::{KeyEventMsg, SketchBoard, SketchBoardInput};
 
 struct App {
@@ -144,7 +145,7 @@ impl Component for App {
     type CommandOutput = AppCommandOutput;
 
     view! {
-          main_window = gtk::Window {
+        main_window = gtk::Window {
             set_default_size: (500, 500),
 
             connect_show[sender] => move |_| {
@@ -154,10 +155,27 @@ impl Component for App {
             // this should be inside Sketchboard, but doesn't seem so work there. We hook it here
             // and send the messages there
             add_controller = gtk::EventControllerKey {
-                connect_key_pressed[sketch_board_sender] => move | _, key, code, modifier | {
-                    sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
+                connect_key_pressed[sketch_board_sender] => move |controller, key, code, modifier | {
+                    if let Some(im_context) = controller.im_context() {
+                        im_context.focus_in();
+                        if !im_context.filter_keypress(controller.current_event().unwrap()) {
+                            sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
+                        }
+                    } else {
+                        sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
+                    }
                     Inhibit(false)
-                }
+                },
+
+                #[wrap(Some)]
+                set_im_context = &gtk::IMMulticontext {
+                    connect_commit[sketch_board_sender] => move |_cx, txt| {
+                        sketch_board_sender.emit(SketchBoardInput::new_text_event(
+                            TextEventMsg::Commit(txt.to_string()),
+                        ))
+                    }
+                },
+
             },
 
             gtk::Overlay {
