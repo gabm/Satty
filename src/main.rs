@@ -162,9 +162,12 @@ impl Component for App {
             // and send the messages there
             add_controller = gtk::EventControllerKey {
                 connect_key_pressed[sketch_board_sender] => move |controller, key, code, modifier | {
-                    let im_context = controller.im_context().unwrap();
-                    im_context.focus_in();
-                    if !im_context.filter_keypress(controller.current_event().unwrap()) {
+                    if let Some(im_context) = controller.im_context() {
+                        im_context.focus_in();
+                        if !im_context.filter_keypress(controller.current_event().unwrap()) {
+                            sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
+                        }
+                    } else {
                         sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
                     }
                     Inhibit(false)
