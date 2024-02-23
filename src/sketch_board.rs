@@ -20,7 +20,7 @@ use crate::style::Style;
 use crate::tools::{Tool, ToolEvent, ToolUpdateResult, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum SketchBoardInput {
     InputEvent(InputEvent),
     Resize(Vec2D),
@@ -33,10 +33,11 @@ pub enum SketchBoardOutput {
     ToggleToolbarsDisplay,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum InputEvent {
-    MouseEvent(MouseEventMsg),
-    KeyEvent(KeyEventMsg),
+    Mouse(MouseEventMsg),
+    Key(KeyEventMsg),
+    Text(TextEventMsg),
 }
 
 // from https://flatuicolors.com/palette/au
@@ -53,6 +54,10 @@ pub struct KeyEventMsg {
     pub key: Key,
     pub code: u32,
     pub modifier: ModifierType,
+}
+#[derive(Debug, Clone)]
+pub enum TextEventMsg {
+    Commit(String),
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -79,7 +84,7 @@ impl SketchBoardInput {
         modifier: ModifierType,
         pos: Vec2D,
     ) -> SketchBoardInput {
-        SketchBoardInput::InputEvent(InputEvent::MouseEvent(MouseEventMsg {
+        SketchBoardInput::InputEvent(InputEvent::Mouse(MouseEventMsg {
             type_: event_type,
             button: button.into(),
             modifier,
@@ -87,7 +92,11 @@ impl SketchBoardInput {
         }))
     }
     pub fn new_key_event(event: KeyEventMsg) -> SketchBoardInput {
-        SketchBoardInput::InputEvent(InputEvent::KeyEvent(event))
+        SketchBoardInput::InputEvent(InputEvent::Key(event))
+    }
+
+    pub fn new_text_event(event: TextEventMsg) -> SketchBoardInput {
+        SketchBoardInput::InputEvent(InputEvent::Text(event))
     }
 }
 
@@ -109,7 +118,7 @@ impl InputEvent {
     }
 
     fn remap_event_coordinates(&mut self, scale: f64) {
-        if let InputEvent::MouseEvent(me) = self {
+        if let InputEvent::Mouse(me) = self {
             Self::screen2image(&mut me.pos, scale)
         };
     }
@@ -412,7 +421,7 @@ impl Component for SketchBoard {
             }
 
             SketchBoardInput::InputEvent(mut ie) => {
-                if let InputEvent::KeyEvent(ke) = ie {
+                if let InputEvent::Key(ke) = ie {
                     if ke.key == Key::z && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_undo()
                     } else if ke.key == Key::y && ke.modifier == ModifierType::CONTROL_MASK {
