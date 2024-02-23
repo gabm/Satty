@@ -30,6 +30,7 @@ pub enum SketchBoardInput {
 #[derive(Debug, Clone)]
 pub enum SketchBoardOutput {
     ShowToast(String),
+    ToggleToolbarsDisplay,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -262,6 +263,17 @@ impl SketchBoard {
         }
     }
 
+    // Toolbars = Tools Toolbar + Style Toolbar
+    fn handle_toggle_toolbars_display(
+        &mut self,
+        sender: ComponentSender<Self>,
+    ) -> ToolUpdateResult {
+        sender
+            .output_sender()
+            .emit(SketchBoardOutput::ToggleToolbarsDisplay);
+        ToolUpdateResult::Unmodified
+    }
+
     fn handle_toolbar_event(
         &mut self,
         toolbar_event: ToolbarEvent,
@@ -405,6 +417,8 @@ impl Component for SketchBoard {
                         self.handle_undo()
                     } else if ke.key == Key::y && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_redo()
+                    } else if ke.key == Key::t && ke.modifier == ModifierType::CONTROL_MASK {
+                        self.handle_toggle_toolbars_display(sender)
                     } else if ke.key == Key::s && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_save(sender);
                         if APP_CONFIG.read().early_exit() {

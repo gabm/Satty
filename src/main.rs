@@ -15,7 +15,7 @@ use anyhow::{anyhow, Context, Result};
 
 use sketch_board::SketchBoardOutput;
 use ui::toast::Toast;
-use ui::toolbars::{StyleToolbar, ToolsToolbar};
+use ui::toolbars::{StyleToolbar, StyleToolbarInput, ToolsToolbar, ToolsToolbarInput};
 
 mod command_line;
 mod configuration;
@@ -39,6 +39,8 @@ struct App {
 #[derive(Debug)]
 enum AppInput {
     Realized,
+    ShowToast(String),
+    ToggleToolbarsDisplay,
 }
 
 #[derive(Debug)]
@@ -173,6 +175,15 @@ impl Component for App {
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             AppInput::Realized => self.resize_window_initial(root, sender),
+            AppInput::ShowToast(msg) => self.toast.emit(ui::toast::ToastMessage::Show(msg)),
+            AppInput::ToggleToolbarsDisplay => {
+                self.tools_toolbar
+                    .sender()
+                    .emit(ToolsToolbarInput::ToggleVisibility);
+                self.style_toolbar
+                    .sender()
+                    .emit(StyleToolbarInput::ToggleVisibility);
+            }
         }
     }
 
@@ -203,8 +214,9 @@ impl Component for App {
         let sketch_board =
             SketchBoard::builder()
                 .launch(image)
-                .forward(toast.sender(), |t| match t {
-                    SketchBoardOutput::ShowToast(msg) => ui::toast::ToastMessage::Show(msg),
+                .forward(sender.input_sender(), |t| match t {
+                    SketchBoardOutput::ShowToast(msg) => AppInput::ShowToast(msg),
+                    SketchBoardOutput::ToggleToolbarsDisplay => AppInput::ToggleToolbarsDisplay,
                 });
 
         let sketch_board_sender = sketch_board.sender().clone();
