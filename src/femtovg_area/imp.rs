@@ -368,24 +368,34 @@ impl FemtoVgAreaMut {
             ImageFlags::empty(),
         )?;
 
-        let img = unsafe {
+        unsafe {
             if image.has_alpha() {
-                let img = Img::new(
-                    image.pixels().align_to::<RGBA<u8>>().1,
+                let mut img = Img::new_stride(
+                    image.pixels().align_to::<RGBA<u8>>().1.into(),
                     image.width() as usize,
                     image.height() as usize,
+                    (image.rowstride() / 3) as usize,
                 );
-                ImageSource::Rgba(img)
+
+                // this function truncates the internal buffer so that width == stride
+                let _ = img.as_contiguous_buf();
+
+                canvas.update_image(background_image_id, ImageSource::Rgba(img.as_ref()), 0, 0)?;
             } else {
-                let img = Img::new(
-                    image.pixels().align_to::<RGB<u8>>().1,
+                let mut img = Img::new_stride(
+                    image.pixels().align_to::<RGB<u8>>().1.into(),
                     image.width() as usize,
                     image.height() as usize,
+                    (image.rowstride() / 3) as usize,
                 );
-                ImageSource::Rgb(img)
+
+                // this function truncates the internal buffer so that width == stride
+                let _ = img.as_contiguous_buf();
+
+                canvas.update_image(background_image_id, ImageSource::Rgb(img.as_ref()), 0, 0)?;
             }
         };
-        canvas.update_image(background_image_id, img, 0, 0)?;
+
         Ok(background_image_id)
     }
 }
