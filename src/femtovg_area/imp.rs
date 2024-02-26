@@ -268,7 +268,14 @@ impl FemtoVgAreaMut {
 
         // setup transform to image coordinates
         let mut transform = Transform2D::identity();
+        let offset_x =
+            canvas.width() as f32 - self.background_image.width() as f32 * self.scale_factor;
+        let offset_y =
+            canvas.height() as f32 - self.background_image.height() as f32 * self.scale_factor;
+
         transform.scale(self.scale_factor, self.scale_factor);
+        transform.translate(offset_x / 2.0, offset_y / 2.0);
+
         canvas.reset_transform();
         canvas.set_transform(&transform);
 
