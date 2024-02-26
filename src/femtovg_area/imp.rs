@@ -254,9 +254,26 @@ impl FemtoVgAreaMut {
         canvas.set_render_target(femtovg::RenderTarget::Image(image_id));
         canvas.reset_transform();
 
-        self.render(canvas, font)?;
+        self.render(canvas, font, false)?;
 
-        Ok(canvas.screenshot()?)
+        let mut result = canvas.screenshot()?;
+        let crop_tool = self.crop_tool.borrow();
+
+        if let Some(crop) = crop_tool.get_crop() {
+            if let Some((pos, size)) = crop.get_rectangle() {
+                let (buf, width, height) = result
+                    .sub_image(
+                        pos.x as usize,
+                        pos.y as usize,
+                        size.x as usize,
+                        size.y as usize,
+                    )
+                    .to_contiguous_buf();
+                result = Img::new(buf.to_vec(), width, height);
+            }
+        }
+
+        Ok(result)
     }
 
     pub fn render_framebuffer(
@@ -279,7 +296,7 @@ impl FemtoVgAreaMut {
         canvas.reset_transform();
         canvas.set_transform(&transform);
 
-        self.render(canvas, font)?;
+        self.render(canvas, font, true)?;
 
         Ok(())
     }
@@ -288,6 +305,7 @@ impl FemtoVgAreaMut {
         &mut self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         font: FontId,
+        render_crop: bool,
     ) -> Result<()> {
         // clear canvas
         canvas.clear_rect(
@@ -312,8 +330,10 @@ impl FemtoVgAreaMut {
         }
 
         // render crop tool
-        if let Some(c) = self.crop_tool.borrow().get_crop() {
-            c.draw(canvas, font)?;
+        if render_crop {
+            if let Some(c) = self.crop_tool.borrow().get_crop() {
+                c.draw(canvas, font)?;
+            }
         }
 
         canvas.flush();
@@ -381,7 +401,7 @@ impl FemtoVgAreaMut {
                     image.pixels().align_to::<RGBA<u8>>().1.into(),
                     image.width() as usize,
                     image.height() as usize,
-                    (image.rowstride() / 3) as usize,
+                    (image.rowstride() / 4) as usize,
                 );
 
                 // this function truncates the internal buffer so that width == stride
