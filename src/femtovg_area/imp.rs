@@ -72,6 +72,7 @@ impl WidgetImpl for FemtoVGArea {
 impl GLAreaImpl for FemtoVGArea {
     fn resize(&self, width: i32, height: i32) {
         self.ensure_canvas();
+
         let mut bc = self.canvas.borrow_mut();
         let canvas = bc.as_mut().unwrap(); // this unwrap is safe as long as we call "ensure_canvas" before
 
@@ -80,6 +81,12 @@ impl GLAreaImpl for FemtoVGArea {
             height as u32,
             self.obj().scale_factor() as f32,
         );
+
+        // update scale factor
+        self.inner()
+            .as_mut()
+            .expect("Did you call init before using FemtoVgArea?")
+            .update_scale_factor(canvas);
     }
     fn render(&self, _context: &gtk::gdk::GLContext) -> bool {
         self.ensure_canvas();
@@ -234,10 +241,6 @@ impl FemtoVgAreaMut {
 
     pub fn set_active_tool(&mut self, active_tool: Rc<RefCell<dyn Tool>>) {
         self.active_tool = active_tool;
-    }
-
-    pub fn set_scale_factor(&mut self, scale_factor: f32) {
-        self.scale_factor = scale_factor;
     }
 
     pub fn render_native_resolution(
@@ -435,5 +438,24 @@ impl FemtoVgAreaMut {
         };
 
         Ok(background_image_id)
+    }
+
+    pub fn update_scale_factor(&mut self, canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>) {
+        let image_width = self.background_image.width() as f32;
+        let image_height = self.background_image.height() as f32;
+        let aspect_ratio = image_width / image_height;
+
+        let canvas_width = canvas.width() as f32;
+        let canvas_height = canvas.height() as f32;
+
+        self.scale_factor = if canvas_width / aspect_ratio <= canvas_height {
+            canvas_width / aspect_ratio / image_height
+        } else {
+            canvas_height * aspect_ratio / image_width
+        };
+    }
+
+    pub fn get_scale_factor(&self) -> f32 {
+        self.scale_factor
     }
 }

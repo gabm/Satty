@@ -27,7 +27,6 @@ type RenderedImage = Img<Vec<RGBA<u8>>>;
 #[derive(Debug, Clone)]
 pub enum SketchBoardInput {
     InputEvent(InputEvent),
-    Resize(Vec2D),
     ToolbarEvent(ToolbarEvent),
     RenderResult(RenderedImage, Action),
 }
@@ -140,21 +139,9 @@ pub struct SketchBoard {
     active_tool: Rc<RefCell<dyn Tool>>,
     tools: ToolsManager,
     style: Style,
-    image_dimensions: Vec2D,
-    scale_factor: f32,
 }
 
 impl SketchBoard {
-    pub fn calculate_scale_factor(&mut self, new_dimensions: Vec2D) {
-        let aspect_ratio = self.image_dimensions.x / self.image_dimensions.y;
-        self.scale_factor = if new_dimensions.x / aspect_ratio <= new_dimensions.y {
-            new_dimensions.x / aspect_ratio / self.image_dimensions.y
-        } else {
-            new_dimensions.y * aspect_ratio / self.image_dimensions.x
-        };
-
-        self.renderer.set_scale_factor(self.scale_factor);
-    }
     fn refresh_screen(&mut self) {
         self.renderer.queue_render();
     }
@@ -422,10 +409,6 @@ impl Component for SketchBoard {
                             Vec2D::new(x as f32, y as f32)));
                     }
                 },
-
-                connect_resize[sender] => move |_, x, y| {
-                    sender.input(SketchBoardInput::Resize(Vec2D::new(x as f32,y as f32)));
-                }
             }
         },
     }
@@ -433,11 +416,6 @@ impl Component for SketchBoard {
     fn update(&mut self, msg: SketchBoardInput, sender: ComponentSender<Self>, _root: &Self::Root) {
         // handle resize ourselves, pass everything else to tool
         let result = match msg {
-            SketchBoardInput::Resize(dim) => {
-                self.calculate_scale_factor(dim);
-                ToolUpdateResult::Redraw
-            }
-
             SketchBoardInput::InputEvent(mut ie) => {
                 if let InputEvent::Key(ke) = ie {
                     if ke.key == Key::z && ke.modifier == ModifierType::CONTROL_MASK {
@@ -462,9 +440,7 @@ impl Component for SketchBoard {
                             .handle_event(ToolEvent::Input(ie))
                     }
                 } else {
-                    ie.remap_event_coordinates(
-                        self.scale_factor / self.renderer.scale_factor() as f32,
-                    );
+                    ie.remap_event_coordinates(self.renderer.get_scale_factor());
                     self.active_tool
                         .borrow_mut()
                         .handle_event(ToolEvent::Input(ie))
@@ -499,11 +475,9 @@ impl Component for SketchBoard {
         let tools = ToolsManager::new();
 
         let mut model = Self {
-            image_dimensions: Vec2D::new(image.width() as f32, image.height() as f32),
             renderer: FemtoVGArea::default(),
             active_tool: tools.get(&config.initial_tool()),
             style: Style::default(),
-            scale_factor: 1.0,
             tools,
         };
 

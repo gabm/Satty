@@ -5,7 +5,7 @@ use std::{cell::RefCell, rc::Rc};
 use gdk_pixbuf::{glib::subclass::types::ObjectSubclassIsExt, Pixbuf};
 use gtk::glib;
 use relm4::{
-    gtk::{self},
+    gtk::{self, prelude::WidgetExt},
     Sender,
 };
 
@@ -26,13 +26,6 @@ impl Default for FemtoVGArea {
 }
 
 impl FemtoVGArea {
-    pub fn set_scale_factor(&mut self, scale_factor: f32) {
-        self.imp()
-            .inner()
-            .as_mut()
-            .expect("Did you call init before usind FemtoVgArea?")
-            .set_scale_factor(scale_factor);
-    }
     pub fn set_active_tool(&mut self, active_tool: Rc<RefCell<dyn Tool>>) {
         self.imp()
             .inner()
@@ -66,6 +59,17 @@ impl FemtoVGArea {
         self.imp().request_render(action);
     }
 
+    pub fn get_scale_factor(&self) -> f32 {
+        let renderer_scale_factor = self
+            .imp()
+            .inner()
+            .as_mut()
+            .expect("Did you call init before using FemtoVgArea?")
+            .get_scale_factor();
+        let dpi_scale_factor = self.scale_factor() as f32;
+
+        renderer_scale_factor / dpi_scale_factor
+    }
     pub fn init(
         &mut self,
         sender: Sender<SketchBoardInput>,
