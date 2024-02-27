@@ -151,16 +151,18 @@ Satty is based on GTK-4 and Adwaita.
 
 - libgtk-4-1
 - libadwaita-1-0
+- libepoxy
 
 ### Arch Linux & Gentoo
 
-- pango
 - glib2
-- cairo
 - libadwaita
 - gtk4
 - gdk-pixbuf2
+- libepoxy
 
 ## License
 
 The source code is released under the MPL-2.0 license.
+
+The Font 'Roboto Regular' from Google is released under Apache-2.0 license.
