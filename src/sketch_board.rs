@@ -129,7 +129,7 @@ impl InputEvent {
     }
 
     fn remap_event_coordinates(&mut self, scale: f32) {
-        if let InputEvent::MouseEvent(me) = self {
+        if let InputEvent::Mouse(me) = self {
             Self::screen2image(&mut me.pos, scale)
         };
     }
