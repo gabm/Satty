@@ -18,6 +18,7 @@ use relm4::{gtk, Sender};
 use resource::resource;
 
 use crate::{
+    math::Vec2D,
     sketch_board::{Action, SketchBoardInput},
     tools::{CropTool, Drawable, Tool},
 };
@@ -244,36 +245,46 @@ impl FemtoVgAreaMut {
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         font: FontId,
     ) -> anyhow::Result<ImgVec<RGBA8>> {
+        // get offset and size of the area in question
+        let (pos, size) = self
+            .crop_tool
+            .borrow()
+            .get_crop()
+            .and_then(|c| c.get_rectangle())
+            .unwrap_or((
+                Vec2D::zero(),
+                Vec2D::new(
+                    self.background_image.width() as f32,
+                    self.background_image.height() as f32,
+                ),
+            ));
+
+        // create render-target
         let image_id = canvas.create_image_empty(
-            self.background_image.width() as usize,
-            self.background_image.height() as usize,
+            size.x as usize,
+            size.y as usize,
             PixelFormat::Rgba8,
             ImageFlags::empty(),
         )?;
-
         canvas.set_render_target(femtovg::RenderTarget::Image(image_id));
-        canvas.reset_transform();
 
+        // apply offset
+        let mut transform = Transform2D::identity();
+        transform.translate(-pos.x, -pos.y);
+        canvas.reset_transform();
+        canvas.set_transform(&transform);
+
+        // render
         self.render(canvas, font, false)?;
 
-        let mut result = canvas.screenshot()?;
-        let crop_tool = self.crop_tool.borrow();
+        // return screenshot
+        let result = canvas.screenshot();
 
-        if let Some(crop) = crop_tool.get_crop() {
-            if let Some((pos, size)) = crop.get_rectangle() {
-                let (buf, width, height) = result
-                    .sub_image(
-                        pos.x as usize,
-                        pos.y as usize,
-                        size.x as usize,
-                        size.y as usize,
-                    )
-                    .to_contiguous_buf();
-                result = Img::new(buf.to_vec(), width, height);
-            }
-        }
+        // clean up
+        canvas.set_render_target(femtovg::RenderTarget::Screen);
+        canvas.delete_image(image_id);
 
-        Ok(result)
+        Ok(result?)
     }
 
     pub fn render_framebuffer(
