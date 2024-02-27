@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::f64::consts::PI;
 use std::rc::Rc;
 
-use pangocairo::pango::{FontDescription, SCALE};
+use femtovg::{Color, Paint, Path};
 
 use crate::sketch_board::{MouseButton, MouseEventType};
 use crate::style::Style;
@@ -26,54 +26,51 @@ pub struct Marker {
 impl Drawable for Marker {
     fn draw(
         &self,
-        cx: &pangocairo::cairo::Context,
-        _surface: &pangocairo::cairo::ImageSurface,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        font: femtovg::FontId,
     ) -> anyhow::Result<()> {
-        let layout = pangocairo::create_layout(cx);
+        let text = format!("{}", self.number);
 
-        // set text
-        let mut desc = FontDescription::from_string("Sans,Times new roman");
-        desc.set_size(self.style.size.to_text_size());
-        layout.set_font_description(Some(&desc));
-        layout.set_alignment(pangocairo::pango::Alignment::Center);
-        layout.set_text(format!("{}", self.number).as_str());
+        let mut paint = Paint::color(Color::white());
+        paint.set_font(&[font]);
+        paint.set_font_size((self.style.size.to_text_size()) as f32);
+        paint.set_text_align(femtovg::Align::Center);
+        paint.set_text_baseline(femtovg::Baseline::Middle);
 
-        // calculate circle positon and size
-        let (_, rect) = layout.extents();
-        let circle_pos_x = self.pos.x + (rect.x() / SCALE + rect.width() / SCALE / 2) as f64;
-        let circle_pos_y = self.pos.y + (rect.y() / SCALE + rect.height() / SCALE / 2) as f64;
-        let circle_radius = ((rect.width() / SCALE * rect.width() / SCALE) as f64
-            + (rect.height() / SCALE * rect.height() / SCALE) as f64)
-            .sqrt();
+        let text_metrics = canvas.measure_text(self.pos.x, self.pos.y, &text, &paint)?;
 
-        let (r, g, b, a) = self.style.color.to_rgba_f64();
+        let circle_radius = (text_metrics.width() * text_metrics.width()
+            + text_metrics.height() * text_metrics.height())
+        .sqrt();
 
-        cx.save()?;
-
-        // draw a circle background
-        cx.arc(
-            circle_pos_x,
-            circle_pos_y,
+        let mut inner_circle_path = Path::new();
+        inner_circle_path.arc(
+            self.pos.x,
+            self.pos.y,
             circle_radius * 0.8,
             0.0,
-            2.0 * PI,
-        ); // full circle
-        cx.set_source_rgba(r, g, b, a);
-        cx.fill()?;
+            2.0 * PI as f32,
+            femtovg::Solidity::Solid,
+        );
 
-        // draw a circle around
-        cx.arc(circle_pos_x, circle_pos_y, circle_radius, 0.0, 2.0 * PI); // full circle
-        cx.set_source_rgba(r, g, b, a);
-        cx.set_line_width(self.style.size.to_line_width() * 2.0);
-        cx.stroke()?;
+        let mut outer_circle_path = Path::new();
+        outer_circle_path.arc(
+            self.pos.x,
+            self.pos.y,
+            circle_radius,
+            0.0,
+            2.0 * PI as f32,
+            femtovg::Solidity::Solid,
+        );
 
-        // render text on top
-        cx.set_source_rgb(1.0, 1.0, 1.0);
-        cx.move_to(self.pos.x, self.pos.y);
-        pangocairo::show_layout(cx, &layout);
+        let cirlce_paint = Paint::color(self.style.color.into())
+            .with_line_width(self.style.size.to_line_width() * 2.0);
 
-        cx.restore()?;
-
+        canvas.save();
+        canvas.fill_path(&inner_circle_path, &cirlce_paint);
+        canvas.stroke_path(&outer_circle_path, &cirlce_paint);
+        canvas.fill_text(self.pos.x, self.pos.y, &text, &paint)?;
+        canvas.restore();
         Ok(())
     }
 

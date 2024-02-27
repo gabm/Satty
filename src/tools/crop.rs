@@ -1,11 +1,11 @@
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 
 use crate::{
     math::{self, Vec2D},
     sketch_board::{KeyEventMsg, MouseEventMsg, MouseEventType},
 };
 use anyhow::Result;
-use pangocairo::cairo::{Context, ImageSurface};
+use femtovg::{Color, Paint, Path};
 use relm4::gtk::gdk::Key;
 
 use super::{Drawable, Tool, ToolUpdateResult};
@@ -24,15 +24,30 @@ pub struct CropTool {
 }
 
 impl Crop {
-    const HANDLE_RADIUS: f64 = 4.0;
-    const HANDLE_BORDER: f64 = 2.0;
+    const HANDLE_RADIUS: f32 = 5.0;
+    const HANDLE_BORDER: f32 = 2.0;
 
-    fn draw_single_handle(cx: &Context, center: Vec2D) -> Result<()> {
-        cx.set_source_rgb(0.9, 0.9, 0.9);
-        cx.set_line_width(Crop::HANDLE_BORDER);
-        cx.arc(center.x, center.y, Crop::HANDLE_RADIUS, 0.0, 2.0 * PI);
-        cx.stroke()?;
-        Ok(())
+    fn draw_single_handle(
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        center: Vec2D,
+        scale: f32,
+    ) {
+        let mut path = Path::new();
+        path.arc(
+            center.x,
+            center.y,
+            Crop::HANDLE_RADIUS / scale,
+            0.0,
+            2.0 * PI,
+            femtovg::Solidity::Solid,
+        );
+
+        let border_paint =
+            Paint::color(Color::rgbf(0.9, 0.9, 0.9)).with_line_width(Crop::HANDLE_BORDER / scale);
+        let fill_paint = Paint::color(Color::rgbaf(0.0, 0.0, 0.0, 0.4));
+
+        canvas.fill_path(&path, &fill_paint);
+        canvas.stroke_path(&path, &border_paint);
     }
 
     pub fn get_rectangle(&self) -> Option<(Vec2D, Vec2D)> {
@@ -42,46 +57,48 @@ impl Crop {
 }
 
 impl Drawable for Crop {
-    fn draw(&self, cx: &Context, surface: &ImageSurface) -> Result<()> {
+    fn draw(
+        &self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        _font: femtovg::FontId,
+    ) -> Result<()> {
         let size = match self.size {
             Some(s) => s,
             None => return Ok(()), // early exit if none
         };
 
-        let dimensions = Vec2D::new(surface.width() as f64, surface.height() as f64);
+        let scale = canvas.transform().average_scale();
+        let dimensions = Vec2D::new(
+            canvas.width() as f32 / scale,
+            canvas.height() as f32 / scale,
+        );
 
-        cx.save()?;
+        let shadow_paint = Paint::color(Color::rgbaf(0.0, 0.0, 0.0, 0.5))
+            .with_fill_rule(femtovg::FillRule::EvenOdd);
+        let mut shadow_path = Path::new();
+        shadow_path.rect(0.0, 0.0, dimensions.x, dimensions.y);
+        shadow_path.rect(self.pos.x, self.pos.y, size.x, size.y);
 
-        // fill with half-transparent overlay
-        cx.set_fill_rule(pangocairo::cairo::FillRule::EvenOdd);
-        cx.set_source_rgba(0.0, 0.0, 0.0, 0.5);
-        cx.rectangle(0.0, 0.0, dimensions.x, dimensions.y);
-        cx.rectangle(self.pos.x, self.pos.y, size.x, size.y);
-        cx.fill()?;
-        cx.set_fill_rule(pangocairo::cairo::FillRule::Winding);
+        let border_paint = Paint::color(Color::rgbf(0.1, 0.1, 0.1)).with_line_width(2.0);
+        let mut border_path = Path::new();
+        border_path.rect(self.pos.x, self.pos.y, size.x, size.y);
 
-        // draw border
-        cx.set_line_width(1.0);
-        cx.set_source_rgb(0.1, 0.1, 0.1);
-        cx.rectangle(self.pos.x, self.pos.y, size.x, size.y);
-        cx.stroke()?;
+        canvas.save();
+        canvas.fill_path(&shadow_path, &shadow_paint);
+        canvas.stroke_path(&border_path, &border_paint);
 
-        // draw 8 handles
         if self.active {
-            cx.save()?;
-            Self::draw_single_handle(cx, self.pos)?;
-            Self::draw_single_handle(cx, self.pos + Vec2D::new(size.x / 2.0, 0.0))?;
-            Self::draw_single_handle(cx, self.pos + Vec2D::new(size.x, 0.0))?;
-            Self::draw_single_handle(cx, self.pos + Vec2D::new(0.0, size.y / 2.0))?;
-            Self::draw_single_handle(cx, self.pos + Vec2D::new(0.0, size.y))?;
-            Self::draw_single_handle(cx, self.pos + Vec2D::new(size.x / 2.0, size.y))?;
-            Self::draw_single_handle(cx, self.pos + Vec2D::new(size.x, size.y))?;
-            Self::draw_single_handle(cx, self.pos + Vec2D::new(size.x, size.y / 2.0))?;
-            cx.restore()?;
+            Self::draw_single_handle(canvas, self.pos, scale);
+            Self::draw_single_handle(canvas, self.pos + Vec2D::new(size.x / 2.0, 0.0), scale);
+            Self::draw_single_handle(canvas, self.pos + Vec2D::new(size.x, 0.0), scale);
+            Self::draw_single_handle(canvas, self.pos + Vec2D::new(0.0, size.y / 2.0), scale);
+            Self::draw_single_handle(canvas, self.pos + Vec2D::new(0.0, size.y), scale);
+            Self::draw_single_handle(canvas, self.pos + Vec2D::new(size.x / 2.0, size.y), scale);
+            Self::draw_single_handle(canvas, self.pos + Vec2D::new(size.x, size.y), scale);
+            Self::draw_single_handle(canvas, self.pos + Vec2D::new(size.x, size.y / 2.0), scale);
         }
 
-        cx.restore()?;
-
+        canvas.restore();
         Ok(())
     }
 }
@@ -157,7 +174,7 @@ impl CropTool {
         let crop_size = crop.size?;
         let crop_pos = crop.pos;
 
-        const MAX_DISTANCE2: f64 = (Crop::HANDLE_BORDER + Crop::HANDLE_RADIUS)
+        const MAX_DISTANCE2: f32 = (Crop::HANDLE_BORDER + Crop::HANDLE_RADIUS)
             * (Crop::HANDLE_RADIUS + Crop::HANDLE_BORDER);
 
         for h in CropHandle::all() {

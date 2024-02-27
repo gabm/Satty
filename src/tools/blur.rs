@@ -1,7 +1,8 @@
 use std::cell::RefCell;
 
 use anyhow::Result;
-use pangocairo::cairo::{Context, ImageSurface};
+use femtovg::{imgref::Img, Color, ImageFilter, ImageFlags, ImageId, Paint, Path};
+
 use relm4::gtk::gdk::Key;
 
 use crate::{
@@ -18,85 +19,99 @@ pub struct Blur {
     size: Option<Vec2D>,
     style: Style,
     editing: bool,
-    cached_surface: RefCell<Option<ImageSurface>>,
+    cached_image: RefCell<Option<ImageId>>,
 }
 
 impl Blur {
     fn blur(
-        surface: &mut ImageSurface,
-        factor: f64,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         pos: Vec2D,
         size: Vec2D,
-    ) -> Result<ImageSurface> {
-        let (pos, size) = math::rect_ensure_positive_size(pos, size);
+        sigma: f32,
+    ) -> Result<ImageId> {
+        let img = canvas.screenshot()?;
 
-        let tmp = ImageSurface::create(
-            pangocairo::cairo::Format::ARgb32,
-            (size.x / factor) as i32,
-            (size.y / factor) as i32,
+        // TODO: review that calculation!
+        let scaled_width = canvas.width() as f32 / canvas.transform().average_scale();
+        let dpi = img.width() as f32 / scaled_width;
+
+        let (buf, width, height) = img
+            .sub_image(
+                (pos.x * dpi) as usize,
+                (pos.y * dpi) as usize,
+                (size.x * dpi) as usize,
+                (size.y * dpi) as usize,
+            )
+            .to_contiguous_buf();
+        let sub = Img::new(buf.into_owned(), width, height);
+
+        let src_image_id = canvas.create_image(sub.as_ref(), ImageFlags::empty())?;
+        let dst_image_id = canvas.create_image_empty(
+            sub.width(),
+            sub.height(),
+            femtovg::PixelFormat::Rgba8,
+            ImageFlags::GENERATE_MIPMAPS,
         )?;
 
-        let tmp_cx = Context::new(tmp.clone())?;
-        tmp_cx.scale(1.0 / factor, 1.0 / factor);
-        tmp_cx.set_source_surface(surface, -pos.x, -pos.y)?;
-        tmp_cx.paint()?;
+        canvas.filter_image(
+            dst_image_id,
+            ImageFilter::GaussianBlur { sigma },
+            src_image_id,
+        );
+        //canvas.delete_image(src_image_id);
 
-        let result = ImageSurface::create(
-            pangocairo::cairo::Format::ARgb32,
-            size.x as i32,
-            size.y as i32,
-        )?;
-
-        let result_cx = Context::new(result.clone())?;
-        result_cx.scale(factor, factor);
-        result_cx.set_source_surface(tmp, 0.0, 0.0)?;
-        result_cx.paint()?;
-
-        Ok(result)
+        Ok(dst_image_id)
     }
 }
 
 impl Drawable for Blur {
-    fn draw(&self, cx: &Context, surface: &ImageSurface) -> Result<()> {
+    fn draw(
+        &self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        _font: femtovg::FontId,
+    ) -> Result<()> {
         let size = match self.size {
             Some(s) => s,
             None => return Ok(()), // early exit if none
         };
-        let (r, g, b, a) = self.style.color.to_rgba_f64();
-
-        cx.save()?;
-
         if self.editing {
             // set style
-            cx.set_line_width(Size::Medium.to_line_width());
-            cx.set_source_rgba(r, g, b, a);
+            let paint = Paint::color(Color::black()).with_line_width(Size::Medium.to_line_width());
 
             // make rect
-            cx.rectangle(self.top_left.x, self.top_left.y, size.x, size.y);
+            let mut path = Path::new();
+            path.rect(self.top_left.x, self.top_left.y, size.x, size.y);
 
             // draw
-            cx.stroke()?;
+            canvas.stroke_path(&path, &paint);
         } else {
+            let (pos, size) = math::rect_ensure_positive_size(self.top_left, size);
+
             // create new cached image
-            if self.cached_surface.borrow().is_none() {
-                let mut tmp = surface.clone();
-                *self.cached_surface.borrow_mut() = Some(Self::blur(
-                    &mut tmp,
-                    self.style.size.to_blur_factor(),
-                    self.top_left,
+            if self.cached_image.borrow().is_none() {
+                self.cached_image.borrow_mut().replace(Self::blur(
+                    canvas,
+                    pos,
                     size,
+                    self.style.size.to_blur_factor(),
                 )?);
             }
 
-            let (pos, _) = math::rect_ensure_positive_size(self.top_left, size);
-
-            // paint over original
-            cx.set_source_surface(self.cached_surface.borrow().as_ref().unwrap(), pos.x, pos.y)?;
-            cx.paint()?;
+            let mut path = Path::new();
+            path.rect(pos.x, pos.y, size.x, size.y);
+            canvas.fill_path(
+                &path,
+                &Paint::image(
+                    self.cached_image.borrow().unwrap(), // this unwrap is safe because we placed it above
+                    pos.x,
+                    pos.y,
+                    size.x,
+                    size.y,
+                    0f32,
+                    1f32,
+                ),
+            );
         }
-
-        cx.restore()?;
-
         Ok(())
     }
 }
@@ -117,7 +132,7 @@ impl Tool for BlurTool {
                     size: None,
                     style: self.style,
                     editing: true,
-                    cached_surface: RefCell::new(None),
+                    cached_image: RefCell::new(None),
                 });
 
                 ToolUpdateResult::Redraw

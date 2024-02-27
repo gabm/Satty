@@ -1,8 +1,5 @@
 use anyhow::Result;
-use pangocairo::{
-    cairo::{Context, ImageSurface},
-    pango::{FontDescription, SCALE},
-};
+use femtovg::{FontId, Paint, Path, TextMetrics};
 use relm4::gtk::{
     gdk::{Key, ModifierType},
     TextBuffer,
@@ -27,49 +24,111 @@ pub struct Text {
 }
 
 impl Drawable for Text {
-    fn draw(&self, cx: &Context, _surface: &ImageSurface) -> Result<()> {
-        let layout = pangocairo::create_layout(cx);
-
-        let text = self.text_buffer.text(
+    fn draw(
+        &self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        font: FontId,
+    ) -> Result<()> {
+        let gtext = self.text_buffer.text(
             &self.text_buffer.start_iter(),
             &self.text_buffer.end_iter(),
             false,
         );
-        layout.set_text(text.as_str());
+        let text = gtext.as_str();
 
-        let mut desc = FontDescription::from_string("Sans,Times new roman");
-        desc.set_size(self.style.size.to_text_size());
-        layout.set_font_description(Some(&desc));
+        let mut paint: Paint = self.style.into();
+        paint.set_font(&[font]);
 
-        let (r, g, b, a) = self.style.color.to_rgba_f64();
+        let font_metrics = canvas.measure_font(&paint)?;
 
-        cx.save()?;
-        cx.set_source_rgba(r, g, b, a);
+        let width = (canvas.width() as f32) / canvas.transform().average_scale() - self.pos.x;
+        let mut y = self.pos.y;
+        let mut metrics = Vec::<TextMetrics>::new();
 
-        cx.move_to(self.pos.x, self.pos.y);
-        pangocairo::show_layout(cx, &layout);
+        let lines = canvas.break_text_vec(width, text, &paint)?;
+
+        for line_range in lines {
+            if let Ok(text_metrics) = canvas.fill_text(self.pos.x, y, &text[line_range], &paint) {
+                y += text_metrics.height() * 1.2;
+                metrics.push(text_metrics);
+            }
+        }
 
         if self.editing {
             // GTK is working with UTF-8 and character positions, pango is working with UTF-8 but byte positions.
             // here we transform one into the other!
-            let (cursor_byte_pos, _) = text
+            let (mut cursor_byte_pos, _) = text
                 .char_indices()
                 .nth((self.text_buffer.cursor_position()) as usize)
-                .unwrap_or((text.bytes().count(), 'X'));
+                .unwrap_or((text.len(), 'X'));
 
-            let (cursor, _) = layout.cursor_pos(cursor_byte_pos as i32);
+            // GTK does swalllow manual line wraps, lets correct the cursor position for that! urgh..
+            let no_manual_line_wraps = text.split_at(cursor_byte_pos).0.matches('\n').count();
+            cursor_byte_pos -= no_manual_line_wraps;
 
-            let cursor_pos =
-                self.pos + Vec2D::new((cursor.x() / SCALE) as f64, (cursor.y() / SCALE) as f64);
-            let cursor_height = (cursor.height() / SCALE) as f64;
+            // function to draw a cursor
+            let mut draw_cursor = |x, y: f32, height| {
+                // 20% extra height for cursor w.r.t. font height
+                let extra_height = height * 0.1;
 
-            cx.set_line_width(1.0);
-            cx.move_to(cursor_pos.x, cursor_pos.y);
-            cx.rel_line_to(0.0, cursor_height);
-            cx.stroke()?;
+                let mut path = Path::new();
+                path.move_to(x, y - extra_height);
+                path.line_to(x, y + height + 2.0 * extra_height);
+                canvas.fill_path(&path, &paint);
+            };
+
+            // find cursor pos in broken text
+            let mut acc_byte_index = 0;
+            let mut cursor_drawn = false;
+
+            for m in &metrics {
+                for g in &m.glyphs {
+                    if acc_byte_index + g.byte_index == cursor_byte_pos {
+                        if g.c == '\n' {
+                            // if its a newline -> draw cursor on next line
+                            draw_cursor(
+                                self.pos.x,
+                                y,
+                                -(font_metrics.ascender() + font_metrics.descender()),
+                            );
+                        } else {
+                            // cursor is before this glyph, draw here!
+                            draw_cursor(g.x - g.bearing_x, m.y, m.height());
+                        }
+                        cursor_drawn = true;
+                        break;
+                    }
+                }
+
+                let last_byte_index = match m.glyphs.last() {
+                    Some(g) => g.byte_index,
+                    None => 0,
+                };
+
+                acc_byte_index += last_byte_index;
+
+                if cursor_drawn {
+                    break;
+                }
+            }
+
+            if !cursor_drawn {
+                // cursor is after last char, draw there!
+                if let Some(m) = metrics.last() {
+                    if let Some(g) = m.glyphs.last() {
+                        // on the same line as last glyph
+                        draw_cursor(g.x + g.bearing_x + g.width, m.y, m.height());
+                    }
+                } else {
+                    // no text rendered so far
+                    draw_cursor(
+                        self.pos.x,
+                        self.pos.y,
+                        -(font_metrics.ascender() + font_metrics.descender()),
+                    );
+                }
+            }
         }
-
-        cx.restore()?;
 
         Ok(())
     }

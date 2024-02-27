@@ -1,4 +1,4 @@
-use std::f64::consts::PI;
+use femtovg::{FontId, Path};
 
 use crate::{
     math::Vec2D,
@@ -24,37 +24,21 @@ pub struct BrushDrawable {
 impl Drawable for BrushDrawable {
     fn draw(
         &self,
-        cx: &pangocairo::cairo::Context,
-        _surface: &pangocairo::cairo::ImageSurface,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        _font: FontId,
     ) -> anyhow::Result<()> {
-        let (r, g, b, a) = self.style.color.to_rgba_f64();
+        canvas.save();
+        let mut path = Path::new();
 
-        cx.save()?;
-
-        cx.set_line_width(self.style.size.to_line_width());
-        cx.set_source_rgba(r, g, b, a);
-        cx.set_line_join(pangocairo::cairo::LineJoin::Bevel);
-
-        if self.points.is_empty() {
-            cx.arc(
-                self.start.x,
-                self.start.y,
-                self.style.size.to_line_width(),
-                0.0,
-                2.0 * PI,
-            );
-            cx.fill()?;
-        } else {
-            cx.move_to(self.start.x, self.start.y);
-
+        if !self.points.is_empty() {
+            path.move_to(self.start.x, self.start.y);
             for p in &self.points {
-                cx.line_to(self.start.x + p.x, self.start.y + p.y);
+                path.line_to(self.start.x + p.x, self.start.y + p.y);
             }
-            cx.stroke()?;
+
+            canvas.stroke_path(&path, &self.style.into());
         }
-
-        cx.restore()?;
-
+        canvas.restore();
         Ok(())
     }
 }

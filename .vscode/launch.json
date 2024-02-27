@@ -21,7 +21,7 @@
             },
             "args": [
                 "--filename",
-                "/home/gabm/Pictures/Screenshots/swappy-20230921-054340.png",
+                "/home/gabm/Pictures/Screenshots/satty-20240109-22:19:08.png",
                 //"/home/gabm/Pictures/Wallpaper/torres_1.jpg"
                 "--output-filename",
                 "/tmp/out.png"

@@ -1,36 +1,36 @@
 use std::{
-    f64::consts::PI,
+    f32::consts::PI,
     fmt::Display,
     ops::{Add, AddAssign, Sub, SubAssign},
 };
 
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
 pub struct Vec2D {
-    pub x: f64,
-    pub y: f64,
+    pub x: f32,
+    pub y: f32,
 }
 
 impl Vec2D {
     pub fn zero() -> Self {
-        Self { x: 0f64, y: 0f64 }
+        Self { x: 0.0, y: 0.0 }
     }
 
-    pub fn new(x: f64, y: f64) -> Self {
+    pub fn new(x: f32, y: f32) -> Self {
         Self { x, y }
     }
 
-    pub fn norm(&self) -> f64 {
+    pub fn norm(&self) -> f32 {
         (self.x * self.x + self.y * self.y).sqrt()
     }
 
-    pub fn norm2(&self) -> f64 {
+    pub fn norm2(&self) -> f32 {
         self.x * self.x + self.y * self.y
     }
 
     pub fn snapped_vector_15deg(&self) -> Vec2D {
         let current_angle = (self.y / self.x).atan();
         let current_norm2 = self.norm2();
-        let new_angle = (current_angle / 0.26179938782).round() * 0.2617993878;
+        let new_angle = (current_angle / 0.261_799_4).round() * 0.261_799_4;
 
         let (a, b) = if new_angle.abs() < PI / 4.0
         // 45°

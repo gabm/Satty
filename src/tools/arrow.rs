@@ -1,7 +1,7 @@
-use std::f64::consts::PI;
+use std::f32::consts::PI;
 
 use anyhow::Result;
-use pangocairo::cairo::{Context, ImageSurface};
+use femtovg::{FontId, Path};
 use relm4::gtk::gdk::{Key, ModifierType};
 
 use crate::{
@@ -111,8 +111,8 @@ impl Arrow {
         // borrowed from: https://math.stackexchange.com/questions/1314006/drawing-an-arrow
         let delta = self.start - end;
         let l1 = delta.norm();
-        const L2: f64 = 30.0;
-        const PHI: f64 = PI / 6.0;
+        const L2: f32 = 30.0;
+        const PHI: f32 = PI / 6.0;
         let (sin_phi, cos_phi) = PHI.sin_cos();
 
         let x3 = end.x + L2 / l1 * (delta.x * cos_phi + delta.y * sin_phi);
@@ -126,34 +126,30 @@ impl Arrow {
 }
 
 impl Drawable for Arrow {
-    fn draw(&self, cx: &Context, _surface: &ImageSurface) -> Result<()> {
+    fn draw(
+        &self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        _font: FontId,
+    ) -> Result<()> {
         let end = match self.end {
             Some(e) => e,
             None => return Ok(()), // exit if no end
         };
-
         let (p1, p2) = self.get_arrow_head_points();
-        let (r, g, b, a) = self.style.color.to_rgba_f64();
 
-        cx.save()?;
+        canvas.save();
 
-        cx.set_line_width(self.style.size.to_line_width());
-        cx.set_source_rgba(r, g, b, a);
+        let mut path = Path::new();
+        path.move_to(self.start.x, self.start.y);
+        path.line_to(end.x, end.y);
 
-        // base line
-        cx.move_to(self.start.x, self.start.y);
-        cx.line_to(end.x, end.y);
+        path.move_to(p1.x, p1.y);
+        path.line_to(end.x, end.y);
+        path.line_to(p2.x, p2.y);
 
-        // arrow-arms
-        cx.move_to(p1.x, p1.y);
-        cx.line_to(end.x, end.y);
-        cx.line_to(p2.x, p2.y);
+        canvas.stroke_path(&path, &self.style.into());
 
-        // draw!
-        cx.stroke()?;
-
-        cx.restore()?;
-
+        canvas.restore();
         Ok(())
     }
 }

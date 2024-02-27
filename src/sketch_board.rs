@@ -1,5 +1,8 @@
 use anyhow::anyhow;
 
+use femtovg::imgref::Img;
+use femtovg::rgb::{ComponentBytes, RGBA};
+use gdk_pixbuf::glib::Bytes;
 use gdk_pixbuf::Pixbuf;
 use std::cell::RefCell;
 use std::fs;
@@ -9,22 +12,29 @@ use std::rc::Rc;
 
 use gtk::prelude::*;
 
-use relm4::drawing::DrawHandler;
-use relm4::gtk::gdk::{DisplayManager, Key, MemoryTexture, ModifierType};
+use relm4::gtk::gdk::{DisplayManager, Key, ModifierType, Texture};
 use relm4::{gtk, Component, ComponentParts, ComponentSender};
 
 use crate::configuration::APP_CONFIG;
+use crate::femtovg_area::FemtoVGArea;
 use crate::math::Vec2D;
-use crate::renderer::Renderer;
 use crate::style::Style;
 use crate::tools::{Tool, ToolEvent, ToolUpdateResult, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
 
+type RenderedImage = Img<Vec<RGBA<u8>>>;
+
 #[derive(Debug, Clone)]
 pub enum SketchBoardInput {
     InputEvent(InputEvent),
-    Resize(Vec2D),
     ToolbarEvent(ToolbarEvent),
+    RenderResult(RenderedImage, Action),
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Action {
+    SaveToClipboard,
+    SaveToFile,
 }
 
 #[derive(Debug, Clone)]
@@ -112,12 +122,12 @@ impl From<u32> for MouseButton {
 }
 
 impl InputEvent {
-    fn screen2image(p: &mut Vec2D, scale: f64) {
+    fn screen2image(p: &mut Vec2D, scale: f32) {
         p.x /= scale;
         p.y /= scale;
     }
 
-    fn remap_event_coordinates(&mut self, scale: f64) {
+    fn remap_event_coordinates(&mut self, scale: f32) {
         if let InputEvent::Mouse(me) = self {
             Self::screen2image(&mut me.pos, scale)
         };
@@ -125,47 +135,49 @@ impl InputEvent {
 }
 
 pub struct SketchBoard {
-    handler: DrawHandler,
+    renderer: FemtoVGArea,
     active_tool: Rc<RefCell<dyn Tool>>,
     tools: ToolsManager,
     style: Style,
-    renderer: Renderer,
-    image_dimensions: Vec2D,
-    scale_factor: f64,
 }
 
 impl SketchBoard {
-    pub fn calculate_scale_factor(&mut self, new_dimensions: Vec2D) {
-        let aspect_ratio = self.image_dimensions.x / self.image_dimensions.y;
-        self.scale_factor = if new_dimensions.x / aspect_ratio <= new_dimensions.y {
-            new_dimensions.x / aspect_ratio / self.image_dimensions.y
-        } else {
-            new_dimensions.y * aspect_ratio / self.image_dimensions.x
-        };
-    }
     fn refresh_screen(&mut self) {
-        let cx = self.handler.get_context();
-        if let Err(e) = self
-            .renderer
-            .render_to_window(&cx, self.scale_factor, &self.active_tool)
-        {
-            println!("Error drawing: {:?}", e);
+        self.renderer.queue_render();
+    }
+
+    fn image_to_pixbuf(image: RenderedImage) -> Pixbuf {
+        let (buf, w, h) = image.into_contiguous_buf();
+
+        Pixbuf::from_bytes(
+            &Bytes::from(buf.as_bytes()),
+            gdk_pixbuf::Colorspace::Rgb,
+            true,
+            8,
+            w as i32,
+            h as i32,
+            w as i32 * 4,
+        )
+    }
+
+    fn handle_render_result(
+        &self,
+        sender: ComponentSender<Self>,
+        image: RenderedImage,
+        action: Action,
+    ) {
+        match action {
+            Action::SaveToClipboard => {
+                self.handle_copy_clipboard(sender, Self::image_to_pixbuf(image))
+            }
+            Action::SaveToFile => self.handle_save(sender, Self::image_to_pixbuf(image)),
+        };
+        if APP_CONFIG.read().early_exit() {
+            relm4::main_application().quit();
         }
     }
 
-    fn handle_save(&self, sender: ComponentSender<Self>) {
-        let texture = match self.renderer.render_to_texture(&self.active_tool) {
-            Ok(t) => t,
-            Err(e) => {
-                println!("Error while creating texture: {e}");
-                return;
-            }
-        };
-
-        self.handle_save_texture(sender, &texture);
-    }
-
-    fn handle_save_texture(&self, sender: ComponentSender<Self>, texture: &MemoryTexture) {
+    fn handle_save(&self, sender: ComponentSender<Self>, image: Pixbuf) {
         let output_filename = match APP_CONFIG.read().output_filename() {
             None => {
                 println!("No Output filename specified!");
@@ -177,6 +189,7 @@ impl SketchBoard {
         // run the output filename by "chrono date format"
         let output_filename = format!("{}", chrono::Local::now().format(&output_filename));
 
+        // TODO: we could support more data types
         if !output_filename.ends_with(".png") {
             let msg = "The only supported format is png, but the filename does not end in png";
             println!("{msg}");
@@ -186,7 +199,13 @@ impl SketchBoard {
             return;
         }
 
-        let data = texture.save_to_png_bytes();
+        let data = match image.save_to_bufferv("png", &Vec::new()) {
+            Ok(d) => d,
+            Err(e) => {
+                println!("Error serializing image: {e}");
+                return;
+            }
+        };
 
         let msg = match fs::write(&output_filename, data) {
             Err(e) => format!("Error while saving file: {e}"),
@@ -198,7 +217,7 @@ impl SketchBoard {
             .emit(SketchBoardOutput::ShowToast(msg));
     }
 
-    fn save_to_clipboard(&self, texture: &MemoryTexture) -> anyhow::Result<()> {
+    fn save_to_clipboard(&self, texture: &impl IsA<Texture>) -> anyhow::Result<()> {
         let display = DisplayManager::get()
             .default_display()
             .ok_or(anyhow!("Cannot open default display for clipboard."))?;
@@ -209,7 +228,7 @@ impl SketchBoard {
 
     fn save_to_external_process(
         &self,
-        texture: &MemoryTexture,
+        texture: &impl IsA<Texture>,
         command: &str,
     ) -> anyhow::Result<()> {
         let mut child = Command::new(command)
@@ -227,14 +246,8 @@ impl SketchBoard {
         Ok(())
     }
 
-    fn handle_copy_clipboard(&self, sender: ComponentSender<Self>) {
-        let texture = match self.renderer.render_to_texture(&self.active_tool) {
-            Ok(t) => t,
-            Err(e) => {
-                println!("Error while creating texture: {e}");
-                return;
-            }
-        };
+    fn handle_copy_clipboard(&self, sender: ComponentSender<Self>, image: Pixbuf) {
+        let texture = Texture::for_pixbuf(&image);
 
         let result = if let Some(command) = APP_CONFIG.read().copy_command() {
             self.save_to_external_process(&texture, command)
@@ -249,8 +262,9 @@ impl SketchBoard {
                     "Copied to clipboard.".to_string(),
                 ));
 
+                // TODO: rethink order and messaging patterns
                 if APP_CONFIG.read().save_after_copy() {
-                    self.handle_save_texture(sender, &texture);
+                    self.handle_save(sender, image);
                 };
             }
         }
@@ -283,11 +297,7 @@ impl SketchBoard {
         ToolUpdateResult::Unmodified
     }
 
-    fn handle_toolbar_event(
-        &mut self,
-        toolbar_event: ToolbarEvent,
-        sender: ComponentSender<Self>,
-    ) -> ToolUpdateResult {
+    fn handle_toolbar_event(&mut self, toolbar_event: ToolbarEvent) -> ToolUpdateResult {
         match toolbar_event {
             ToolbarEvent::ToolSelected(tool) => {
                 // deactivate old tool and save drawable, if any
@@ -304,6 +314,7 @@ impl SketchBoard {
 
                 // change active tool
                 self.active_tool = self.tools.get(&tool);
+                self.renderer.set_active_tool(self.active_tool.clone());
 
                 // send style event
                 self.active_tool
@@ -334,17 +345,11 @@ impl SketchBoard {
                     .handle_event(ToolEvent::StyleChanged(self.style))
             }
             ToolbarEvent::SaveFile => {
-                self.handle_save(sender);
-                if APP_CONFIG.read().early_exit() {
-                    relm4::main_application().quit();
-                }
+                self.renderer.request_render(Action::SaveToFile);
                 ToolUpdateResult::Unmodified
             }
             ToolbarEvent::CopyClipboard => {
-                self.handle_copy_clipboard(sender);
-                if APP_CONFIG.read().early_exit() {
-                    relm4::main_application().quit();
-                }
+                self.renderer.request_render(Action::SaveToClipboard);
                 ToolUpdateResult::Unmodified
             }
             ToolbarEvent::Undo => self.handle_undo(),
@@ -363,7 +368,7 @@ impl Component for SketchBoard {
     view! {
         gtk::Box {
             #[local_ref]
-            area -> gtk::DrawingArea {
+            area -> FemtoVGArea {
                 set_vexpand: true,
                 set_hexpand: true,
                 grab_focus: (),
@@ -375,7 +380,7 @@ impl Component for SketchBoard {
                                 MouseEventType::BeginDrag,
                                 controller.current_button(),
                                 controller.current_event_state(),
-                                Vec2D::new(x, y)));
+                                Vec2D::new(x as f32, y as f32)));
 
                         },
                         connect_drag_update[sender] => move |controller, x, y| {
@@ -383,14 +388,14 @@ impl Component for SketchBoard {
                                 MouseEventType::UpdateDrag,
                                 controller.current_button(),
                                 controller.current_event_state(),
-                                Vec2D::new(x, y)));
+                                Vec2D::new(x as f32, y as f32)));
                         },
                         connect_drag_end[sender] => move |controller, x, y| {
                             sender.input(SketchBoardInput::new_mouse_event(
                                 MouseEventType::EndDrag,
                                 controller.current_button(),
                                 controller.current_event_state(),
-                                Vec2D::new(x, y)
+                                Vec2D::new(x as f32, y as f32)
                             ));
                         }
                 },
@@ -401,13 +406,9 @@ impl Component for SketchBoard {
                             MouseEventType::Click,
                             controller.current_button(),
                             controller.current_event_state(),
-                            Vec2D::new(x, y)));
+                            Vec2D::new(x as f32, y as f32)));
                     }
                 },
-
-                connect_resize[sender] => move |_, x, y| {
-                    sender.input(SketchBoardInput::Resize(Vec2D::new(x as f64,y as f64)));
-                }
             }
         },
     }
@@ -415,11 +416,6 @@ impl Component for SketchBoard {
     fn update(&mut self, msg: SketchBoardInput, sender: ComponentSender<Self>, _root: &Self::Root) {
         // handle resize ourselves, pass everything else to tool
         let result = match msg {
-            SketchBoardInput::Resize(dim) => {
-                self.calculate_scale_factor(dim);
-                ToolUpdateResult::Redraw
-            }
-
             SketchBoardInput::InputEvent(mut ie) => {
                 if let InputEvent::Key(ke) = ie {
                     if ke.key == Key::z && ke.modifier == ModifierType::CONTROL_MASK {
@@ -429,16 +425,10 @@ impl Component for SketchBoard {
                     } else if ke.key == Key::t && ke.modifier == ModifierType::CONTROL_MASK {
                         self.handle_toggle_toolbars_display(sender)
                     } else if ke.key == Key::s && ke.modifier == ModifierType::CONTROL_MASK {
-                        self.handle_save(sender);
-                        if APP_CONFIG.read().early_exit() {
-                            relm4::main_application().quit();
-                        }
+                        self.renderer.request_render(Action::SaveToFile);
                         ToolUpdateResult::Unmodified
                     } else if ke.key == Key::c && ke.modifier == ModifierType::CONTROL_MASK {
-                        self.handle_copy_clipboard(sender);
-                        if APP_CONFIG.read().early_exit() {
-                            relm4::main_application().quit();
-                        }
+                        self.renderer.request_render(Action::SaveToClipboard);
                         ToolUpdateResult::Unmodified
                     } else if ke.key == Key::Escape {
                         relm4::main_application().quit();
@@ -450,14 +440,18 @@ impl Component for SketchBoard {
                             .handle_event(ToolEvent::Input(ie))
                     }
                 } else {
-                    ie.remap_event_coordinates(self.scale_factor);
+                    ie.remap_event_coordinates(self.renderer.get_scale_factor());
                     self.active_tool
                         .borrow_mut()
                         .handle_event(ToolEvent::Input(ie))
                 }
             }
             SketchBoardInput::ToolbarEvent(toolbar_event) => {
-                self.handle_toolbar_event(toolbar_event, sender)
+                self.handle_toolbar_event(toolbar_event)
+            }
+            SketchBoardInput::RenderResult(img, action) => {
+                self.handle_render_result(sender, img, action);
+                ToolUpdateResult::Unmodified
             }
         };
 
@@ -480,17 +474,21 @@ impl Component for SketchBoard {
         let config = APP_CONFIG.read();
         let tools = ToolsManager::new();
 
-        let model = Self {
-            image_dimensions: Vec2D::new(image.width() as f64, image.height() as f64),
-            handler: DrawHandler::new(),
+        let mut model = Self {
+            renderer: FemtoVGArea::default(),
             active_tool: tools.get(&config.initial_tool()),
             style: Style::default(),
-            renderer: Renderer::new(image, tools.get_crop_tool()).expect("Can't create renderer"),
-            scale_factor: 1.0,
             tools,
         };
 
-        let area = model.handler.drawing_area();
+        let area = &mut model.renderer;
+        area.init(
+            sender.input_sender().clone(),
+            model.tools.get_crop_tool(),
+            model.active_tool.clone(),
+            image,
+        );
+
         let widgets = view_output!();
 
         ComponentParts { model, widgets }

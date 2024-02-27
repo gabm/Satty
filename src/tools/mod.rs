@@ -1,12 +1,12 @@
 use std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 
 use anyhow::Result;
+use femtovg::{renderer::OpenGl, Canvas, FontId};
 use gdk_pixbuf::{
     glib::{FromVariant, Variant, VariantTy},
     prelude::{StaticVariantType, ToVariant},
 };
-use pangocairo::cairo::ImageSurface;
-use relm4::gtk::cairo::Context;
+
 use serde_derive::Deserialize;
 
 use crate::{
@@ -97,7 +97,7 @@ where
 }
 
 pub trait Drawable: DrawableClone + Debug {
-    fn draw(&self, cx: &Context, surface: &ImageSurface) -> Result<()>;
+    fn draw(&self, canvas: &mut Canvas<OpenGl>, font: FontId) -> Result<()>;
     fn handle_undo(&mut self) {}
     fn handle_redo(&mut self) {}
 }
@@ -163,7 +163,13 @@ impl ToolsManager {
     pub fn get(&self, tool: &Tools) -> Rc<RefCell<dyn Tool>> {
         match tool {
             Tools::Crop => self.crop_tool.clone(),
-            _ => self.tools.get(tool).unwrap().clone(),
+            _ => self
+                .tools
+                .get(tool)
+                .unwrap_or_else(|| {
+                    panic!("Did you add the requested too {tool:#?} to the tools HashMap?")
+                })
+                .clone(),
         }
     }
 
