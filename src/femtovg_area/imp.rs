@@ -38,6 +38,7 @@ pub struct FemtoVgAreaMut {
     active_tool: Rc<RefCell<dyn Tool>>,
     crop_tool: Rc<RefCell<CropTool>>,
     scale_factor: f32,
+    offset: Vec2D,
     drawables: Vec<Box<dyn Drawable>>,
     redo_stack: Vec<Box<dyn Drawable>>,
 }
@@ -86,7 +87,7 @@ impl GLAreaImpl for FemtoVGArea {
         self.inner()
             .as_mut()
             .expect("Did you call init before using FemtoVgArea?")
-            .update_scale_factor(canvas);
+            .update_transformation(canvas);
     }
     fn render(&self, _context: &gtk::gdk::GLContext) -> bool {
         self.ensure_canvas();
@@ -147,6 +148,7 @@ impl FemtoVGArea {
             active_tool,
             crop_tool,
             scale_factor: 1.0,
+            offset: Vec2D::zero(),
             drawables: Vec::new(),
             redo_stack: Vec::new(),
         });
@@ -299,13 +301,8 @@ impl FemtoVgAreaMut {
 
         // setup transform to image coordinates
         let mut transform = Transform2D::identity();
-        let offset_x =
-            canvas.width() as f32 - self.background_image.width() as f32 * self.scale_factor;
-        let offset_y =
-            canvas.height() as f32 - self.background_image.height() as f32 * self.scale_factor;
-
         transform.scale(self.scale_factor, self.scale_factor);
-        transform.translate(offset_x / 2.0, offset_y / 2.0);
+        transform.translate(self.offset.x, self.offset.y);
 
         canvas.reset_transform();
         canvas.set_transform(&transform);
@@ -440,7 +437,11 @@ impl FemtoVgAreaMut {
         Ok(background_image_id)
     }
 
-    pub fn update_scale_factor(&mut self, canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>) {
+    pub fn update_transformation(
+        &mut self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+    ) {
+        // calculate scale
         let image_width = self.background_image.width() as f32;
         let image_height = self.background_image.height() as f32;
         let aspect_ratio = image_width / image_height;
@@ -453,9 +454,26 @@ impl FemtoVgAreaMut {
         } else {
             canvas_height * aspect_ratio / image_width
         };
+
+        // calculate offset
+        self.offset = Vec2D::new(
+            (canvas.width() as f32 - self.background_image.width() as f32 * self.scale_factor)
+                / 2.0,
+            (canvas.height() as f32 - self.background_image.height() as f32 * self.scale_factor)
+                / 2.0,
+        );
     }
 
-    pub fn get_scale_factor(&self) -> f32 {
-        self.scale_factor
+    pub fn abs_canvas_to_image_coordinates(&self, input: Vec2D, dpi_scale_factor: f32) -> Vec2D {
+        Vec2D::new(
+            (input.x * dpi_scale_factor - self.offset.x) / self.scale_factor,
+            (input.y * dpi_scale_factor - self.offset.y) / self.scale_factor,
+        )
+    }
+    pub fn rel_canvas_to_image_coordinates(&self, input: Vec2D, dpi_scale_factor: f32) -> Vec2D {
+        Vec2D::new(
+            input.x * dpi_scale_factor / self.scale_factor,
+            input.y * dpi_scale_factor / self.scale_factor,
+        )
     }
 }
