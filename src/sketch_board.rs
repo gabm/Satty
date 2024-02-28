@@ -70,7 +70,7 @@ pub enum TextEventMsg {
     Commit(String),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum MouseEventType {
     BeginDrag,
     EndDrag,
@@ -122,14 +122,16 @@ impl From<u32> for MouseButton {
 }
 
 impl InputEvent {
-    fn screen2image(p: &mut Vec2D, scale: f32) {
-        p.x /= scale;
-        p.y /= scale;
-    }
-
-    fn remap_event_coordinates(&mut self, scale: f32) {
+    fn remap_event_coordinates(&mut self, renderer: &FemtoVGArea) {
         if let InputEvent::Mouse(me) = self {
-            Self::screen2image(&mut me.pos, scale)
+            match me.type_ {
+                MouseEventType::BeginDrag | MouseEventType::Click => {
+                    me.pos = renderer.abs_canvas_to_image_coordinates(me.pos)
+                }
+                MouseEventType::EndDrag | MouseEventType::UpdateDrag => {
+                    me.pos = renderer.rel_canvas_to_image_coordinates(me.pos)
+                }
+            }
         };
     }
 }
@@ -440,7 +442,7 @@ impl Component for SketchBoard {
                             .handle_event(ToolEvent::Input(ie))
                     }
                 } else {
-                    ie.remap_event_coordinates(self.renderer.get_scale_factor());
+                    ie.remap_event_coordinates(&self.renderer);
                     self.active_tool
                         .borrow_mut()
                         .handle_event(ToolEvent::Input(ie))

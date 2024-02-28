@@ -10,6 +10,7 @@ use relm4::{
 };
 
 use crate::{
+    math::Vec2D,
     sketch_board::{Action, SketchBoardInput},
     tools::{CropTool, Drawable, Tool},
 };
@@ -59,16 +60,20 @@ impl FemtoVGArea {
         self.imp().request_render(action);
     }
 
-    pub fn get_scale_factor(&self) -> f32 {
-        let renderer_scale_factor = self
-            .imp()
+    pub fn abs_canvas_to_image_coordinates(&self, input: Vec2D) -> Vec2D {
+        self.imp()
             .inner()
             .as_mut()
             .expect("Did you call init before using FemtoVgArea?")
-            .get_scale_factor();
-        let dpi_scale_factor = self.scale_factor() as f32;
+            .abs_canvas_to_image_coordinates(input, self.scale_factor() as f32)
+    }
 
-        renderer_scale_factor / dpi_scale_factor
+    pub fn rel_canvas_to_image_coordinates(&self, input: Vec2D) -> Vec2D {
+        self.imp()
+            .inner()
+            .as_mut()
+            .expect("Did you call init before using FemtoVgArea?")
+            .rel_canvas_to_image_coordinates(input, self.scale_factor() as f32)
     }
     pub fn init(
         &mut self,
