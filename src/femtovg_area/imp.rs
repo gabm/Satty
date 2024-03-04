@@ -406,33 +406,50 @@ impl FemtoVgAreaMut {
             ImageFlags::empty(),
         )?;
 
-        unsafe {
-            if image.has_alpha() {
-                let mut img = Img::new_stride(
-                    image.pixels().align_to::<RGBA<u8>>().1.into(),
-                    image.width() as usize,
-                    image.height() as usize,
-                    (image.rowstride() / 4) as usize,
-                );
+        // extract values
+        let width = image.width() as usize;
+        let stride = image.rowstride() as usize; // stride is in bytes per row
+        let height = image.height() as usize;
+        let bytes_per_pixel = if image.has_alpha() { 4 } else { 3 }; // pixbuf supports rgb or rgba
 
-                // this function truncates the internal buffer so that width == stride
-                let _ = img.as_contiguous_buf();
+        unsafe {
+            let src_buffer = image.pixels();
+
+            let row_length = width * bytes_per_pixel;
+            let mut dst_buffer = if row_length == stride {
+                src_buffer.to_vec()
+            } else {
+                let mut dst_buffer = Vec::<u8>::with_capacity(width * height * bytes_per_pixel);
+
+                for row in 0..height {
+                    let src_offset = row * stride;
+                    dst_buffer.extend_from_slice(&src_buffer[src_offset..src_offset + row_length]);
+                }
+                dst_buffer
+            };
+
+            dst_buffer.truncate(width * height * bytes_per_pixel);
+
+            if image.has_alpha() {
+                let img = Img::new_stride(
+                    dst_buffer.align_to::<RGBA<u8>>().1.to_vec(),
+                    width,
+                    height,
+                    width,
+                );
 
                 canvas.update_image(background_image_id, ImageSource::Rgba(img.as_ref()), 0, 0)?;
             } else {
-                let mut img = Img::new_stride(
-                    image.pixels().align_to::<RGB<u8>>().1.into(),
-                    image.width() as usize,
-                    image.height() as usize,
-                    (image.rowstride() / 3) as usize,
+                let img = Img::new_stride(
+                    dst_buffer.align_to::<RGB<u8>>().1.to_owned(),
+                    width,
+                    height,
+                    width,
                 );
-
-                // this function truncates the internal buffer so that width == stride
-                let _ = img.as_contiguous_buf();
 
                 canvas.update_image(background_image_id, ImageSource::Rgb(img.as_ref()), 0, 0)?;
             }
-        };
+        }
 
         Ok(background_image_id)
     }
