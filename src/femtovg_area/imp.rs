@@ -417,8 +417,11 @@ impl FemtoVgAreaMut {
 
             let row_length = width * bytes_per_pixel;
             let mut dst_buffer = if row_length == stride {
+                // stride == row_length, there are no additional bytes after the end of each row
                 src_buffer.to_vec()
             } else {
+                // stride != row_length, there are additional bytes after the end of each row that
+                // need to be truncated. We copy row by row..
                 let mut dst_buffer = Vec::<u8>::with_capacity(width * height * bytes_per_pixel);
 
                 for row in 0..height {
@@ -428,6 +431,8 @@ impl FemtoVgAreaMut {
                 dst_buffer
             };
 
+            // in almost all cases, that should be a no-op. Buf we might have additional elements after the
+            // end of the buffer, e.g. after width * height * bytes_per_pixel
             dst_buffer.truncate(width * height * bytes_per_pixel);
 
             if image.has_alpha() {
