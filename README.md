@@ -14,6 +14,10 @@ Satty has been created to provide the following improvements over existing scree
 
 ## Install
 
+Thanks to our package maintainers, Satty is available for many distributions on Linux and BSD:
+
+[![Packaging status](https://repology.org/badge/vertical-allrepos/satty.svg)](https://repology.org/project/satty/versions)
+
 ### Arch Linux
 
 You can get the official Arch Linux package from the AUR:
