@@ -8,7 +8,7 @@ use crate::{
 
 use gdk_pixbuf::{
     gio::SimpleAction,
-    glib::{FromVariant, Variant, VariantTy},
+    glib::{Variant, VariantTy},
     Pixbuf,
 };
 use relm4::{
@@ -205,7 +205,7 @@ impl SimpleComponent for ToolsToolbar {
 
     fn init(
         _: Self::Init,
-        root: &Self::Root,
+        root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let model = ToolsToolbar {
@@ -431,7 +431,7 @@ impl Component for StyleToolbar {
     }
     fn init(
         _: Self::Init,
-        root: &Self::Root,
+        root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         // Color Action for selecting colors

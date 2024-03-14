@@ -3,10 +3,11 @@ use std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
 use anyhow::Result;
 use femtovg::{renderer::OpenGl, Canvas, FontId};
 use gdk_pixbuf::{
-    glib::{FromVariant, Variant, VariantTy},
+    glib::{Variant, VariantTy},
     prelude::{StaticVariantType, ToVariant},
 };
 
+use glib::variant::FromVariant;
 use serde_derive::Deserialize;
 
 use crate::{

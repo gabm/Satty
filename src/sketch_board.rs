@@ -470,7 +470,7 @@ impl Component for SketchBoard {
 
     fn init(
         image: Self::Init,
-        root: &Self::Root,
+        root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         let config = APP_CONFIG.read();

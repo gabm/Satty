@@ -1,0 +1,19 @@
+#app_id = "com.gabm.satty"
+icons = [
+  "pen-regular",
+  "color-regular",
+  "cursor-regular",
+  "number-circle-1-regular",
+  "drop-regular",
+  "arrow-redo-filled",
+  "arrow-undo-filled",
+  "save-regular",
+  "copy-regular",
+  "text-case-title-regular",
+  "text-font-regular",
+  "minus-large",
+  "checkbox-unchecked-regular",
+  "crop-filled",
+  "arrow-up-right-filled",
+  "rectangle-landscape-regular",
+]

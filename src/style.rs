@@ -2,9 +2,10 @@ use std::borrow::Cow;
 
 use femtovg::Paint;
 use gdk_pixbuf::{
-    glib::{FromVariant, Variant, VariantTy},
+    glib::{Variant, VariantTy},
     prelude::{StaticVariantType, ToVariant},
 };
+use glib::variant::FromVariant;
 use hex_color::HexColor;
 use relm4::gtk::gdk::RGBA;
 
