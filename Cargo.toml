@@ -18,9 +18,9 @@ include = [
 
 
 [dependencies]
-relm4 = { version = "0.6.2", features = ["macros", "libadwaita", "gnome_42"] }
+relm4 = { version = "0.8", features = ["macros", "libadwaita", "gnome_42"] }
 tokio = { version = "1.32.0", features = ["full"] }
-gdk-pixbuf = "0.17.2"
+gdk-pixbuf = "0.19.2"
 
 # error handling
 anyhow = "1.0"
@@ -47,25 +47,8 @@ glib = "0.19.2"
 resource = "0.5.0"  # font emedding
 
 [dependencies.relm4-icons]
-version = "0.6.0"
-features = [
-  "pen-regular",
-  "color-regular",
-  "cursor-regular",
-  "number-circle-1-regular",
-  "drop-regular",
-  "arrow-redo-filled",
-  "arrow-undo-filled",
-  "save-regular",
-  "copy-regular",
-  "text-case-title-regular",
-  "text-font-regular",
-  "minus-large",
-  "checkbox-unchecked-regular",
-  "crop-filled",
-  "arrow-up-right-filled",
-  "rectangle-landscape-regular",
-]
+version = "0.8.2"
+
 
 [build-dependencies]
 clap = { version = "4.4.10", features = ["derive"] }

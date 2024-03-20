@@ -89,7 +89,7 @@ impl GLAreaImpl for FemtoVGArea {
             .expect("Did you call init before using FemtoVgArea?")
             .update_transformation(canvas);
     }
-    fn render(&self, _context: &gtk::gdk::GLContext) -> bool {
+    fn render(&self, _context: &gtk::gdk::GLContext) -> glib::Propagation {
         self.ensure_canvas();
 
         let mut bc = self.canvas.borrow_mut();
@@ -109,7 +109,7 @@ impl GLAreaImpl for FemtoVGArea {
                 Ok(t) => t,
                 Err(e) => {
                     println!("Error while rendering image: {e}");
-                    return false;
+                    return glib::Propagation::Stop;
                 }
             };
 
@@ -131,7 +131,7 @@ impl GLAreaImpl for FemtoVGArea {
         {
             println!("Error rendering to framebuffer: {e}");
         }
-        false
+        glib::Propagation::Stop
     }
 }
 impl FemtoVGArea {

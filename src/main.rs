@@ -8,7 +8,7 @@ use gtk::prelude::*;
 use relm4::gtk::gdk::Rectangle;
 
 use relm4::{
-    gtk::{self, gdk::DisplayManager, CssProvider, Inhibit, Window},
+    gtk::{self, gdk::DisplayManager, CssProvider, Window},
     Component, ComponentController, ComponentParts, ComponentSender, Controller, RelmApp,
 };
 
@@ -52,11 +52,12 @@ enum AppCommandOutput {
 
 impl App {
     fn get_monitor_size(root: &Window) -> Option<Rectangle> {
-        let surface = root.surface();
-        DisplayManager::get()
-            .default_display()
-            .and_then(|display| display.monitor_at_surface(&surface))
-            .map(|monitor| monitor.geometry())
+        root.surface().and_then(|surface| {
+            DisplayManager::get()
+                .default_display()
+                .and_then(|display| display.monitor_at_surface(&surface))
+                .map(|monitor| monitor.geometry())
+        })
     }
 
     fn resize_window_initial(&self, root: &Window, sender: ComponentSender<Self>) {
@@ -165,7 +166,7 @@ impl Component for App {
                     } else {
                         sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
                     }
-                    Inhibit(false)
+                    glib::Propagation::Stop
                 },
 
                 #[wrap(Some)]
@@ -219,7 +220,7 @@ impl Component for App {
 
     fn init(
         image: Self::Init,
-        root: &Self::Root,
+        root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
         Self::apply_style();

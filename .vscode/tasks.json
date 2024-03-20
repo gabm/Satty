@@ -8,8 +8,8 @@
                 "run",
                 "--",
                 "--filename",
-                "/tmp/bug.png",
-                //"/home/gabm/Pictures/Screenshots/satty-20240219-14:19:29.png", // small
+                //"/tmp/bug.png",
+                "/home/gabm/Pictures/Screenshots/satty-20240219-14:19:29.png", // small
                 //"/home/gabm/Pictures/Screenshots/satty-20240109-22:19:08.png", // big
                 //"--fullscreen",
                 "--output-filename",
