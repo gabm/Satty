@@ -39,9 +39,12 @@ impl Drawable for Text {
         let mut paint: Paint = self.style.into();
         paint.set_font(&[font]);
 
-        let font_metrics = canvas.measure_font(&paint)?;
+        // get some metrics
+        let canva_scale = canvas.transform().average_scale();
+        let canvas_offset_x = canvas.transform()[4];
+        let canvas_width = canvas.width() as f32;
 
-        let width = (canvas.width() as f32) / canvas.transform().average_scale() - self.pos.x;
+        let width = canvas_width / canva_scale - self.pos.x - canvas_offset_x;
         let mut y = self.pos.y;
         let mut metrics = Vec::<TextMetrics>::new();
 
@@ -53,7 +56,7 @@ impl Drawable for Text {
                 metrics.push(text_metrics);
             }
         }
-
+        let font_metrics = canvas.measure_font(&paint)?;
         if self.editing {
             // GTK is working with UTF-8 and character positions, pango is working with UTF-8 but byte positions.
             // here we transform one into the other!
