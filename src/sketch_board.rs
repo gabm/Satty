@@ -273,7 +273,9 @@ impl SketchBoard {
     }
 
     fn handle_undo(&mut self) -> ToolUpdateResult {
-        if self.renderer.undo() {
+        if self.active_tool.borrow().active() {
+            self.active_tool.borrow_mut().handle_undo()
+        } else if self.renderer.undo() {
             ToolUpdateResult::Redraw
         } else {
             ToolUpdateResult::Unmodified
@@ -281,7 +283,9 @@ impl SketchBoard {
     }
 
     fn handle_redo(&mut self) -> ToolUpdateResult {
-        if self.renderer.redo() {
+        if self.active_tool.borrow().active() {
+            self.active_tool.borrow_mut().handle_redo()
+        } else if self.renderer.redo() {
             ToolUpdateResult::Redraw
         } else {
             ToolUpdateResult::Unmodified
