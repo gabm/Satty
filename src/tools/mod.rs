@@ -79,6 +79,18 @@ pub trait Tool {
         ToolUpdateResult::Unmodified
     }
 
+    fn active(&self) -> bool {
+        false
+    }
+
+    fn handle_undo(&mut self) -> ToolUpdateResult {
+        ToolUpdateResult::Unmodified
+    }
+
+    fn handle_redo(&mut self) -> ToolUpdateResult {
+        ToolUpdateResult::Unmodified
+    }
+
     fn get_drawable(&self) -> Option<&dyn Drawable>;
 }
 

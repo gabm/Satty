@@ -23,6 +23,20 @@ pub struct Text {
     style: Style,
 }
 
+impl Text {
+    fn new(pos: Vec2D, style: Style) -> Self {
+        let text_buffer = TextBuffer::new(None);
+        text_buffer.set_enable_undo(true);
+
+        Self {
+            pos,
+            text_buffer,
+            editing: true,
+            style,
+        }
+    }
+}
+
 impl Drawable for Text {
     fn draw(
         &self,
@@ -274,12 +288,7 @@ impl Tool for TextTool {
                     };
 
                     // create a new Text
-                    self.text = Some(Text {
-                        pos: event.pos,
-                        text_buffer: TextBuffer::new(None),
-                        editing: true,
-                        style: self.style,
-                    });
+                    self.text = Some(Text::new(event.pos, self.style));
 
                     return_value
                 } else {
@@ -296,6 +305,28 @@ impl Tool for TextTool {
             let result = t.clone_box();
             self.text = None;
             ToolUpdateResult::Commit(result)
+        } else {
+            ToolUpdateResult::Unmodified
+        }
+    }
+
+    fn active(&self) -> bool {
+        self.text.is_some()
+    }
+
+    fn handle_undo(&mut self) -> ToolUpdateResult {
+        if let Some(t) = &self.text {
+            t.text_buffer.undo();
+            ToolUpdateResult::Redraw
+        } else {
+            ToolUpdateResult::Unmodified
+        }
+    }
+
+    fn handle_redo(&mut self) -> ToolUpdateResult {
+        if let Some(t) = &self.text {
+            t.text_buffer.redo();
+            ToolUpdateResult::Redraw
         } else {
             ToolUpdateResult::Unmodified
         }
