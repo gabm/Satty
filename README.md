@@ -78,6 +78,8 @@ output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
 save-after-copy = false
 # Hide toolbars by default
 default-hide-toolbars = false
+# Path of font to use for text annotations
+font = "/usr/share/fonts/TTF/Roboto-Regular.ttf"
 
 # custom colours for the colour palette
 [color-palette]
@@ -118,6 +120,8 @@ Options:
           After copying the screenshot, save it to a file as well
   -d, --default-hide-toolbars
           Hide toolbars by default
+      --font <FONT>
+          Path of font to use for text annotations
   -h, --help
           Print help
   -V, --version

@@ -21,6 +21,7 @@ use crate::{
     math::Vec2D,
     sketch_board::{Action, SketchBoardInput},
     tools::{CropTool, Drawable, Tool},
+    APP_CONFIG,
 };
 
 #[derive(Default)]
@@ -162,14 +163,26 @@ impl FemtoVGArea {
             self.canvas.borrow_mut().replace(c);
         }
 
-        self.font.borrow_mut().replace(
+        let font = APP_CONFIG.read().font().and_then(|f| {
             self.canvas
                 .borrow_mut()
                 .as_mut()
                 .unwrap() // this unwrap is safe because it gets placed above
-                .add_font_mem(&resource!("src/assets/Roboto-Regular.ttf"))
-                .expect("Cannot add font"),
-        );
+                .add_font(f)
+                .ok()
+        });
+        if let Some(font) = font {
+            self.font.borrow_mut().replace(font);
+        } else {
+            self.font.borrow_mut().replace(
+                self.canvas
+                    .borrow_mut()
+                    .as_mut()
+                    .unwrap() // this unwrap is safe because it gets placed above
+                    .add_font_mem(&resource!("src/assets/Roboto-Regular.ttf"))
+                    .expect("Cannot add font"),
+            );
+        }
     }
 
     fn setup_canvas(&self) -> Result<femtovg::Canvas<femtovg::renderer::OpenGl>> {

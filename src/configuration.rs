@@ -38,6 +38,7 @@ pub struct Configuration {
     save_after_copy: bool,
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
+    font: Option<String>,
 }
 
 pub struct ColorPalette {
@@ -146,6 +147,9 @@ impl Configuration {
         if let Some(v) = general.default_hide_toolbars {
             self.default_hide_toolbars = v;
         }
+        if let Some(v) = general.font {
+            self.font = Some(v);
+        }
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
         // input_filename is required and needs to be overwritten
@@ -185,6 +189,9 @@ impl Configuration {
         }
         if command_line.save_after_copy {
             self.save_after_copy = command_line.save_after_copy;
+        }
+        if let Some(v) = command_line.font {
+            self.font = Some(v);
         }
     }
 
@@ -227,6 +234,10 @@ impl Configuration {
     pub fn default_hide_toolbars(&self) -> bool {
         self.default_hide_toolbars
     }
+
+    pub fn font(&self) -> Option<&String> {
+        self.font.as_ref()
+    }
 }
 
 impl Default for Configuration {
@@ -242,6 +253,7 @@ impl Default for Configuration {
             save_after_copy: false,
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
+            font: None,
         }
     }
 }
@@ -277,6 +289,7 @@ struct ConfiguationFileGeneral {
     output_filename: Option<String>,
     save_after_copy: Option<bool>,
     default_hide_toolbars: Option<bool>,
+    font: Option<String>,
 }
 
 #[derive(Deserialize)]
