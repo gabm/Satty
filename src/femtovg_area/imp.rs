@@ -12,6 +12,7 @@ use femtovg::{
     rgb::{RGB, RGBA, RGBA8},
     Canvas, FontId, ImageFlags, ImageId, ImageSource, Paint, Path, PixelFormat, Transform2D,
 };
+use fontconfig::Fontconfig;
 use gdk_pixbuf::Pixbuf;
 use gtk::{glib, prelude::*, subclass::prelude::*};
 use relm4::{gtk, Sender};
@@ -163,14 +164,22 @@ impl FemtoVGArea {
             self.canvas.borrow_mut().replace(c);
         }
 
-        let font = APP_CONFIG.read().font().and_then(|f| {
-            self.canvas
-                .borrow_mut()
-                .as_mut()
-                .unwrap() // this unwrap is safe because it gets placed above
-                .add_font(f)
-                .ok()
-        });
+        let app_config = APP_CONFIG.read();
+        let font = app_config
+            .font_family()
+            .and_then(|font_family| {
+                Fontconfig::new().and_then(|fc| {
+                    fc.find(font_family, app_config.font_style().map(String::as_str))
+                })
+            })
+            .and_then(|f| {
+                self.canvas
+                    .borrow_mut()
+                    .as_mut()
+                    .unwrap() // this unwrap is safe because it gets placed above
+                    .add_font(f.path)
+                    .ok()
+            });
         if let Some(font) = font {
             self.font.borrow_mut().replace(font);
         } else {

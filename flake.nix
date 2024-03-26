@@ -26,6 +26,7 @@
             gtk4
             wrapGAppsHook4 # this is needed for relm4-icons to properly load after gtk::init()
             libadwaita
+            fontconfig
 
             (rust-bin.stable.latest.default.override
               {

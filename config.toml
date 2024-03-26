@@ -15,6 +15,9 @@ output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
 save-after-copy = false
 # Hide toolbars by default
 dafault-hide-toolbars = false
+# Font to use for text annotations
+font-family = "Roboto"
+font-style = "Regular"
 
 # custom colours for the colour palette
 [color-palette]

@@ -45,6 +45,7 @@ glow = "0.13.1"
 glib-macros = "0.19.2"
 glib = "0.19.2"
 resource = "0.5.0"  # font emedding
+fontconfig = "0.8.0"  # font loading
 
 [dependencies.relm4-icons]
 version = "0.8.2"

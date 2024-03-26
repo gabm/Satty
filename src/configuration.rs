@@ -38,7 +38,8 @@ pub struct Configuration {
     save_after_copy: bool,
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
-    font: Option<String>,
+    font_family: Option<String>,
+    font_style: Option<String>,
 }
 
 pub struct ColorPalette {
@@ -147,8 +148,11 @@ impl Configuration {
         if let Some(v) = general.default_hide_toolbars {
             self.default_hide_toolbars = v;
         }
-        if let Some(v) = general.font {
-            self.font = Some(v);
+        if let Some(v) = general.font_family {
+            self.font_family = Some(v);
+        }
+        if let Some(v) = general.font_style {
+            self.font_style = Some(v);
         }
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
@@ -190,8 +194,11 @@ impl Configuration {
         if command_line.save_after_copy {
             self.save_after_copy = command_line.save_after_copy;
         }
-        if let Some(v) = command_line.font {
-            self.font = Some(v);
+        if let Some(v) = command_line.font_family {
+            self.font_family = Some(v);
+        }
+        if let Some(v) = command_line.font_style {
+            self.font_style = Some(v);
         }
     }
 
@@ -235,8 +242,12 @@ impl Configuration {
         self.default_hide_toolbars
     }
 
-    pub fn font(&self) -> Option<&String> {
-        self.font.as_ref()
+    pub fn font_family(&self) -> Option<&String> {
+        self.font_family.as_ref()
+    }
+
+    pub fn font_style(&self) -> Option<&String> {
+        self.font_style.as_ref()
     }
 }
 
@@ -253,7 +264,8 @@ impl Default for Configuration {
             save_after_copy: false,
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
-            font: None,
+            font_family: None,
+            font_style: None,
         }
     }
 }
@@ -289,7 +301,8 @@ struct ConfiguationFileGeneral {
     output_filename: Option<String>,
     save_after_copy: Option<bool>,
     default_hide_toolbars: Option<bool>,
-    font: Option<String>,
+    font_family: Option<String>,
+    font_style: Option<String>,
 }
 
 #[derive(Deserialize)]
