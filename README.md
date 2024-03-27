@@ -78,6 +78,10 @@ output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
 save-after-copy = false
 # Hide toolbars by default
 default-hide-toolbars = false
+# Font to use for text annotations
+[font]
+family = "Roboto"
+style = "Bold"
 
 # custom colours for the colour palette
 [color-palette]
@@ -118,6 +122,10 @@ Options:
           After copying the screenshot, save it to a file as well
   -d, --default-hide-toolbars
           Hide toolbars by default
+      --font-family <FONT_FAMILY>
+          Font family to use for text annotations
+      --font-style <FONT_STYLE>
+          Font style to use for text annotations
   -h, --help
           Print help
   -V, --version
@@ -157,6 +165,7 @@ Satty is based on GTK-4 and Adwaita.
 - libgtk-4-1
 - libadwaita-1-0
 - libepoxy
+- fontconfig
 
 ### Arch Linux & Gentoo
 
@@ -165,6 +174,7 @@ Satty is based on GTK-4 and Adwaita.
 - gtk4
 - gdk-pixbuf2
 - libepoxy
+- fontconfig
 
 ## License
 

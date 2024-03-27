@@ -43,6 +43,14 @@ pub struct CommandLine {
     /// Hide toolbars by default
     #[arg(short, long)]
     pub default_hide_toolbars: bool,
+
+    /// Font family to use for text annotations
+    #[arg(long)]
+    pub font_family: Option<String>,
+
+    /// Font style to use for text annotations
+    #[arg(long)]
+    pub font_style: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]

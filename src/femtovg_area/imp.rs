@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Error, Result};
 use glow::HasContext;
 use std::{
     cell::{RefCell, RefMut},
@@ -12,6 +12,7 @@ use femtovg::{
     rgb::{RGB, RGBA, RGBA8},
     Canvas, FontId, ImageFlags, ImageId, ImageSource, Paint, Path, PixelFormat, Transform2D,
 };
+use fontconfig::Fontconfig;
 use gdk_pixbuf::Pixbuf;
 use gtk::{glib, prelude::*, subclass::prelude::*};
 use relm4::{gtk, Sender};
@@ -21,6 +22,7 @@ use crate::{
     math::Vec2D,
     sketch_board::{Action, SketchBoardInput},
     tools::{CropTool, Drawable, Tool},
+    APP_CONFIG,
 };
 
 #[derive(Default)]
@@ -162,14 +164,40 @@ impl FemtoVGArea {
             self.canvas.borrow_mut().replace(c);
         }
 
-        self.font.borrow_mut().replace(
-            self.canvas
-                .borrow_mut()
-                .as_mut()
-                .unwrap() // this unwrap is safe because it gets placed above
-                .add_font_mem(&resource!("src/assets/Roboto-Regular.ttf"))
-                .expect("Cannot add font"),
-        );
+        let app_config = APP_CONFIG.read();
+        let font = app_config
+            .font()
+            .family()
+            .map(|font| {
+                let font = Fontconfig::new()
+                    .ok_or_else(|| anyhow!("Error while initializing fontconfig"))?
+                    .find(font, app_config.font().style())
+                    .ok_or_else(|| anyhow!("Can not find font"))?;
+                let font_id = self
+                    .canvas
+                    .borrow_mut()
+                    .as_mut()
+                    .unwrap() // this unwrap is safe because it gets placed above
+                    .add_font(font.path)?;
+                Ok(font_id)
+            })
+            .transpose()
+            .unwrap_or_else(|e: Error| {
+                println!("Error while loading font. Using default font: {e}");
+                None
+            });
+        if let Some(font) = font {
+            self.font.borrow_mut().replace(font);
+        } else {
+            self.font.borrow_mut().replace(
+                self.canvas
+                    .borrow_mut()
+                    .as_mut()
+                    .unwrap() // this unwrap is safe because it gets placed above
+                    .add_font_mem(&resource!("src/assets/Roboto-Regular.ttf"))
+                    .expect("Cannot add font"),
+            );
+        }
     }
 
     fn setup_canvas(&self) -> Result<femtovg::Canvas<femtovg::renderer::OpenGl>> {

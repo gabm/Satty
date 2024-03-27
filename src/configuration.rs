@@ -38,6 +38,30 @@ pub struct Configuration {
     save_after_copy: bool,
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
+    font: FontConfiguration,
+}
+
+#[derive(Default)]
+pub struct FontConfiguration {
+    family: Option<String>,
+    style: Option<String>,
+}
+
+impl FontConfiguration {
+    pub fn family(&self) -> Option<&str> {
+        self.family.as_deref()
+    }
+    pub fn style(&self) -> Option<&str> {
+        self.style.as_deref()
+    }
+    fn merge(&mut self, file_font: FontFile) {
+        if let Some(v) = file_font.family {
+            self.family = Some(v);
+        }
+        if let Some(v) = file_font.style {
+            self.style = Some(v);
+        }
+    }
 }
 
 pub struct ColorPalette {
@@ -159,6 +183,9 @@ impl Configuration {
             if let Some(v) = file.color_palette {
                 self.color_palette.merge(v);
             }
+            if let Some(v) = file.font {
+                self.font.merge(v);
+            }
         }
 
         // overwrite with all specified values from command line
@@ -185,6 +212,12 @@ impl Configuration {
         }
         if command_line.save_after_copy {
             self.save_after_copy = command_line.save_after_copy;
+        }
+        if let Some(v) = command_line.font_family {
+            self.font.family = Some(v);
+        }
+        if let Some(v) = command_line.font_style {
+            self.font.style = Some(v);
         }
     }
 
@@ -227,6 +260,10 @@ impl Configuration {
     pub fn default_hide_toolbars(&self) -> bool {
         self.default_hide_toolbars
     }
+
+    pub fn font(&self) -> &FontConfiguration {
+        &self.font
+    }
 }
 
 impl Default for Configuration {
@@ -242,6 +279,7 @@ impl Default for Configuration {
             save_after_copy: false,
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
+            font: FontConfiguration::default(),
         }
     }
 }
@@ -264,6 +302,14 @@ impl Default for ColorPalette {
 struct ConfigurationFile {
     general: Option<ConfiguationFileGeneral>,
     color_palette: Option<ColorPaletteFile>,
+    font: Option<FontFile>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+struct FontFile {
+    family: Option<String>,
+    style: Option<String>,
 }
 
 #[derive(Deserialize)]
