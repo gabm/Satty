@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Error, Result};
 use glow::HasContext;
 use std::{
     cell::{RefCell, RefMut},
@@ -166,19 +166,25 @@ impl FemtoVGArea {
 
         let app_config = APP_CONFIG.read();
         let font = app_config
-            .font_family()
-            .and_then(|font_family| {
-                Fontconfig::new().and_then(|fc| {
-                    fc.find(font_family, app_config.font_style().map(String::as_str))
-                })
-            })
-            .and_then(|f| {
-                self.canvas
+            .font()
+            .family()
+            .map(|font| {
+                let font = Fontconfig::new()
+                    .ok_or_else(|| anyhow!("Error while initializing fontconfig"))?
+                    .find(font, app_config.font().style())
+                    .ok_or_else(|| anyhow!("Can not find font"))?;
+                let font_id = self
+                    .canvas
                     .borrow_mut()
                     .as_mut()
                     .unwrap() // this unwrap is safe because it gets placed above
-                    .add_font(f.path)
-                    .ok()
+                    .add_font(font.path)?;
+                Ok(font_id)
+            })
+            .transpose()
+            .unwrap_or_else(|e: Error| {
+                println!("Error while loading font. Using default font: {e}");
+                None
             });
         if let Some(font) = font {
             self.font.borrow_mut().replace(font);

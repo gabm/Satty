@@ -38,8 +38,30 @@ pub struct Configuration {
     save_after_copy: bool,
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
-    font_family: Option<String>,
-    font_style: Option<String>,
+    font: FontConfiguration,
+}
+
+#[derive(Default)]
+pub struct FontConfiguration {
+    family: Option<String>,
+    style: Option<String>,
+}
+
+impl FontConfiguration {
+    pub fn family(&self) -> Option<&str> {
+        self.family.as_deref()
+    }
+    pub fn style(&self) -> Option<&str> {
+        self.style.as_deref()
+    }
+    fn merge(&mut self, file_font: FontFile) {
+        if let Some(v) = file_font.family {
+            self.family = Some(v);
+        }
+        if let Some(v) = file_font.style {
+            self.style = Some(v);
+        }
+    }
 }
 
 pub struct ColorPalette {
@@ -148,12 +170,6 @@ impl Configuration {
         if let Some(v) = general.default_hide_toolbars {
             self.default_hide_toolbars = v;
         }
-        if let Some(v) = general.font_family {
-            self.font_family = Some(v);
-        }
-        if let Some(v) = general.font_style {
-            self.font_style = Some(v);
-        }
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
         // input_filename is required and needs to be overwritten
@@ -166,6 +182,9 @@ impl Configuration {
             }
             if let Some(v) = file.color_palette {
                 self.color_palette.merge(v);
+            }
+            if let Some(v) = file.font {
+                self.font.merge(v);
             }
         }
 
@@ -195,10 +214,10 @@ impl Configuration {
             self.save_after_copy = command_line.save_after_copy;
         }
         if let Some(v) = command_line.font_family {
-            self.font_family = Some(v);
+            self.font.family = Some(v);
         }
         if let Some(v) = command_line.font_style {
-            self.font_style = Some(v);
+            self.font.style = Some(v);
         }
     }
 
@@ -242,12 +261,8 @@ impl Configuration {
         self.default_hide_toolbars
     }
 
-    pub fn font_family(&self) -> Option<&String> {
-        self.font_family.as_ref()
-    }
-
-    pub fn font_style(&self) -> Option<&String> {
-        self.font_style.as_ref()
+    pub fn font(&self) -> &FontConfiguration {
+        &self.font
     }
 }
 
@@ -264,8 +279,7 @@ impl Default for Configuration {
             save_after_copy: false,
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
-            font_family: None,
-            font_style: None,
+            font: FontConfiguration::default(),
         }
     }
 }
@@ -288,6 +302,14 @@ impl Default for ColorPalette {
 struct ConfigurationFile {
     general: Option<ConfiguationFileGeneral>,
     color_palette: Option<ColorPaletteFile>,
+    font: Option<FontFile>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+struct FontFile {
+    family: Option<String>,
+    style: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -301,8 +323,6 @@ struct ConfiguationFileGeneral {
     output_filename: Option<String>,
     save_after_copy: Option<bool>,
     default_hide_toolbars: Option<bool>,
-    font_family: Option<String>,
-    font_style: Option<String>,
 }
 
 #[derive(Deserialize)]

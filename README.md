@@ -79,8 +79,9 @@ save-after-copy = false
 # Hide toolbars by default
 default-hide-toolbars = false
 # Font to use for text annotations
-font-family = "Roboto"
-font-style = "Bold"
+[font]
+family = "Roboto"
+style = "Bold"
 
 # custom colours for the colour palette
 [color-palette]
