@@ -172,6 +172,15 @@ impl SimpleComponent for ToolsToolbar {
                 ActionablePlus::set_action::<ToolsAction>: Tools::Blur,
 
             },
+            gtk::ToggleButton {
+                set_focusable: false,
+                set_hexpand: false,
+
+                set_icon_name: "highlight-regular",
+                set_tooltip: "Highlight",
+                ActionablePlus::set_action::<ToolsAction>: Tools::Highlight,
+
+            },
             gtk::Separator {},
             gtk::Button {
                 set_focusable: false,

@@ -20,6 +20,7 @@ mod arrow;
 mod blur;
 mod brush;
 mod crop;
+mod highlight;
 mod line;
 mod marker;
 mod pointer;
@@ -125,6 +126,7 @@ pub enum ToolUpdateResult {
 pub use arrow::ArrowTool;
 pub use blur::BlurTool;
 pub use crop::CropTool;
+pub use highlight::HighlightTool;
 pub use line::LineTool;
 pub use rectangle::RectangleTool;
 pub use text::TextTool;
@@ -142,7 +144,8 @@ pub enum Tools {
     Text = 5,
     Marker = 6,
     Blur = 7,
-    Brush = 8,
+    Highlight = 8,
+    Brush = 9,
 }
 
 pub struct ToolsManager {
@@ -166,6 +169,10 @@ impl ToolsManager {
         );
         tools.insert(Tools::Text, Rc::new(RefCell::new(TextTool::default())));
         tools.insert(Tools::Blur, Rc::new(RefCell::new(BlurTool::default())));
+        tools.insert(
+            Tools::Highlight,
+            Rc::new(RefCell::new(HighlightTool::default())),
+        );
         tools.insert(Tools::Marker, Rc::new(RefCell::new(MarkerTool::default())));
         tools.insert(Tools::Brush, Rc::new(RefCell::new(BrushTool::default())));
 
@@ -214,7 +221,8 @@ impl FromVariant for Tools {
             5 => Some(Tools::Text),
             6 => Some(Tools::Marker),
             7 => Some(Tools::Blur),
-            8 => Some(Tools::Brush),
+            8 => Some(Tools::Highlight),
+            9 => Some(Tools::Brush),
             _ => None,
         })
     }
@@ -231,6 +239,7 @@ impl From<command_line::Tools> for Tools {
             command_line::Tools::Text => Self::Text,
             command_line::Tools::Marker => Self::Marker,
             command_line::Tools::Blur => Self::Blur,
+            command_line::Tools::Highlight => Self::Highlight,
             command_line::Tools::Brush => Self::Brush,
         }
     }
