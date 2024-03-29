@@ -32,17 +32,26 @@ impl Highlight {
         let strength = match self.style.size {
             Size::Large => 0.5,
             Size::Medium => 0.4,
-            Size::Small => 0.2,
+            Size::Small => 0.3,
         };
         let img = canvas.screenshot()?;
         let scale = canvas.transform().average_scale();
-        let scaled_width = canvas.width() as f32 / scale;
-        let dpi = img.width() as f32 / scaled_width;
 
-        let scaled_x = (pos.x * dpi).round();
-        let scaled_y = (pos.y * dpi).round();
-        let scaled_width = (size.x * dpi).round();
-        let scaled_height = (size.y * dpi).round();
+        // Ideally i'd want to be able to access the underlying area renderer
+        // so i'd be able to do a full resolution screenshot and also convert
+        // the coords which are relative to the main screenshot into abs coords
+        // for the resulting image e.g.
+        //
+        // let img = area.render_native_resolution()?;
+        // let pos = Vec2D::new(
+        //     pos.x + area.offset.x,
+        //     pos.y + area.offset.y,
+        // );
+        //
+        let scaled_x = (pos.x * scale).round();
+        let scaled_y = (pos.y * scale).round();
+        let scaled_width = (size.x * scale).round();
+        let scaled_height = (size.y * scale).round();
 
         // error when any size dim is 0 since img.sub_image panics
         if scaled_width == 0. || scaled_height == 0. {
@@ -87,41 +96,29 @@ impl Drawable for Highlight {
         };
 
         let (pos, size) = math::rect_ensure_positive_size(self.top_left, size);
-        let scale = canvas.transform().average_scale();
-        let dimensions = Vec2D::new(
-            canvas.width() as f32 / scale,
-            canvas.height() as f32 / scale,
-        );
-        // we clamp the area to the image dimensions so were not stretching the
-        // highlight when the selection exceeds the image size.
-        let clamped_pos = Vec2D::new(pos.x.max(0.), pos.y.max(0.));
-        let clamped_size = Vec2D::new(
-            match pos.x.is_sign_negative() {
-                true => size.x - pos.x.abs(),
-                false => size.x,
-            }
-            .min(dimensions.x - clamped_pos.x),
-            match pos.y.is_sign_negative() {
-                true => size.y - pos.y.abs(),
-                false => size.y,
-            }
-            .min(dimensions.y - clamped_pos.y),
-        );
+
         if self.editing {
-            // set style
-            let paint =
-                Paint::color(self.style.color.into()).with_line_width(Size::Medium.to_line_width());
+            // box + border to indicate selection
+            let shadow_paint = Paint::color(femtovg::Color {
+                r: 0.,
+                g: 0.,
+                b: 0.,
+                a: 0.5,
+            });
+            let mut shadow_path = Path::new();
+            shadow_path.rect(pos.x, pos.y, size.x, size.y);
+            let border_paint =
+                Paint::color(self.style.color.into()).with_line_width(Size::Small.to_line_width());
+            let mut border_path = Path::new();
+            border_path.rect(pos.x, pos.y, size.x, size.y);
 
-            // make rect
-            let mut path = Path::new();
-            path.rect(clamped_pos.x, clamped_pos.y, clamped_size.x, clamped_size.y);
-
-            // draw
-            canvas.stroke_path(&path, &paint);
+            canvas.save();
+            canvas.fill_path(&shadow_path, &shadow_paint);
+            canvas.stroke_path(&border_path, &border_paint);
         } else {
             // create new cached image
             if self.cached_image.borrow().is_none() {
-                match self.highlight(canvas, clamped_pos, clamped_size) {
+                match self.highlight(canvas, pos, size) {
                     Ok(hls_image) => self.cached_image.borrow_mut().replace(hls_image),
                     Err(error) => {
                         if error.to_string() == "width or height is 0" {
@@ -133,15 +130,15 @@ impl Drawable for Highlight {
             }
 
             let mut path = Path::new();
-            path.rect(clamped_pos.x, clamped_pos.y, clamped_size.x, clamped_size.y);
+            path.rect(pos.x, pos.y, size.x, size.y);
             canvas.fill_path(
                 &path,
                 &Paint::image(
                     self.cached_image.borrow().unwrap(), // this unwrap is safe because we placed it above
-                    clamped_pos.x,
-                    clamped_pos.y,
-                    clamped_size.x,
-                    clamped_size.y,
+                    pos.x,
+                    pos.y,
+                    size.x,
+                    size.y,
                     0f32,
                     1f32,
                 ),
