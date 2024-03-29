@@ -152,7 +152,6 @@ impl SimpleComponent for ToolsToolbar {
                 set_icon_name: "text-case-title-regular",
                 set_tooltip: "Text tool",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Text,
-
             },
             gtk::ToggleButton {
                 set_focusable: false,
@@ -161,7 +160,6 @@ impl SimpleComponent for ToolsToolbar {
                 set_icon_name: "number-circle-1-regular",
                 set_tooltip: "Numbered Marker",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Marker,
-
             },
             gtk::ToggleButton {
                 set_focusable: false,
@@ -170,7 +168,6 @@ impl SimpleComponent for ToolsToolbar {
                 set_icon_name: "drop-regular",
                 set_tooltip: "Blur",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Blur,
-
             },
             gtk::ToggleButton {
                 set_focusable: false,
@@ -179,7 +176,6 @@ impl SimpleComponent for ToolsToolbar {
                 set_icon_name: "highlight-regular",
                 set_tooltip: "Highlight",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Highlight,
-
             },
             gtk::Separator {},
             gtk::Button {
