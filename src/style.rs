@@ -204,4 +204,12 @@ impl Size {
             Size::Large => 30.0 * size_factor,
         }
     }
+
+    pub fn to_highlight_opacity(self) -> u8 {
+        match self {
+            Size::Small => 50,
+            Size::Medium => 100,
+            Size::Large => 150,
+        }
+    }
 }

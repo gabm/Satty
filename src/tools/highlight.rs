@@ -27,24 +27,13 @@ impl Drawable for Highlight {
     ) -> Result<()> {
         let size = match self.size {
             Some(s) => s,
-            None => return Ok(()), // early exit if none
+            None => return Ok(()), // early exit if size is none
         };
 
         let (pos, size) = math::rect_ensure_positive_size(self.top_left, size);
-        let strength = match self.style.size {
-            Size::Large => 0.5,
-            Size::Medium => 0.4,
-            Size::Small => 0.3,
-        };
 
-        let shadow_paint = Paint::color(femtovg::Color::rgba(
-            self.style.color.r,
-            self.style.color.g,
-            self.style.color.b,
-            (strength * 255.) as u8,
-        ));
         if self.editing {
-            canvas.save();
+            // include a border when selecting an area.
             let border_paint =
                 Paint::color(self.style.color.into()).with_line_width(Size::Small.to_line_width());
             let mut border_path = Path::new();
@@ -55,12 +44,11 @@ impl Drawable for Highlight {
         let mut shadow_path = Path::new();
         shadow_path.rect(pos.x, pos.y, size.x, size.y);
 
-        canvas.fill_path(&shadow_path, &shadow_paint);
         let shadow_paint = Paint::color(femtovg::Color::rgba(
             self.style.color.r,
             self.style.color.g,
             self.style.color.b,
-            ((strength * 255.) as u8).clamp(0, 255),
+            self.style.size.to_highlight_opacity(),
         ));
 
         canvas.fill_path(&shadow_path, &shadow_paint);
@@ -78,7 +66,6 @@ impl Tool for HighlightTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
         match event.type_ {
             MouseEventType::BeginDrag => {
-                // start new
                 self.highlight = Some(Highlight {
                     top_left: event.pos,
                     size: None,
