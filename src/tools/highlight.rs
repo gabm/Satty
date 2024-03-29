@@ -57,13 +57,6 @@ impl Highlight {
         let new_buf = sub
             .pixels()
             .map(|pixel| {
-                // Alternate style
-                // RGBA::new(
-                //     pixel.r.min(self.style.color.r),
-                //     pixel.g.min(self.style.color.g),
-                //     pixel.b.min(self.style.color.b),
-                //     pixel.a,
-                // )
                 RGBA::new(
                     (((1. - strength) * pixel.r as f64) + (strength * self.style.color.r as f64))
                         as u8,
