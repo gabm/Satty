@@ -18,7 +18,7 @@ use relm4::{gtk, Component, ComponentParts, ComponentSender};
 use crate::configuration::APP_CONFIG;
 use crate::femtovg_area::FemtoVGArea;
 use crate::math::Vec2D;
-use crate::notification::show_notification;
+use crate::notification::log_result;
 use crate::style::Style;
 use crate::tools::{Tool, ToolEvent, ToolUpdateResult, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
@@ -186,9 +186,7 @@ impl SketchBoard {
 
         // TODO: we could support more data types
         if !output_filename.ends_with(".png") {
-            let msg = "The only supported format is png, but the filename does not end in png";
-            println!("{msg}");
-            show_notification(msg);
+            log_result("The only supported format is png, but the filename does not end in png");
             return;
         }
 
@@ -200,12 +198,10 @@ impl SketchBoard {
             }
         };
 
-        let msg = match fs::write(&output_filename, data) {
-            Err(e) => format!("Error while saving file: {e}"),
-            Ok(_) => format!("File saved to '{}'.", &output_filename),
+        match fs::write(&output_filename, data) {
+            Err(e) => log_result(&format!("Error while saving file: {e}")),
+            Ok(_) => log_result(&format!("File saved to '{}'.", &output_filename)),
         };
-
-        show_notification(&msg);
     }
 
     fn save_to_clipboard(&self, texture: &impl IsA<Texture>) -> anyhow::Result<()> {
@@ -249,7 +245,7 @@ impl SketchBoard {
         match result {
             Err(e) => println!("Error saving {e}"),
             Ok(()) => {
-                show_notification("Copied to clipboard.");
+                log_result("Copied to clipboard.");
 
                 // TODO: rethink order and messaging patterns
                 if APP_CONFIG.read().save_after_copy() {

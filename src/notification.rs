@@ -3,7 +3,12 @@ use relm4::gtk::gio::{prelude::ApplicationExt, Notification};
 
 use relm4::gtk::{IconLookupFlags, IconTheme, TextDirection};
 
-pub fn show_notification(msg: &str) {
+pub fn log_result(msg: &str) {
+    println!("{}", msg);
+    show_notification(msg);
+}
+
+fn show_notification(msg: &str) {
     // construct
     let notification = Notification::new("Satty");
     notification.set_body(Some(msg));
