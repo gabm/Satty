@@ -64,6 +64,7 @@ pub enum Tools {
     Text,
     Marker,
     Blur,
+    Highlight,
     Brush,
 }
 
@@ -79,6 +80,7 @@ impl std::fmt::Display for Tools {
             Text => "text",
             Marker => "marker",
             Blur => "blur",
+            Highlight => "highlight",
             Brush => "brush",
         };
         f.write_str(s)
