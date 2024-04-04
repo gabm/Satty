@@ -5,6 +5,7 @@ use std::{io, time::Duration};
 use configuration::{Configuration, APP_CONFIG};
 use gdk_pixbuf::{Pixbuf, PixbufLoader};
 use gtk::prelude::*;
+
 use relm4::gtk::gdk::Rectangle;
 
 use relm4::{
@@ -15,13 +16,13 @@ use relm4::{
 use anyhow::{anyhow, Context, Result};
 
 use sketch_board::SketchBoardOutput;
-use ui::toast::Toast;
 use ui::toolbars::{StyleToolbar, StyleToolbarInput, ToolsToolbar, ToolsToolbarInput};
 
 mod command_line;
 mod configuration;
 mod femtovg_area;
 mod math;
+mod notification;
 mod sketch_board;
 mod style;
 mod tools;
@@ -33,7 +34,6 @@ use crate::sketch_board::{KeyEventMsg, SketchBoard, SketchBoardInput};
 struct App {
     image_dimensions: (i32, i32),
     sketch_board: Controller<SketchBoard>,
-    toast: Controller<Toast>,
     tools_toolbar: Controller<ToolsToolbar>,
     style_toolbar: Controller<StyleToolbar>,
 }
@@ -41,7 +41,6 @@ struct App {
 #[derive(Debug)]
 enum AppInput {
     Realized,
-    ShowToast(String),
     ToggleToolbarsDisplay,
 }
 
@@ -185,8 +184,6 @@ impl Component for App {
 
                 add_overlay = model.style_toolbar.widget(),
 
-                add_overlay = model.toast.widget(),
-
                 model.sketch_board.widget(),
             }
         }
@@ -195,7 +192,6 @@ impl Component for App {
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             AppInput::Realized => self.resize_window_initial(root, sender),
-            AppInput::ShowToast(msg) => self.toast.emit(ui::toast::ToastMessage::Show(msg)),
             AppInput::ToggleToolbarsDisplay => {
                 self.tools_toolbar
                     .sender()
@@ -227,15 +223,11 @@ impl Component for App {
 
         let image_dimensions = (image.width(), image.height());
 
-        // Toast
-        let toast = Toast::builder().launch(3000).detach();
-
         // SketchBoard
         let sketch_board =
             SketchBoard::builder()
                 .launch(image)
                 .forward(sender.input_sender(), |t| match t {
-                    SketchBoardOutput::ShowToast(msg) => AppInput::ShowToast(msg),
                     SketchBoardOutput::ToggleToolbarsDisplay => AppInput::ToggleToolbarsDisplay,
                 });
 
@@ -253,7 +245,6 @@ impl Component for App {
         // Model
         let model = App {
             sketch_board,
-            toast,
             tools_toolbar,
             style_toolbar,
             image_dimensions,

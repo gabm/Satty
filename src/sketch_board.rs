@@ -18,6 +18,7 @@ use relm4::{gtk, Component, ComponentParts, ComponentSender};
 use crate::configuration::APP_CONFIG;
 use crate::femtovg_area::FemtoVGArea;
 use crate::math::Vec2D;
+use crate::notification::show_notification_gtk;
 use crate::style::Style;
 use crate::tools::{Tool, ToolEvent, ToolUpdateResult, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
@@ -39,7 +40,6 @@ pub enum Action {
 
 #[derive(Debug, Clone)]
 pub enum SketchBoardOutput {
-    ShowToast(String),
     ToggleToolbarsDisplay,
 }
 
@@ -162,24 +162,17 @@ impl SketchBoard {
         )
     }
 
-    fn handle_render_result(
-        &self,
-        sender: ComponentSender<Self>,
-        image: RenderedImage,
-        action: Action,
-    ) {
+    fn handle_render_result(&self, image: RenderedImage, action: Action) {
         match action {
-            Action::SaveToClipboard => {
-                self.handle_copy_clipboard(sender, Self::image_to_pixbuf(image))
-            }
-            Action::SaveToFile => self.handle_save(sender, Self::image_to_pixbuf(image)),
+            Action::SaveToClipboard => self.handle_copy_clipboard(Self::image_to_pixbuf(image)),
+            Action::SaveToFile => self.handle_save(Self::image_to_pixbuf(image)),
         };
         if APP_CONFIG.read().early_exit() {
             relm4::main_application().quit();
         }
     }
 
-    fn handle_save(&self, sender: ComponentSender<Self>, image: Pixbuf) {
+    fn handle_save(&self, image: Pixbuf) {
         let output_filename = match APP_CONFIG.read().output_filename() {
             None => {
                 println!("No Output filename specified!");
@@ -195,9 +188,7 @@ impl SketchBoard {
         if !output_filename.ends_with(".png") {
             let msg = "The only supported format is png, but the filename does not end in png";
             println!("{msg}");
-            sender
-                .output_sender()
-                .emit(SketchBoardOutput::ShowToast(msg.to_string()));
+            show_notification_gtk(msg);
             return;
         }
 
@@ -214,9 +205,7 @@ impl SketchBoard {
             Ok(_) => format!("File saved to '{}'.", &output_filename),
         };
 
-        sender
-            .output_sender()
-            .emit(SketchBoardOutput::ShowToast(msg));
+        show_notification_gtk(&msg);
     }
 
     fn save_to_clipboard(&self, texture: &impl IsA<Texture>) -> anyhow::Result<()> {
@@ -248,7 +237,7 @@ impl SketchBoard {
         Ok(())
     }
 
-    fn handle_copy_clipboard(&self, sender: ComponentSender<Self>, image: Pixbuf) {
+    fn handle_copy_clipboard(&self, image: Pixbuf) {
         let texture = Texture::for_pixbuf(&image);
 
         let result = if let Some(command) = APP_CONFIG.read().copy_command() {
@@ -260,13 +249,11 @@ impl SketchBoard {
         match result {
             Err(e) => println!("Error saving {e}"),
             Ok(()) => {
-                sender.output_sender().emit(SketchBoardOutput::ShowToast(
-                    "Copied to clipboard.".to_string(),
-                ));
+                show_notification_gtk("Copied to clipboard.");
 
                 // TODO: rethink order and messaging patterns
                 if APP_CONFIG.read().save_after_copy() {
-                    self.handle_save(sender, image);
+                    self.handle_save(image);
                 };
             }
         }
@@ -456,7 +443,7 @@ impl Component for SketchBoard {
                 self.handle_toolbar_event(toolbar_event)
             }
             SketchBoardInput::RenderResult(img, action) => {
-                self.handle_render_result(sender, img, action);
+                self.handle_render_result(img, action);
                 ToolUpdateResult::Unmodified
             }
         };
