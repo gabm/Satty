@@ -11,3 +11,4 @@ Icon=satty
 Categories=Utility;Graphics;
 StartupNotify=true
 MimeType=image/png;image/jpeg;
+StartupWMClass=com.gabm.satty
