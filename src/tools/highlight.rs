@@ -1,7 +1,7 @@
 use anyhow::Result;
 use femtovg::{Paint, Path};
 
-use relm4::gtk::gdk::Key;
+use relm4::gtk::gdk::{Key, ModifierType};
 
 use crate::{
     math::{self, Vec2D},
@@ -17,14 +17,41 @@ pub struct Highlight {
     size: Option<Vec2D>,
     style: Style,
     editing: bool,
+    points: Option<Vec<Vec2D>>,
+    shift_pressed: bool,
 }
 
-impl Drawable for Highlight {
-    fn draw(
+impl Highlight {
+    // This is triggered when a user does not press shift before highlighting.
+    fn draw_free_hand(
         &self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
-        _font: femtovg::FontId,
     ) -> Result<()> {
+        canvas.save();
+        let mut path = Path::new();
+        if let Some(points) = &self.points {
+            let first = points.first().expect("atleast one point");
+            path.move_to(first.x, first.y);
+            for p in points.iter().skip(1) {
+                path.line_to(first.x + p.x, first.y + p.y);
+            }
+
+            let mut paint = Paint::color(femtovg::Color::rgba(
+                self.style.color.r,
+                self.style.color.g,
+                self.style.color.b,
+                (255.0 * 0.4) as u8,
+            ));
+            paint.set_line_width(self.style.size.to_highlight_width());
+
+            canvas.stroke_path(&path, &paint);
+        }
+        canvas.restore();
+        Ok(())
+    }
+
+    /// This is triggered when the user presses shift *before* highlighting.
+    fn draw_aligned(&self, canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>) -> Result<()> {
         let size = match self.size {
             Some(s) => s,
             None => return Ok(()), // early exit if size is none
@@ -48,10 +75,25 @@ impl Drawable for Highlight {
             self.style.color.r,
             self.style.color.g,
             self.style.color.b,
-            self.style.size.to_highlight_opacity(),
+            (255.0 * 0.4) as u8,
         ));
 
         canvas.fill_path(&shadow_path, &shadow_paint);
+        Ok(())
+    }
+}
+
+impl Drawable for Highlight {
+    fn draw(
+        &self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        _font: femtovg::FontId,
+    ) -> Result<()> {
+        if self.points.is_some() {
+            self.draw_free_hand(canvas)?;
+        } else {
+            self.draw_aligned(canvas)?;
+        }
         Ok(())
     }
 }
@@ -64,6 +106,8 @@ pub struct HighlightTool {
 
 impl Tool for HighlightTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
+        let shift_pressed = event.modifier.intersects(ModifierType::SHIFT_MASK);
+        let ctrl_pressed = event.modifier.intersects(ModifierType::CONTROL_MASK);
         match event.type_ {
             MouseEventType::BeginDrag => {
                 self.highlight = Some(Highlight {
@@ -71,21 +115,36 @@ impl Tool for HighlightTool {
                     size: None,
                     style: self.style,
                     editing: true,
+                    points: if !ctrl_pressed {
+                        Some(vec![event.pos])
+                    } else {
+                        None
+                    },
+                    shift_pressed,
                 });
 
                 ToolUpdateResult::Redraw
             }
             MouseEventType::EndDrag => {
-                if let Some(a) = &mut self.highlight {
+                if let Some(highlight) = &mut self.highlight {
                     if event.pos == Vec2D::zero() {
                         self.highlight = None;
 
                         ToolUpdateResult::Redraw
                     } else {
-                        a.size = Some(event.pos);
-                        a.editing = false;
+                        if let Some(points) = &mut highlight.points {
+                            if shift_pressed {
+                                let last = points.last().expect("should have atleast one point");
+                                points.push(Vec2D::new(event.pos.x, last.y));
+                            } else {
+                                points.push(event.pos);
+                            }
+                        }
 
-                        let result = a.clone_box();
+                        highlight.shift_pressed = shift_pressed;
+                        highlight.editing = false;
+
+                        let result = highlight.clone_box();
                         self.highlight = None;
 
                         ToolUpdateResult::Commit(result)
@@ -95,11 +154,20 @@ impl Tool for HighlightTool {
                 }
             }
             MouseEventType::UpdateDrag => {
-                if let Some(a) = &mut self.highlight {
+                if let Some(highlight) = &mut self.highlight {
                     if event.pos == Vec2D::zero() {
                         return ToolUpdateResult::Unmodified;
                     }
-                    a.size = Some(event.pos);
+                    if let Some(points) = &mut highlight.points {
+                        if shift_pressed {
+                            let last = points.last().expect("should have atleast one point");
+                            points.push(Vec2D::new(event.pos.x, last.y));
+                        } else {
+                            points.push(event.pos);
+                        }
+                    }
+                    highlight.size = Some(event.pos);
+                    highlight.shift_pressed = shift_pressed;
 
                     ToolUpdateResult::Redraw
                 } else {
