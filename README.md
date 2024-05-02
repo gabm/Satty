@@ -150,10 +150,10 @@ You first need to install the native dependencies of Satty (see below) and then 
 make
 
 # optional: install to /usr/local
-PREFIX=/use/local make install
+PREFIX=/usr/local make install
 
 # optional: uninstall from /usr/local
-PREFIX=/use/local make uninstall
+PREFIX=/usr/local make uninstall
 ```
 
 ## Dependencies
