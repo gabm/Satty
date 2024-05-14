@@ -50,7 +50,7 @@ impl Blur {
             sub.width(),
             sub.height(),
             femtovg::PixelFormat::Rgba8,
-            ImageFlags::GENERATE_MIPMAPS,
+            ImageFlags::empty(),
         )?;
 
         canvas.filter_image(
@@ -99,6 +99,7 @@ impl Drawable for Blur {
 
             let mut path = Path::new();
             path.rect(pos.x, pos.y, size.x, size.y);
+
             canvas.fill_path(
                 &path,
                 &Paint::image(
