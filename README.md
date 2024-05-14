@@ -147,7 +147,7 @@ You first need to install the native dependencies of Satty (see below) and then 
 
 ```sh
 # build release binary, located in ./target/release/satty
-make
+make build-release
 
 # optional: install to /usr/local
 PREFIX=/usr/local make install
