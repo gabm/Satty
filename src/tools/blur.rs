@@ -31,16 +31,15 @@ impl Blur {
     ) -> Result<ImageId> {
         let img = canvas.screenshot()?;
 
-        // TODO: review that calculation!
-        let scaled_width = canvas.width() as f32 / canvas.transform().average_scale();
-        let dpi = img.width() as f32 / scaled_width;
+        let transformed_pos = canvas.transform().transform_point(pos.x, pos.y);
+        let transformed_size = size * canvas.transform().average_scale();
 
         let (buf, width, height) = img
             .sub_image(
-                (pos.x * dpi) as usize,
-                (pos.y * dpi) as usize,
-                (size.x * dpi) as usize,
-                (size.y * dpi) as usize,
+                transformed_pos.0 as usize,
+                transformed_pos.1 as usize,
+                transformed_size.x as usize,
+                transformed_size.y as usize,
             )
             .to_contiguous_buf();
         let sub = Img::new(buf.into_owned(), width, height);

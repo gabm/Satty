@@ -1,7 +1,7 @@
 use std::{
     f32::consts::PI,
     fmt::Display,
-    ops::{Add, AddAssign, Sub, SubAssign},
+    ops::{Add, AddAssign, Mul, Sub, SubAssign},
 };
 
 #[derive(Default, Debug, Copy, Clone, PartialEq)]
@@ -87,6 +87,14 @@ impl Sub for Vec2D {
 impl SubAssign for Vec2D {
     fn sub_assign(&mut self, rhs: Self) {
         *self = *self - rhs;
+    }
+}
+
+impl Mul<f32> for Vec2D {
+    type Output = Vec2D;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Vec2D::new(self.x * rhs, self.y * rhs)
     }
 }
 
