@@ -39,6 +39,7 @@ pub struct Configuration {
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
     font: FontConfiguration,
+    default_block_highlight: bool,
 }
 
 #[derive(Default)]
@@ -170,6 +171,9 @@ impl Configuration {
         if let Some(v) = general.default_hide_toolbars {
             self.default_hide_toolbars = v;
         }
+        if let Some(v) = general.default_block_highlight {
+            self.default_block_highlight = v;
+        }
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
         // input_filename is required and needs to be overwritten
@@ -219,6 +223,10 @@ impl Configuration {
         if let Some(v) = command_line.font_style {
             self.font.style = Some(v);
         }
+
+        if command_line.default_line_highlight {
+            self.default_block_highlight = !command_line.default_line_highlight;
+        }
     }
 
     pub fn early_exit(&self) -> bool {
@@ -261,6 +269,9 @@ impl Configuration {
         self.default_hide_toolbars
     }
 
+    pub fn default_block_highlight(&self) -> bool {
+        self.default_block_highlight
+    }
     pub fn font(&self) -> &FontConfiguration {
         &self.font
     }
@@ -280,6 +291,7 @@ impl Default for Configuration {
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
             font: FontConfiguration::default(),
+            default_block_highlight: true,
         }
     }
 }
@@ -323,6 +335,7 @@ struct ConfiguationFileGeneral {
     output_filename: Option<String>,
     save_after_copy: Option<bool>,
     default_hide_toolbars: Option<bool>,
+    default_block_highlight: Option<bool>,
 }
 
 #[derive(Deserialize)]

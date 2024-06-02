@@ -51,6 +51,10 @@ pub struct CommandLine {
     /// Font style to use for text annotations
     #[arg(long)]
     pub font_style: Option<String>,
+
+    /// Change the default highlighter to the line/pen highlighter.
+    #[arg(long)]
+    pub default_line_highlight: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]

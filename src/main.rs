@@ -169,6 +169,17 @@ impl Component for App {
                     glib::Propagation::Stop
                 },
 
+                connect_key_released[sketch_board_sender] => move |controller, key, code, modifier | {
+                    if let Some(im_context) = controller.im_context() {
+                        im_context.focus_in();
+                        if !im_context.filter_keypress(controller.current_event().unwrap()) {
+                            sketch_board_sender.emit(SketchBoardInput::new_key_release_event(KeyEventMsg::new(key, code, modifier)));
+                        }
+                    } else {
+                        sketch_board_sender.emit(SketchBoardInput::new_key_release_event(KeyEventMsg::new(key, code, modifier)));
+                    }
+                },
+
                 #[wrap(Some)]
                 set_im_context = &gtk::IMMulticontext {
                     connect_commit[sketch_board_sender] => move |_cx, txt| {

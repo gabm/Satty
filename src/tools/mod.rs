@@ -56,6 +56,7 @@ pub trait Tool {
         match event {
             InputEvent::Mouse(e) => self.handle_mouse_event(e),
             InputEvent::Key(e) => self.handle_key_event(e),
+            InputEvent::KeyRelease(e) => self.handle_key_release_event(e),
             InputEvent::Text(e) => self.handle_text_event(e),
         }
     }
@@ -71,6 +72,11 @@ pub trait Tool {
     }
 
     fn handle_key_event(&mut self, event: KeyEventMsg) -> ToolUpdateResult {
+        let _ = event;
+        ToolUpdateResult::Unmodified
+    }
+
+    fn handle_key_release_event(&mut self, event: KeyEventMsg) -> ToolUpdateResult {
         let _ = event;
         ToolUpdateResult::Unmodified
     }
