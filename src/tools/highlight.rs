@@ -100,14 +100,6 @@ enum HighlightKind {
     Block(Highlighter<BlockHighlight>),
     Line(Highlighter<LineHighlight>),
 }
-impl HighlightKind {
-    fn highlight(&self, canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>) {
-        let _ = match self {
-            HighlightKind::Block(highlighter) => highlighter.highlight(canvas),
-            HighlightKind::Line(highlighter) => highlighter.highlight(canvas),
-        };
-    }
-}
 
 #[derive(Default, Clone, Debug)]
 pub struct HighlightTool {
@@ -121,8 +113,10 @@ impl Drawable for HighlightKind {
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         _font: femtovg::FontId,
     ) -> Result<()> {
-        self.highlight(canvas);
-        Ok(())
+        match self {
+            HighlightKind::Block(highlighter) => highlighter.highlight(canvas),
+            HighlightKind::Line(highlighter) => highlighter.highlight(canvas),
+        }
     }
 }
 
