@@ -213,8 +213,4 @@ impl Size {
             Size::Large => 45.0 * size_factor,
         }
     }
-
-    pub fn default_block_highlight(self) -> bool {
-        APP_CONFIG.read().default_block_highlight()
-    }
 }

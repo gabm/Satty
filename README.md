@@ -77,8 +77,8 @@ output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
 save-after-copy = false
 # Hide toolbars by default
 default-hide-toolbars = false
-# Whether to set block or line/pen as the default highlighter, other mode is accessible using CTRL.
-default-block-highlight = true
+# The primary highlighter to use, the other is accessible by holding CTRL at the start of a highlight [possible values: block, freehand]
+primary-highlighter = "block"
 
 # Font to use for text annotations
 [font]
@@ -124,8 +124,8 @@ Options:
           After copying the screenshot, save it to a file as well
   -d, --default-hide-toolbars
           Hide toolbars by default
-      --default-line-highlight
-          Change the default highlighter to the line/pen highlighter
+      --primary-highlighter <PRIMARY_HIGHLIGHTER>
+          The primary highlighter to use, secondary is accessible with CTRL [possible values: block, freehand]
       --font-family <FONT_FAMILY>
           Font family to use for text annotations
       --font-style <FONT_STYLE>

@@ -52,9 +52,9 @@ pub struct CommandLine {
     #[arg(long)]
     pub font_style: Option<String>,
 
-    /// Change the default highlighter to the line/pen highlighter.
+    /// The primary highlighter to use, secondary is accessible with CTRL.
     #[arg(long)]
-    pub default_line_highlight: bool,
+    pub primary_highlighter: Option<Highlighters>,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
@@ -70,6 +70,13 @@ pub enum Tools {
     Blur,
     Highlight,
     Brush,
+}
+
+#[derive(Debug, Clone, Copy, Default, ValueEnum)]
+pub enum Highlighters {
+    #[default]
+    Block,
+    Freehand,
 }
 
 impl std::fmt::Display for Tools {

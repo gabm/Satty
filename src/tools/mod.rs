@@ -132,7 +132,7 @@ pub enum ToolUpdateResult {
 pub use arrow::ArrowTool;
 pub use blur::BlurTool;
 pub use crop::CropTool;
-pub use highlight::HighlightTool;
+pub use highlight::{HighlightTool, Highlighters};
 pub use line::LineTool;
 pub use rectangle::RectangleTool;
 pub use text::TextTool;

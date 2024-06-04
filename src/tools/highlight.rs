@@ -4,8 +4,10 @@ use anyhow::Result;
 use femtovg::{Paint, Path};
 
 use relm4::gtk::gdk::{Key, ModifierType};
+use serde_derive::Deserialize;
 
 use crate::{
+    command_line,
     configuration::APP_CONFIG,
     math::{self, Vec2D},
     sketch_board::{MouseEventMsg, MouseEventType},
@@ -17,6 +19,22 @@ use super::{Drawable, Tool, ToolUpdateResult};
 
 const HIGHLIGHT_OPACITY: f64 = 0.4;
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Highlighters {
+    Block = 0,
+    Freehand = 1,
+}
+
+impl From<command_line::Highlighters> for Highlighters {
+    fn from(tool: command_line::Highlighters) -> Self {
+        match tool {
+            command_line::Highlighters::Block => Self::Block,
+            command_line::Highlighters::Freehand => Self::Freehand,
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 struct BlockHighlight {
     top_left: Vec2D,
@@ -24,7 +42,7 @@ struct BlockHighlight {
 }
 
 #[derive(Clone, Debug)]
-struct LineHighlight {
+struct FreehandHighlight {
     points: Vec<Vec2D>,
     shift_pressed: bool,
 }
@@ -39,7 +57,7 @@ trait Highlight {
     fn highlight(&self, canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>) -> Result<()>;
 }
 
-impl Highlight for Highlighter<LineHighlight> {
+impl Highlight for Highlighter<FreehandHighlight> {
     fn highlight(&self, canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>) -> Result<()> {
         canvas.save();
 
@@ -98,7 +116,7 @@ impl Highlight for Highlighter<BlockHighlight> {
 #[derive(Clone, Debug)]
 enum HighlightKind {
     Block(Highlighter<BlockHighlight>),
-    Line(Highlighter<LineHighlight>),
+    Freehand(Highlighter<FreehandHighlight>),
 }
 
 #[derive(Default, Clone, Debug)]
@@ -115,7 +133,7 @@ impl Drawable for HighlightKind {
     ) -> Result<()> {
         match self {
             HighlightKind::Block(highlighter) => highlighter.highlight(canvas),
-            HighlightKind::Line(highlighter) => highlighter.highlight(canvas),
+            HighlightKind::Freehand(highlighter) => highlighter.highlight(canvas),
         }
     }
 }
@@ -124,11 +142,17 @@ impl Tool for HighlightTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
         let shift_pressed = event.modifier.intersects(ModifierType::SHIFT_MASK);
         let ctrl_pressed = event.modifier.intersects(ModifierType::CONTROL_MASK);
-        let default_highlight_block = APP_CONFIG.read().default_block_highlight();
+        let primary_highlighter = APP_CONFIG.read().primary_highlighter();
         match event.type_ {
             MouseEventType::BeginDrag => {
-                match (ctrl_pressed, default_highlight_block) {
-                    (false, true) | (true, false) => {
+                // There exists two types of highlighting modes currently: freehand, block
+                // A user may set a primary highlighter mode, with the other being accessible
+                // by clicking CTRL when starting a highlight (doesn't need to be held).
+                match (primary_highlighter, ctrl_pressed) {
+                    // This matches when CTRL is not pressed and the primary highlighting mode
+                    // is block, along with its inverse, CTRL pressed with the freehand mode
+                    // being their primary highlighting mode.
+                    (Highlighters::Block, false) | (Highlighters::Freehand, true) => {
                         self.highlighter =
                             Some(HighlightKind::Block(Highlighter::<BlockHighlight> {
                                 data: BlockHighlight {
@@ -138,14 +162,18 @@ impl Tool for HighlightTool {
                                 style: self.style,
                             }))
                     }
-                    (false, false) | (true, true) => {
-                        self.highlighter = Some(HighlightKind::Line(Highlighter::<LineHighlight> {
-                            data: LineHighlight {
-                                points: vec![event.pos],
-                                shift_pressed,
-                            },
-                            style: self.style,
-                        }))
+                    // This matches the remaining two cases, which is when the user has the
+                    // freehand mode as the primary mode and CTRL is not pressed, and conversely,
+                    // when CTRL is pressed and the users primary mode is block.
+                    (Highlighters::Freehand, false) | (Highlighters::Block, true) => {
+                        self.highlighter =
+                            Some(HighlightKind::Freehand(Highlighter::<FreehandHighlight> {
+                                data: FreehandHighlight {
+                                    points: vec![event.pos],
+                                    shift_pressed,
+                                },
+                                style: self.style,
+                            }))
                     }
                 }
 
@@ -169,7 +197,7 @@ impl Tool for HighlightTool {
                         };
                         ToolUpdateResult::Redraw
                     }
-                    HighlightKind::Line(highlighter) => {
+                    HighlightKind::Freehand(highlighter) => {
                         if event.pos == Vec2D::zero() {
                             return ToolUpdateResult::Unmodified;
                         };
@@ -234,7 +262,7 @@ impl Tool for HighlightTool {
         // add an extra point when shift is unheld, this allows for users to make sharper turns.
         // press (aka: release) shift a second time to remove the added point.
         if event.key == Key::Shift_L || event.key == Key::Shift_R {
-            if let Some(HighlightKind::Line(highlighter)) = &mut self.highlighter {
+            if let Some(HighlightKind::Freehand(highlighter)) = &mut self.highlighter {
                 let points = &mut highlighter.data.points;
                 let last = points
                     .last()
