@@ -186,6 +186,8 @@ impl Tool for HighlightTool {
                 let mut highlighter_kind = self.highlighter.as_mut().unwrap();
                 let update: ToolUpdateResult = match &mut highlighter_kind {
                     HighlightKind::Block(highlighter) => {
+                        // When shift is pressed when using the block highlighter, it transforms
+                        // the area into a perfect square (in the direction they intended).
                         if shift_pressed {
                             let max_size = event.pos.x.abs().max(event.pos.y.abs());
                             highlighter.data.size = Some(Vec2D {
@@ -202,6 +204,16 @@ impl Tool for HighlightTool {
                             return ToolUpdateResult::Unmodified;
                         };
 
+                        // The freehand highlighter has a more complex shift model:
+                        // when pressing shift it begins a straight line, which is aligned
+                        // from the point after shift was pressed, to any 15*n degree rotation.
+                        //
+                        // After releasing shift, it creates an extra point, this is useful since
+                        // it means that users do not need to move their mouse to achieve perfectly
+                        // aligned turns, since they can release, then hold shift again to continue
+                        // another aligned line.
+                        // This extra point can be removed by releasing shift again (if the cursor
+                        // hasn't moved)
                         if shift_pressed {
                             // if shift was pressed before we remove an extra point which would
                             // have been the previous aligned point. However ignore if there is
@@ -259,8 +271,9 @@ impl Tool for HighlightTool {
         &mut self,
         event: crate::sketch_board::KeyEventMsg,
     ) -> ToolUpdateResult {
-        // add an extra point when shift is unheld, this allows for users to make sharper turns.
-        // press (aka: release) shift a second time to remove the added point.
+        // Adds an extra point when shift is released in the freehand mode, this
+        // allows for users to make sharper turns. Release shift a second time
+        // to remove the added point (only if the cursor has not moved).
         if event.key == Key::Shift_L || event.key == Key::Shift_R {
             if let Some(HighlightKind::Freehand(highlighter)) = &mut self.highlighter {
                 let points = &mut highlighter.data.points;
