@@ -11,7 +11,11 @@ use serde_derive::Deserialize;
 use thiserror::Error;
 use xdg::{BaseDirectories, BaseDirectoriesError};
 
-use crate::{command_line::CommandLine, style::Color, tools::Tools};
+use crate::{
+    command_line::CommandLine,
+    style::Color,
+    tools::{Highlighters, Tools},
+};
 
 pub static APP_CONFIG: SharedState<Configuration> = SharedState::new();
 
@@ -39,6 +43,7 @@ pub struct Configuration {
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
     font: FontConfiguration,
+    primary_highlighter: Highlighters,
 }
 
 #[derive(Default)]
@@ -170,6 +175,9 @@ impl Configuration {
         if let Some(v) = general.default_hide_toolbars {
             self.default_hide_toolbars = v;
         }
+        if let Some(v) = general.primary_highlighter {
+            self.primary_highlighter = v;
+        }
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
         // input_filename is required and needs to be overwritten
@@ -219,6 +227,10 @@ impl Configuration {
         if let Some(v) = command_line.font_style {
             self.font.style = Some(v);
         }
+
+        if let Some(v) = command_line.primary_highlighter {
+            self.primary_highlighter = v.into();
+        }
     }
 
     pub fn early_exit(&self) -> bool {
@@ -261,6 +273,9 @@ impl Configuration {
         self.default_hide_toolbars
     }
 
+    pub fn primary_highlighter(&self) -> Highlighters {
+        self.primary_highlighter
+    }
     pub fn font(&self) -> &FontConfiguration {
         &self.font
     }
@@ -280,6 +295,7 @@ impl Default for Configuration {
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
             font: FontConfiguration::default(),
+            primary_highlighter: Highlighters::Block,
         }
     }
 }
@@ -323,6 +339,7 @@ struct ConfiguationFileGeneral {
     output_filename: Option<String>,
     save_after_copy: Option<bool>,
     default_hide_toolbars: Option<bool>,
+    primary_highlighter: Option<Highlighters>,
 }
 
 #[derive(Deserialize)]

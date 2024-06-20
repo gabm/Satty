@@ -51,7 +51,6 @@ apk add satty
 
 You can download a prebuilt binary for x86-64 on the [Satty Releases](https://github.com/gabm/satty/releases) page.
 
-
 ## Usage
 
 Start by providing a filename or a screenshot via stdin and annotate using the available tools. Save to clipboard or file when finished. Tools and Interface have been kept simple.
@@ -78,6 +77,9 @@ output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
 save-after-copy = false
 # Hide toolbars by default
 default-hide-toolbars = false
+# The primary highlighter to use, the other is accessible by holding CTRL at the start of a highlight [possible values: block, freehand]
+primary-highlighter = "block"
+
 # Font to use for text annotations
 [font]
 family = "Roboto"
@@ -122,6 +124,8 @@ Options:
           After copying the screenshot, save it to a file as well
   -d, --default-hide-toolbars
           Hide toolbars by default
+      --primary-highlighter <PRIMARY_HIGHLIGHTER>
+          The primary highlighter to use, secondary is accessible with CTRL [possible values: block, freehand]
       --font-family <FONT_FAMILY>
           Font family to use for text annotations
       --font-style <FONT_STYLE>
@@ -139,7 +143,6 @@ You can bind a key to the following command:
 ```
 grim -g "$(slurp -o -r -c '#ff0000ff')" - | satty --filename - --fullscreen --output-filename ~/Pictures/Screenshots/satty-$(date '+%Y%m%d-%H:%M:%S').png
 ```
-
 
 ## Build from source
 

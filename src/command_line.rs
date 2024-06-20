@@ -51,6 +51,10 @@ pub struct CommandLine {
     /// Font style to use for text annotations
     #[arg(long)]
     pub font_style: Option<String>,
+
+    /// The primary highlighter to use, secondary is accessible with CTRL.
+    #[arg(long)]
+    pub primary_highlighter: Option<Highlighters>,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
@@ -66,6 +70,13 @@ pub enum Tools {
     Blur,
     Highlight,
     Brush,
+}
+
+#[derive(Debug, Clone, Copy, Default, ValueEnum)]
+pub enum Highlighters {
+    #[default]
+    Block,
+    Freehand,
 }
 
 impl std::fmt::Display for Tools {

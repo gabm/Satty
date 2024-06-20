@@ -47,6 +47,7 @@ pub enum SketchBoardOutput {
 pub enum InputEvent {
     Mouse(MouseEventMsg),
     Key(KeyEventMsg),
+    KeyRelease(KeyEventMsg),
     Text(TextEventMsg),
 }
 
@@ -103,6 +104,10 @@ impl SketchBoardInput {
     }
     pub fn new_key_event(event: KeyEventMsg) -> SketchBoardInput {
         SketchBoardInput::InputEvent(InputEvent::Key(event))
+    }
+
+    pub fn new_key_release_event(event: KeyEventMsg) -> SketchBoardInput {
+        SketchBoardInput::InputEvent(InputEvent::KeyRelease(event))
     }
 
     pub fn new_text_event(event: TextEventMsg) -> SketchBoardInput {

@@ -205,11 +205,12 @@ impl Size {
         }
     }
 
-    pub fn to_highlight_opacity(self) -> u8 {
+    pub fn to_highlight_width(self) -> f32 {
+        let size_factor = APP_CONFIG.read().annotation_size_factor();
         match self {
-            Size::Small => 50,
-            Size::Medium => 100,
-            Size::Large => 150,
+            Size::Small => 15.0 * size_factor,
+            Size::Medium => 30.0 * size_factor,
+            Size::Large => 45.0 * size_factor,
         }
     }
 }
