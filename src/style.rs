@@ -34,6 +34,13 @@ pub enum Size {
     Large = 2,
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Default)]
+pub enum ZoomDirection {
+    #[default]
+    In,
+    Out,
+}
+
 impl Default for Color {
     fn default() -> Self {
         APP_CONFIG.read().color_palette().first()

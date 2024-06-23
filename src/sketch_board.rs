@@ -19,7 +19,7 @@ use crate::configuration::APP_CONFIG;
 use crate::femtovg_area::FemtoVGArea;
 use crate::math::Vec2D;
 use crate::notification::log_result;
-use crate::style::Style;
+use crate::style::{Style, ZoomDirection};
 use crate::tools::{Tool, ToolEvent, ToolUpdateResult, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
 
@@ -292,6 +292,13 @@ impl SketchBoard {
         }
     }
 
+    fn handle_zoom(&mut self, dir: ZoomDirection) {
+        match dir {
+            ZoomDirection::In => self.renderer.zoom(0.1f32),
+            ZoomDirection::Out => self.renderer.zoom(-0.1f32),
+        }
+    }
+
     // Toolbars = Tools Toolbar + Style Toolbar
     fn handle_toggle_toolbars_display(
         &mut self,
@@ -365,6 +372,11 @@ impl SketchBoard {
                 self.active_tool
                     .borrow_mut()
                     .handle_event(ToolEvent::StyleChanged(self.style))
+            }
+            ToolbarEvent::Zoom(dir) => {
+                self.handle_zoom(dir);
+                //ToolUpdateResult::Unmodified
+                ToolUpdateResult::Redraw
             }
         }
     }

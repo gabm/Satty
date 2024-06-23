@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use crate::{
     configuration::APP_CONFIG,
-    style::{Color, Size},
+    style::{Color, Size, ZoomDirection},
     tools::Tools,
 };
 
@@ -38,6 +38,7 @@ pub enum ToolbarEvent {
     SaveFile,
     CopyClipboard,
     ToggleFill,
+    Zoom(ZoomDirection),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -96,6 +97,22 @@ impl SimpleComponent for ToolsToolbar {
                 set_icon_name: "arrow-redo-filled",
                 set_tooltip: "Redo (Ctrl-Y)",
                 connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::Redo);},
+            },
+            gtk::Button {
+                set_focusable: false,
+                set_hexpand: false,
+
+                set_icon_name: "zoom-in",
+                set_tooltip: "Zoom In",
+                connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::Zoom(ZoomDirection::In));},
+            },
+            gtk::Button {
+                set_focusable: false,
+                set_hexpand: false,
+
+                set_icon_name: "zoom-out",
+                set_tooltip: "Zoom Out",
+                connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::Zoom(ZoomDirection::Out));},
             },
             gtk::Separator {},
             gtk::ToggleButton {

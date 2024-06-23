@@ -75,6 +75,15 @@ impl FemtoVGArea {
             .expect("Did you call init before using FemtoVgArea?")
             .rel_canvas_to_image_coordinates(input, self.scale_factor() as f32)
     }
+
+    pub fn zoom(&self, factor: f32) {
+        self.imp()
+            .inner()
+            .as_mut()
+            .expect("Did you call init before using FemtoVgArea?")
+            .set_scale_factor(factor);
+    }
+
     pub fn init(
         &mut self,
         sender: Sender<SketchBoardInput>,
