@@ -353,7 +353,7 @@ impl SketchBoard {
                 self.active_tool
                     .borrow_mut()
                     .handle_event(ToolEvent::StyleChanged(self.style))
-            },
+            }
         }
     }
 }

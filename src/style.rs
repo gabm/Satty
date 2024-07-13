@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use femtovg::{Paint};
+use femtovg::Paint;
 use gdk_pixbuf::{
     glib::{Variant, VariantTy},
     prelude::{StaticVariantType, ToVariant},
