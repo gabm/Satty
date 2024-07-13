@@ -20,6 +20,7 @@ mod arrow;
 mod blur;
 mod brush;
 mod crop;
+mod ellipse;
 mod highlight;
 mod line;
 mod marker;
@@ -132,6 +133,7 @@ pub enum ToolUpdateResult {
 pub use arrow::ArrowTool;
 pub use blur::BlurTool;
 pub use crop::CropTool;
+pub use ellipse::EllipseTool;
 pub use highlight::{HighlightTool, Highlighters};
 pub use line::LineTool;
 pub use rectangle::RectangleTool;
@@ -147,11 +149,12 @@ pub enum Tools {
     Line = 2,
     Arrow = 3,
     Rectangle = 4,
-    Text = 5,
-    Marker = 6,
-    Blur = 7,
-    Highlight = 8,
-    Brush = 9,
+    Ellipse = 5,
+    Text = 6,
+    Marker = 7,
+    Blur = 8,
+    Highlight = 9,
+    Brush = 10,
 }
 
 pub struct ToolsManager {
@@ -172,6 +175,10 @@ impl ToolsManager {
         tools.insert(
             Tools::Rectangle,
             Rc::new(RefCell::new(RectangleTool::default())),
+        );
+        tools.insert(
+            Tools::Ellipse,
+            Rc::new(RefCell::new(EllipseTool::default())),
         );
         tools.insert(Tools::Text, Rc::new(RefCell::new(TextTool::default())));
         tools.insert(Tools::Blur, Rc::new(RefCell::new(BlurTool::default())));
@@ -224,11 +231,12 @@ impl FromVariant for Tools {
             2 => Some(Tools::Line),
             3 => Some(Tools::Arrow),
             4 => Some(Tools::Rectangle),
-            5 => Some(Tools::Text),
-            6 => Some(Tools::Marker),
-            7 => Some(Tools::Blur),
-            8 => Some(Tools::Highlight),
-            9 => Some(Tools::Brush),
+            5 => Some(Tools::Ellipse),
+            6 => Some(Tools::Text),
+            7 => Some(Tools::Marker),
+            8 => Some(Tools::Blur),
+            9 => Some(Tools::Highlight),
+            10 => Some(Tools::Brush),
             _ => None,
         })
     }
@@ -242,6 +250,7 @@ impl From<command_line::Tools> for Tools {
             command_line::Tools::Line => Self::Line,
             command_line::Tools::Arrow => Self::Arrow,
             command_line::Tools::Rectangle => Self::Rectangle,
+            command_line::Tools::Ellipse => Self::Ellipse,
             command_line::Tools::Text => Self::Text,
             command_line::Tools::Marker => Self::Marker,
             command_line::Tools::Blur => Self::Blur,
