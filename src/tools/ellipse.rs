@@ -112,4 +112,3 @@ impl Tool for EllipseTool {
         }
     }
 }
-
