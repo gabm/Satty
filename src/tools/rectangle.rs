@@ -32,7 +32,11 @@ impl Drawable for Rectangle {
         let mut path = Path::new();
         path.rect(self.top_left.x, self.top_left.y, size.x, size.y);
 
-        canvas.stroke_path(&path, &self.style.into());
+        if self.style.fill {
+            canvas.fill_path(&path, &self.style.into());
+        } else {
+            canvas.stroke_path(&path, &self.style.into());
+        }
         canvas.restore();
 
         Ok(())

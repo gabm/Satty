@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use femtovg::Paint;
+use femtovg::{Paint};
 use gdk_pixbuf::{
     glib::{Variant, VariantTy},
     prelude::{StaticVariantType, ToVariant},
@@ -15,6 +15,7 @@ use crate::configuration::APP_CONFIG;
 pub struct Style {
     pub color: Color,
     pub size: Size,
+    pub fill: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]

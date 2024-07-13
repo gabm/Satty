@@ -37,6 +37,7 @@ pub enum ToolbarEvent {
     Undo,
     SaveFile,
     CopyClipboard,
+    ToggleFill,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -398,7 +399,22 @@ impl Component for StyleToolbar {
                 set_tooltip: "Large size",
                 ActionablePlus::set_action::<SizeAction>: Size::Large,
             },
+            gtk::Button {
+                set_focusable: false,
+                set_hexpand: false,
 
+                set_icon_name: "paint-bucket-regular",
+                set_tooltip: "Fill shape",
+                connect_clicked[sender] => move |button| {
+                    sender.output_sender().emit(ToolbarEvent::ToggleFill);
+                    let new_icon = if button.icon_name() == Some("paint-bucket-regular".into()) {
+                        "paint-bucket-filled"
+                    } else {
+                        "paint-bucket-regular"
+                    };
+                    button.set_icon_name(new_icon);
+                },
+            },
         },
     }
 
