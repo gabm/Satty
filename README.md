@@ -110,7 +110,7 @@ Options:
           Path to input image or '-' to read from stdin
       --fullscreen
           Start Satty in fullscreen mode
-      --output-filename <OUTPUT_FILENAME>
+  -o, --output-filename <OUTPUT_FILENAME>
           Filename to use for saving action. Omit to disable saving to file. Might contain format specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
       --early-exit
           Exit directly after copy/save action
