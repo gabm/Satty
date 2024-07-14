@@ -17,7 +17,7 @@ pub struct CommandLine {
 
     /// Filename to use for saving action. Omit to disable saving to file. Might contain format
     /// specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>.
-    #[arg(long)]
+    #[arg(short, long)]
     pub output_filename: Option<String>,
 
     /// Exit directly after copy/save action
