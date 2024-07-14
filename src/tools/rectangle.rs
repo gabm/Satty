@@ -1,6 +1,6 @@
 use anyhow::Result;
 use femtovg::{FontId, Path};
-use relm4::gtk::gdk::Key;
+use relm4::gtk::gdk::{Key, ModifierType};
 
 use crate::{
     math::Vec2D,
@@ -51,6 +51,7 @@ pub struct RectangleTool {
 
 impl Tool for RectangleTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
+        let shift_pressed = event.modifier.intersects(ModifierType::SHIFT_MASK);
         match event.type_ {
             MouseEventType::BeginDrag => {
                 // start new
@@ -63,14 +64,22 @@ impl Tool for RectangleTool {
                 ToolUpdateResult::Redraw
             }
             MouseEventType::EndDrag => {
-                if let Some(a) = &mut self.rectangle {
+                if let Some(rectangle) = &mut self.rectangle {
                     if event.pos == Vec2D::zero() {
                         self.rectangle = None;
 
                         ToolUpdateResult::Redraw
                     } else {
-                        a.size = Some(event.pos);
-                        let result = a.clone_box();
+                        if shift_pressed {
+                            let max_size = event.pos.x.abs().max(event.pos.y.abs());
+                            rectangle.size = Some(Vec2D {
+                                x: max_size * event.pos.x.signum(),
+                                y: max_size * event.pos.y.signum(),
+                            });
+                        } else {
+                            rectangle.size = Some(event.pos);
+                        }
+                        let result = rectangle.clone_box();
                         self.rectangle = None;
 
                         ToolUpdateResult::Commit(result)
@@ -80,11 +89,19 @@ impl Tool for RectangleTool {
                 }
             }
             MouseEventType::UpdateDrag => {
-                if let Some(a) = &mut self.rectangle {
+                if let Some(rectangle) = &mut self.rectangle {
                     if event.pos == Vec2D::zero() {
                         return ToolUpdateResult::Unmodified;
                     }
-                    a.size = Some(event.pos);
+                    if shift_pressed {
+                        let max_size = event.pos.x.abs().max(event.pos.y.abs());
+                        rectangle.size = Some(Vec2D {
+                            x: max_size * event.pos.x.signum(),
+                            y: max_size * event.pos.y.signum(),
+                        });
+                    } else {
+                        rectangle.size = Some(event.pos);
+                    }
 
                     ToolUpdateResult::Redraw
                 } else {
