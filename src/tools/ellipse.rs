@@ -1,6 +1,6 @@
 use anyhow::Result;
 use femtovg::{FontId, Path};
-use relm4::gtk::gdk::Key;
+use relm4::gtk::gdk::{Key, ModifierType};
 
 use crate::{
     math::Vec2D,
@@ -65,7 +65,11 @@ impl Tool for EllipseTool {
 
                         ToolUpdateResult::Redraw
                     } else {
-                        ellipse.radii = Some(event.pos);
+                        if event.modifier.contains(ModifierType::SHIFT_MASK) {
+                            ellipse.radii = Some(Vec2D::new(event.pos.x, event.pos.x));
+                        } else {
+                            ellipse.radii = Some(event.pos);
+                        }
                         let result = ellipse.clone_box();
                         self.ellipse = None;
 
@@ -80,7 +84,11 @@ impl Tool for EllipseTool {
                     if event.pos == Vec2D::zero() {
                         return ToolUpdateResult::Unmodified;
                     }
-                    ellipse.radii = Some(event.pos);
+                    if event.modifier.contains(ModifierType::SHIFT_MASK) {
+                        ellipse.radii = Some(Vec2D::new(event.pos.x, event.pos.x));
+                    } else {
+                        ellipse.radii = Some(event.pos);
+                    }
 
                     ToolUpdateResult::Redraw
                 } else {
