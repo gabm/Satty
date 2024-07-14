@@ -149,6 +149,14 @@ impl SimpleComponent for ToolsToolbar {
                 set_focusable: false,
                 set_hexpand: false,
 
+                set_icon_name: "circle-regular",
+                set_tooltip: "Ellipse tool",
+                ActionablePlus::set_action::<ToolsAction>: Tools::Ellipse,
+            },
+            gtk::ToggleButton {
+                set_focusable: false,
+                set_hexpand: false,
+
                 set_icon_name: "text-case-title-regular",
                 set_tooltip: "Text tool",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Text,
