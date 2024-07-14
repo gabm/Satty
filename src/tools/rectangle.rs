@@ -47,6 +47,7 @@ pub struct RectangleTool {
 
 impl Tool for RectangleTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
+        let shift_pressed = event.modifier.intersects(ModifierType::SHIFT_MASK);
         match event.type_ {
             MouseEventType::BeginDrag => {
                 // start new
@@ -65,8 +66,12 @@ impl Tool for RectangleTool {
 
                         ToolUpdateResult::Redraw
                     } else {
-                        if event.modifier.contains(ModifierType::SHIFT_MASK) {
-                            rectangle.size = Some(Vec2D::new(event.pos.x, event.pos.x));
+                        if shift_pressed {
+                            let max_size = event.pos.x.abs().max(event.pos.y.abs());
+                            rectangle.size = Some(Vec2D {
+                                x: max_size * event.pos.x.signum(),
+                                y: max_size * event.pos.y.signum(),
+                            });
                         } else {
                             rectangle.size = Some(event.pos);
                         }
@@ -84,8 +89,12 @@ impl Tool for RectangleTool {
                     if event.pos == Vec2D::zero() {
                         return ToolUpdateResult::Unmodified;
                     }
-                    if event.modifier.contains(ModifierType::SHIFT_MASK) {
-                        rectangle.size = Some(Vec2D::new(event.pos.x, event.pos.x));
+                    if shift_pressed {
+                        let max_size = event.pos.x.abs().max(event.pos.y.abs());
+                        rectangle.size = Some(Vec2D {
+                            x: max_size * event.pos.x.signum(),
+                            y: max_size * event.pos.y.signum(),
+                        });
                     } else {
                         rectangle.size = Some(event.pos);
                     }
