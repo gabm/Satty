@@ -47,6 +47,7 @@ pub struct EllipseTool {
 
 impl Tool for EllipseTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
+        let shift_pressed = event.modifier.intersects(ModifierType::SHIFT_MASK);
         match event.type_ {
             MouseEventType::BeginDrag => {
                 // start new
@@ -65,8 +66,12 @@ impl Tool for EllipseTool {
 
                         ToolUpdateResult::Redraw
                     } else {
-                        if event.modifier.contains(ModifierType::SHIFT_MASK) {
-                            ellipse.radii = Some(Vec2D::new(event.pos.x, event.pos.x));
+                        if shift_pressed {
+                            let max_size = event.pos.x.abs().max(event.pos.y.abs());
+                            ellipse.radii = Some(Vec2D {
+                                x: max_size * event.pos.x.signum(),
+                                y: max_size * event.pos.y.signum(),
+                            });
                         } else {
                             ellipse.radii = Some(event.pos);
                         }
@@ -84,8 +89,12 @@ impl Tool for EllipseTool {
                     if event.pos == Vec2D::zero() {
                         return ToolUpdateResult::Unmodified;
                     }
-                    if event.modifier.contains(ModifierType::SHIFT_MASK) {
-                        ellipse.radii = Some(Vec2D::new(event.pos.x, event.pos.x));
+                    if shift_pressed {
+                        let max_size = event.pos.x.abs().max(event.pos.y.abs());
+                        ellipse.radii = Some(Vec2D {
+                            x: max_size * event.pos.x.signum(),
+                            y: max_size * event.pos.y.signum(),
+                        });
                     } else {
                         ellipse.radii = Some(event.pos);
                     }
