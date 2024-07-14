@@ -15,6 +15,7 @@ use crate::configuration::APP_CONFIG;
 pub struct Style {
     pub color: Color,
     pub size: Size,
+    pub fill: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]

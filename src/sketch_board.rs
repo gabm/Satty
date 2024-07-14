@@ -348,6 +348,12 @@ impl SketchBoard {
             }
             ToolbarEvent::Undo => self.handle_undo(),
             ToolbarEvent::Redo => self.handle_redo(),
+            ToolbarEvent::ToggleFill => {
+                self.style.fill = !self.style.fill;
+                self.active_tool
+                    .borrow_mut()
+                    .handle_event(ToolEvent::StyleChanged(self.style))
+            }
         }
     }
 }

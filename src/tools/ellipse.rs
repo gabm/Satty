@@ -32,7 +32,11 @@ impl Drawable for Ellipse {
         let mut path = Path::new();
         path.ellipse(self.middle.x, self.middle.y, radii.x, radii.y);
 
-        canvas.stroke_path(&path, &self.style.into());
+        if self.style.fill {
+            canvas.fill_path(&path, &self.style.into());
+        } else {
+            canvas.stroke_path(&path, &self.style.into());
+        }
         canvas.restore();
 
         Ok(())
