@@ -1,6 +1,6 @@
 use anyhow::Result;
 use femtovg::{FontId, Path};
-use relm4::gtk::gdk::Key;
+use relm4::gtk::gdk::{Key, ModifierType};
 
 use crate::{
     math::Vec2D,
@@ -59,14 +59,18 @@ impl Tool for RectangleTool {
                 ToolUpdateResult::Redraw
             }
             MouseEventType::EndDrag => {
-                if let Some(a) = &mut self.rectangle {
+                if let Some(rectangle) = &mut self.rectangle {
                     if event.pos == Vec2D::zero() {
                         self.rectangle = None;
 
                         ToolUpdateResult::Redraw
                     } else {
-                        a.size = Some(event.pos);
-                        let result = a.clone_box();
+                        if event.modifier.contains(ModifierType::SHIFT_MASK) {
+                            rectangle.size = Some(Vec2D::new(event.pos.x, event.pos.x));
+                        } else {
+                            rectangle.size = Some(event.pos);
+                        }
+                        let result = rectangle.clone_box();
                         self.rectangle = None;
 
                         ToolUpdateResult::Commit(result)
@@ -76,11 +80,15 @@ impl Tool for RectangleTool {
                 }
             }
             MouseEventType::UpdateDrag => {
-                if let Some(a) = &mut self.rectangle {
+                if let Some(rectangle) = &mut self.rectangle {
                     if event.pos == Vec2D::zero() {
                         return ToolUpdateResult::Unmodified;
                     }
-                    a.size = Some(event.pos);
+                    if event.modifier.contains(ModifierType::SHIFT_MASK) {
+                        rectangle.size = Some(Vec2D::new(event.pos.x, event.pos.x));
+                    } else {
+                        rectangle.size = Some(event.pos);
+                    }
 
                     ToolUpdateResult::Redraw
                 } else {
