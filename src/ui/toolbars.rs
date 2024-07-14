@@ -252,7 +252,7 @@ pub enum ColorButtons {
     Second = 1,
     Third = 2,
     Fourth = 3,
-    Fith = 4,
+    Fifth = 4,
     Custom = 5,
 }
 
@@ -295,7 +295,7 @@ impl StyleToolbar {
             ColorButtons::Second => config.color_palette().second(),
             ColorButtons::Third => config.color_palette().third(),
             ColorButtons::Fourth => config.color_palette().fourth(),
-            ColorButtons::Fith => config.color_palette().fifth(),
+            ColorButtons::Fifth => config.color_palette().fifth(),
             ColorButtons::Custom => self.custom_color,
         }
     }
@@ -358,7 +358,7 @@ impl Component for StyleToolbar {
 
                 create_icon(APP_CONFIG.read().color_palette().fifth()),
 
-                ActionablePlus::set_action::<ColorAction>: ColorButtons::Fith,
+                ActionablePlus::set_action::<ColorAction>: ColorButtons::Fifth,
             },
             gtk::Separator {},
             gtk::ToggleButton {
@@ -530,7 +530,7 @@ impl FromVariant for ColorButtons {
             1 => Some(ColorButtons::Second),
             2 => Some(ColorButtons::Third),
             3 => Some(ColorButtons::Fourth),
-            4 => Some(ColorButtons::Fith),
+            4 => Some(ColorButtons::Fifth),
             5 => Some(ColorButtons::Custom),
             _ => None,
         })
