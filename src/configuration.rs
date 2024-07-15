@@ -150,7 +150,7 @@ impl Configuration {
 
         APP_CONFIG.write().merge(file, command_line);
     }
-    fn merge_general(&mut self, general: ConfiguationFileGeneral) {
+    fn merge_general(&mut self, general: ConfigurationFileGeneral) {
         if let Some(v) = general.fullscreen {
             self.fullscreen = v;
         }
@@ -316,7 +316,7 @@ impl Default for ColorPalette {
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct ConfigurationFile {
-    general: Option<ConfiguationFileGeneral>,
+    general: Option<ConfigurationFileGeneral>,
     color_palette: Option<ColorPaletteFile>,
     font: Option<FontFile>,
 }
@@ -330,7 +330,7 @@ struct FontFile {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
-struct ConfiguationFileGeneral {
+struct ConfigurationFileGeneral {
     fullscreen: Option<bool>,
     early_exit: Option<bool>,
     initial_tool: Option<Tools>,

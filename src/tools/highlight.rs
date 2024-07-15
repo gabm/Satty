@@ -66,7 +66,7 @@ impl Highlight for Highlighter<FreehandHighlight> {
             .data
             .points
             .first()
-            .expect("should exist atleast one point in highlight instance.");
+            .expect("should exist at least one point in highlight instance.");
 
         path.move_to(first.x, first.y);
         for p in self.data.points.iter().skip(1) {
@@ -224,7 +224,7 @@ impl Tool for HighlightTool {
                                     .data
                                     .points
                                     .pop()
-                                    .expect("atleast 2 points in highlight path.");
+                                    .expect("at least 2 points in highlight path.");
                             };
                             // use the last point to position the snapping guide, or 0 if the point
                             // is the first one.
@@ -235,7 +235,7 @@ impl Tool for HighlightTool {
                                     .data
                                     .points
                                     .last_mut()
-                                    .expect("atleast one point")
+                                    .expect("at least one point")
                             };
                             let snapped_pos = event.pos.sub(last).snapped_vector_15deg().add(last);
                             highlighter.data.points.push(snapped_pos);
@@ -279,7 +279,7 @@ impl Tool for HighlightTool {
                 let points = &mut highlighter.data.points;
                 let last = points
                     .last()
-                    .expect("line highlight must have atleast one point");
+                    .expect("line highlight must have at least one point");
                 if points.len() >= 2 {
                     if *last == points[points.len() - 2] {
                         points.pop();

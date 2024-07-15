@@ -320,7 +320,7 @@ impl CropTool {
 
         match action {
             // crop never returns "commit" because nothing gets
-            // commited to the drawables stack
+            // committed to the drawables stack
             CropToolAction::NewCrop => {
                 crop.size = Some(direction);
                 self.action = None;
@@ -377,7 +377,7 @@ impl Tool for CropTool {
     fn get_drawable(&self) -> Option<&dyn Drawable> {
         // the reason we always return None is because we dont want this tool
         // to show up with the standard rendering mechanism. Instead it will always
-        // be drawn seperately by using `get_crop(&self)`
+        // be drawn separately by using `get_crop(&self)`
         None
     }
 }
