@@ -16,8 +16,8 @@
   in {
     devShells = forEachSystem (
       system: let
-        overlays = [(import rust-overlay)];
-        pkgs = import nixpkgs {inherit system overlays;};
+        pkgs = nixpkgs.legacyPackages.${system};
+        rustPkgs = rust-overlay.packages.${system};
       in rec {
         default = satty;
         satty = pkgs.mkShell {
@@ -30,13 +30,13 @@
             libadwaita
             fontconfig
 
-            (rust-bin.stable.latest.default.override {
+            (rustPkgs.rust.override {
               extensions = ["rust-src"];
             })
           ];
 
-          shellHook = with pkgs; ''
-            export GSETTINGS_SCHEMA_DIR=${glib.getSchemaPath gtk4}
+          shellHook = ''
+            export GSETTINGS_SCHEMA_DIR=${pkgs.glib.getSchemaPath pkgs.gtk4}
           '';
         };
       }
