@@ -3,9 +3,11 @@ use relm4::gtk::gio::{prelude::ApplicationExt, Notification};
 
 use relm4::gtk::{IconLookupFlags, IconTheme, TextDirection};
 
-pub fn log_result(msg: &str) {
+pub fn log_result(msg: &str, notify: bool) {
     println!("{}", msg);
-    show_notification(msg);
+    if notify {
+        show_notification(msg);
+    }
 }
 
 fn show_notification(msg: &str) {

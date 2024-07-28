@@ -55,6 +55,10 @@ pub struct CommandLine {
     /// The primary highlighter to use, secondary is accessible with CTRL.
     #[arg(long)]
     pub primary_highlighter: Option<Highlighters>,
+
+    /// Disable notifications
+    #[arg(long)]
+    pub disable_notifications: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]

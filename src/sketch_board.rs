@@ -191,7 +191,7 @@ impl SketchBoard {
 
         // TODO: we could support more data types
         if !output_filename.ends_with(".png") {
-            log_result("The only supported format is png, but the filename does not end in png");
+            log_result("The only supported format is png, but the filename does not end in png", !APP_CONFIG.read().disable_notifications());
             return;
         }
 
@@ -204,8 +204,8 @@ impl SketchBoard {
         };
 
         match fs::write(&output_filename, data) {
-            Err(e) => log_result(&format!("Error while saving file: {e}")),
-            Ok(_) => log_result(&format!("File saved to '{}'.", &output_filename)),
+            Err(e) => log_result(&format!("Error while saving file: {e}"), !APP_CONFIG.read().disable_notifications()),
+            Ok(_) => log_result(&format!("File saved to '{}'.", &output_filename), !APP_CONFIG.read().disable_notifications()),
         };
     }
 
@@ -250,7 +250,7 @@ impl SketchBoard {
         match result {
             Err(e) => println!("Error saving {e}"),
             Ok(()) => {
-                log_result("Copied to clipboard.");
+                log_result("Copied to clipboard.", !APP_CONFIG.read().disable_notifications());
 
                 // TODO: rethink order and messaging patterns
                 if APP_CONFIG.read().save_after_copy() {

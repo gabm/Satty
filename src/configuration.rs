@@ -44,6 +44,7 @@ pub struct Configuration {
     default_hide_toolbars: bool,
     font: FontConfiguration,
     primary_highlighter: Highlighters,
+    disable_notifications: bool,
 }
 
 #[derive(Default)]
@@ -178,6 +179,9 @@ impl Configuration {
         if let Some(v) = general.primary_highlighter {
             self.primary_highlighter = v;
         }
+        if let Some(v) = general.disable_notifications {
+            self.disable_notifications = v;
+        }
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
         // input_filename is required and needs to be overwritten
@@ -231,6 +235,9 @@ impl Configuration {
         if let Some(v) = command_line.primary_highlighter {
             self.primary_highlighter = v.into();
         }
+        if command_line.disable_notifications {
+            self.disable_notifications = command_line.disable_notifications;
+        }
     }
 
     pub fn early_exit(&self) -> bool {
@@ -276,6 +283,9 @@ impl Configuration {
     pub fn primary_highlighter(&self) -> Highlighters {
         self.primary_highlighter
     }
+    pub fn disable_notifications(&self) -> bool {
+        self.disable_notifications
+    }
     pub fn font(&self) -> &FontConfiguration {
         &self.font
     }
@@ -296,6 +306,7 @@ impl Default for Configuration {
             default_hide_toolbars: false,
             font: FontConfiguration::default(),
             primary_highlighter: Highlighters::Block,
+            disable_notifications: false,
         }
     }
 }
@@ -340,6 +351,7 @@ struct ConfiguationFileGeneral {
     save_after_copy: Option<bool>,
     default_hide_toolbars: Option<bool>,
     primary_highlighter: Option<Highlighters>,
+    disable_notifications: Option<bool>
 }
 
 #[derive(Deserialize)]

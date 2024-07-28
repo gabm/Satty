@@ -79,6 +79,7 @@ save-after-copy = false
 default-hide-toolbars = false
 # The primary highlighter to use, the other is accessible by holding CTRL at the start of a highlight [possible values: block, freehand]
 primary-highlighter = "block"
+disable-notifications = false
 
 # Font to use for text annotations
 [font]
@@ -126,6 +127,8 @@ Options:
           Hide toolbars by default
       --primary-highlighter <PRIMARY_HIGHLIGHTER>
           The primary highlighter to use, secondary is accessible with CTRL [possible values: block, freehand]
+      --disable-notifications
+          Disable notifications
       --font-family <FONT_FAMILY>
           Font family to use for text annotations
       --font-style <FONT_STYLE>
