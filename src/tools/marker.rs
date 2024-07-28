@@ -63,12 +63,12 @@ impl Drawable for Marker {
             femtovg::Solidity::Solid,
         );
 
-        let cirlce_paint = Paint::color(self.style.color.into())
+        let circle_paint = Paint::color(self.style.color.into())
             .with_line_width(self.style.size.to_line_width() * 2.0);
 
         canvas.save();
-        canvas.fill_path(&inner_circle_path, &cirlce_paint);
-        canvas.stroke_path(&outer_circle_path, &cirlce_paint);
+        canvas.fill_path(&inner_circle_path, &circle_paint);
+        canvas.stroke_path(&outer_circle_path, &circle_paint);
         canvas.fill_text(self.pos.x, self.pos.y, &text, &paint)?;
         canvas.restore();
         Ok(())

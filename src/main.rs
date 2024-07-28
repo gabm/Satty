@@ -88,7 +88,7 @@ impl App {
             let mut new_width = reduced_monitor_width;
             let mut new_height = new_width / aspect_ratio;
 
-            // if new_heigth is still bigger than monitor height, then scale on monitor height
+            // if new_height is still bigger than monitor height, then scale on monitor height
             if new_height > reduced_monitor_height {
                 new_height = reduced_monitor_height;
                 new_width = new_height * aspect_ratio;
@@ -323,7 +323,7 @@ fn run_satty() -> Result<()> {
 
 fn main() -> Result<()> {
     // populate the APP_CONFIG from commandline and
-    // config file. this might exit, if an error occured.
+    // config file. this might exit, if an error occurred.
     Configuration::load();
 
     // run the application

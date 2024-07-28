@@ -13,7 +13,7 @@ export def main [version: string] {
     $"Updating version from ($read_version | version_print) to ($requested_version | version_print)" | echo_section_headline
 
     if not (is_newer $read_version $requested_version) {
-        echo "Requested version is older than current verion. Aborting."
+        echo "Requested version is older than current version. Aborting."
         exit 1
     }
 
@@ -73,7 +73,7 @@ def update_cargo_lock [] {
 }
 
 def git_commit [tag: string] {
-    "Commiting..." | echo_section_headline
+    "Committing..." | echo_section_headline
     git commit -am $"Updating version to ($tag)"
 }
 
