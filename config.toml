@@ -17,6 +17,8 @@ save-after-copy = false
 default-hide-toolbars = false
 # The primary highlighter to use, the other is accessible by holding CTRL at the start of a highlight [possible values: block, freehand]
 primary-highlighter = "block"
+# Disable notifications
+disable-notifications = false
 
 # Font to use for text annotations
 [font]
