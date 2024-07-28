@@ -41,7 +41,7 @@ Pending PR for Gentoo overlay: https://github.com/gentoo/gentoo/pull/33908
 
 ### Alpine Linux
 
-Satty is available in [Alpine Testing](https://pkgs.alpinelinux.org/packages?name=satty&branch=edge&repo=&arch=&maintainer=). You can install it by uncommenting the testing repo in `/etc/apk/repositories` and then run:
+Satty is available in [Alpine Community](https://pkgs.alpinelinux.org/packages?name=satty&branch=edge&repo=&arch=&maintainer=). You can install it by uncommenting the community repo in `/etc/apk/repositories` and then run:
 
 ```
 apk add satty
