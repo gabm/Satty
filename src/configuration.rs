@@ -351,7 +351,7 @@ struct ConfiguationFileGeneral {
     save_after_copy: Option<bool>,
     default_hide_toolbars: Option<bool>,
     primary_highlighter: Option<Highlighters>,
-    disable_notifications: Option<bool>
+    disable_notifications: Option<bool>,
 }
 
 #[derive(Deserialize)]
