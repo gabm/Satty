@@ -531,4 +531,12 @@ impl FemtoVgAreaMut {
     pub fn set_scale_factor(&mut self, factor: f32) {
         self.scale_factor += factor;
     }
+
+    pub fn get_offset(&mut self) -> Vec2D {
+        self.offset
+    }
+
+    pub fn set_offset(&mut self, new_offset: Vec2D) {
+        self.offset = new_offset;
+    }
 }

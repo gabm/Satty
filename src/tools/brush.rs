@@ -91,6 +91,7 @@ impl Tool for BrushTool {
                     ToolUpdateResult::Unmodified
                 }
             }
+            _ => ToolUpdateResult::Unmodified,
         }
     }
 

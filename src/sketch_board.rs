@@ -77,6 +77,9 @@ pub enum MouseEventType {
     EndDrag,
     UpdateDrag,
     Click,
+    Scroll,
+    ScrollBegin,
+    ScrollEnd,
     //Motion(Vec2D),
 }
 
@@ -135,6 +138,11 @@ impl InputEvent {
                 }
                 MouseEventType::EndDrag | MouseEventType::UpdateDrag => {
                     me.pos = renderer.rel_canvas_to_image_coordinates(me.pos)
+                }
+                MouseEventType::Scroll
+                | MouseEventType::ScrollBegin
+                | MouseEventType::ScrollEnd => {
+                    println!("{:?}", me);
                 }
             }
         };
@@ -290,6 +298,13 @@ impl SketchBoard {
         } else {
             ToolUpdateResult::Unmodified
         }
+    }
+
+    fn handle_pan(&mut self, mouse_pos: Vec2D) -> ToolUpdateResult {
+        let pos = self.renderer.abs_canvas_to_image_coordinates(mouse_pos);
+        println!("P{:?}", pos);
+        self.renderer.pan(mouse_pos);
+        ToolUpdateResult::Redraw
     }
 
     fn handle_zoom(&mut self, dir: ZoomDirection) {
@@ -463,6 +478,22 @@ impl Component for SketchBoard {
                             .borrow_mut()
                             .handle_event(ToolEvent::Input(ie))
                     }
+                } else if let InputEvent::Mouse(me) = ie {
+                    match me.button {
+                        MouseButton::Middle => {
+                            if me.type_ == MouseEventType::UpdateDrag {
+                                self.handle_pan(me.pos);
+                            } else if me.type_ == MouseEventType::Scroll {
+                                match me.pos.y {
+                                    v if v < 0.0 => self.handle_zoom(ZoomDirection::In),
+                                    v if v > 0.0 => self.handle_zoom(ZoomDirection::Out),
+                                    _ => {}
+                                }
+                            }
+                        }
+                        _ => {}
+                    }
+                    ToolUpdateResult::Redraw
                 } else {
                     ie.remap_event_coordinates(&self.renderer);
                     self.active_tool
