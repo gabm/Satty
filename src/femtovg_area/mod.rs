@@ -84,16 +84,20 @@ impl FemtoVGArea {
             .set_scale_factor(factor);
     }
 
-    pub fn pan(&self, abs_pos: Vec2D) {
+    pub fn pan(&self, delta: Vec2D) {
         let mut area = self.imp().inner();
         let area_mut = area
             .as_mut()
             .expect("Did you call init before using FemtoVgArea?");
 
         let curr_offset = area_mut.get_offset();
-        println!("{:?}", abs_pos);
 
-        area_mut.set_offset(curr_offset + (curr_offset - abs_pos));
+        let delta = Vec2D::new(
+            delta.x / area_mut.get_scale_factor(),
+            delta.y / area_mut.get_scale_factor(),
+        );
+
+        area_mut.set_offset(curr_offset - delta);
     }
 
     pub fn init(

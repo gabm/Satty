@@ -27,7 +27,6 @@ mod marker;
 mod pointer;
 mod rectangle;
 mod text;
-mod zoom;
 
 pub enum ToolEvent {
     Activated,
@@ -139,7 +138,6 @@ pub use highlight::{HighlightTool, Highlighters};
 pub use line::LineTool;
 pub use rectangle::RectangleTool;
 pub use text::TextTool;
-pub use zoom::ZoomTool;
 
 use self::{brush::BrushTool, marker::MarkerTool, pointer::PointerTool};
 
@@ -191,7 +189,6 @@ impl ToolsManager {
         );
         tools.insert(Tools::Marker, Rc::new(RefCell::new(MarkerTool::default())));
         tools.insert(Tools::Brush, Rc::new(RefCell::new(BrushTool::default())));
-        tools.insert(Tools::Zoom, Rc::new(RefCell::new(ZoomTool::default())));
 
         let crop_tool = Rc::new(RefCell::new(CropTool::default()));
         Self { tools, crop_tool }
