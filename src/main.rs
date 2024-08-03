@@ -7,7 +7,8 @@ use gdk_pixbuf::gio::ApplicationFlags;
 use gdk_pixbuf::{Pixbuf, PixbufLoader};
 use gtk::prelude::*;
 
-use relm4::gtk::gdk::Rectangle;
+use math::Vec2D;
+use relm4::gtk::gdk::{ModifierType, Rectangle};
 
 use relm4::{
     gtk::{self, gdk::DisplayManager, CssProvider, Window},
@@ -154,6 +155,7 @@ impl Component for App {
                 sender.input(AppInput::Realized);
             },
 
+
             // this should be inside Sketchboard, but doesn't seem so work there. We hook it here
             // and send the messages there
             add_controller = gtk::EventControllerKey {
@@ -189,6 +191,20 @@ impl Component for App {
                     }
                 },
 
+            },
+
+            add_controller = gtk::EventControllerScroll {
+                set_flags: gtk::EventControllerScrollFlags::VERTICAL,
+                connect_scroll[sketch_board_sender] => move |_, _, delta_y| {
+                    sketch_board_sender.emit(
+                        SketchBoardInput::new_mouse_event(
+                            sketch_board::MouseEventType::Scroll,
+                            sketch_board::MouseButton::Middle as u32,
+                            ModifierType::empty(),
+                            Vec2D::new(0f32, delta_y as f32)),
+                    );
+                    glib::Propagation::Stop
+                }
             },
 
             gtk::Overlay {

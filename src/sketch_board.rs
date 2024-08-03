@@ -19,7 +19,7 @@ use crate::configuration::APP_CONFIG;
 use crate::femtovg_area::FemtoVGArea;
 use crate::math::Vec2D;
 use crate::notification::log_result;
-use crate::style::Style;
+use crate::style::{Style, ZoomDirection};
 use crate::tools::{Tool, ToolEvent, ToolUpdateResult, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
 
@@ -77,6 +77,9 @@ pub enum MouseEventType {
     EndDrag,
     UpdateDrag,
     Click,
+    Scroll,
+    ScrollBegin,
+    ScrollEnd,
     //Motion(Vec2D),
 }
 
@@ -86,6 +89,11 @@ pub struct MouseEventMsg {
     pub button: MouseButton,
     pub modifier: ModifierType,
     pub pos: Vec2D,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MouseDragEventMsg {
+    delta: Vec2D,
 }
 
 impl SketchBoardInput {
@@ -136,6 +144,7 @@ impl InputEvent {
                 MouseEventType::EndDrag | MouseEventType::UpdateDrag => {
                     me.pos = renderer.rel_canvas_to_image_coordinates(me.pos)
                 }
+                _ => {}
             }
         };
     }
@@ -146,6 +155,7 @@ pub struct SketchBoard {
     active_tool: Rc<RefCell<dyn Tool>>,
     tools: ToolsManager,
     style: Style,
+    drag_event: Option<MouseDragEventMsg>,
 }
 
 impl SketchBoard {
@@ -292,6 +302,18 @@ impl SketchBoard {
         }
     }
 
+    fn handle_pan(&mut self, delta: Vec2D) -> ToolUpdateResult {
+        self.renderer.pan(delta);
+        return ToolUpdateResult::Redraw;
+    }
+
+    fn handle_zoom(&mut self, dir: ZoomDirection) {
+        match dir {
+            ZoomDirection::In => self.renderer.zoom(0.1f32),
+            ZoomDirection::Out => self.renderer.zoom(-0.1f32),
+        }
+    }
+
     // Toolbars = Tools Toolbar + Style Toolbar
     fn handle_toggle_toolbars_display(
         &mut self,
@@ -365,6 +387,11 @@ impl SketchBoard {
                 self.active_tool
                     .borrow_mut()
                     .handle_event(ToolEvent::StyleChanged(self.style))
+            }
+            ToolbarEvent::Zoom(dir) => {
+                self.handle_zoom(dir);
+                //ToolUpdateResult::Unmodified
+                ToolUpdateResult::Redraw
             }
         }
     }
@@ -451,6 +478,40 @@ impl Component for SketchBoard {
                             .borrow_mut()
                             .handle_event(ToolEvent::Input(ie))
                     }
+                } else if let InputEvent::Mouse(me) = ie {
+                    match me.button {
+                        MouseButton::Middle => {
+                            if me.type_ == MouseEventType::BeginDrag {
+                                self.drag_event = Some(MouseDragEventMsg {
+                                    delta: Vec2D::new(0f32, 0f32),
+                                });
+                            } else if me.type_ == MouseEventType::UpdateDrag {
+                                // Convert the delta to a Vec2D that only has +1 or -1
+                                let mut event = self
+                                    .drag_event
+                                    .expect("Begin drag did not setup sketch_board.drag_event!");
+
+                                self.handle_pan(event.delta - me.pos);
+
+                                // Update self.drag_event.delta to the latest value
+                                event.delta = me.pos;
+                                self.drag_event = Some(event);
+                            } else if me.type_ == MouseEventType::Scroll {
+                                match me.pos.y {
+                                    v if v < 0.0 => self.handle_zoom(ZoomDirection::In),
+                                    v if v > 0.0 => self.handle_zoom(ZoomDirection::Out),
+                                    _ => {}
+                                }
+                            }
+                            ToolUpdateResult::Redraw
+                        }
+                        _ => {
+                            ie.remap_event_coordinates(&self.renderer);
+                            self.active_tool
+                                .borrow_mut()
+                                .handle_event(ToolEvent::Input(ie))
+                        }
+                    }
                 } else {
                     ie.remap_event_coordinates(&self.renderer);
                     self.active_tool
@@ -491,6 +552,7 @@ impl Component for SketchBoard {
             active_tool: tools.get(&config.initial_tool()),
             style: Style::default(),
             tools,
+            drag_event: None,
         };
 
         let area = &mut model.renderer;
