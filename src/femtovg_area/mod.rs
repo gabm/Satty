@@ -92,10 +92,7 @@ impl FemtoVGArea {
 
         let curr_offset = area_mut.get_offset();
 
-        let delta = Vec2D::new(
-            delta.x / area_mut.get_scale_factor(),
-            delta.y / area_mut.get_scale_factor(),
-        );
+        let delta = Vec2D::new(delta.x, delta.y);
 
         area_mut.set_offset(curr_offset - delta);
     }
