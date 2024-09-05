@@ -232,7 +232,9 @@ impl SketchBoard {
         texture: &impl IsA<Texture>,
         command: &str,
     ) -> anyhow::Result<()> {
-        let mut child = Command::new(command)
+        let mut child = Command::new("sh")
+            .arg("-c")
+            .arg(command)
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
             .spawn()?;
