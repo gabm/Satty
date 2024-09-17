@@ -199,11 +199,23 @@ impl Component for App {
                     sketch_board_sender.emit(
                         SketchBoardInput::new_mouse_event(
                             sketch_board::MouseEventType::Scroll,
-                            sketch_board::MouseButton::Middle as u32,
+                            Some(sketch_board::MouseButton::Middle as u32),
                             ModifierType::empty(),
                             Vec2D::new(0f32, delta_y as f32)),
                     );
                     glib::Propagation::Stop
+                }
+            },
+
+            add_controller = gtk::EventControllerMotion {
+                connect_motion[sketch_board_sender] => move |_, x, y| {
+                    sketch_board_sender.emit(
+                        SketchBoardInput::new_mouse_event(
+                            sketch_board::MouseEventType::Motion,
+                            None,
+                            ModifierType::empty(),
+                            Vec2D::new(x as f32, y as f32)),
+                    );
                 }
             },
 
