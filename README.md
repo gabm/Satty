@@ -24,7 +24,7 @@ Thanks to our package maintainers, Satty is available for many distributions on 
 You can get the official Arch Linux package from the AUR:
 
 ```
-yay -S satty-bin
+pacman -S satty
 ```
 
 ### Gentoo
