@@ -139,7 +139,7 @@ Options:
           Print version
 ```
 
-### wlroots based compositors (Sway, Hyprland, Wayfire, River, ...)
+### wlroots based compositors (Sway, Wayfire, River, ...)
 
 You can bind a key to the following command:
 
@@ -147,6 +147,11 @@ You can bind a key to the following command:
 grim -g "$(slurp -o -r -c '#ff0000ff')" -t ppm - | satty --filename - --fullscreen --output-filename ~/Pictures/Screenshots/satty-$(date '+%Y%m%d-%H:%M:%S').png
 ```
 
+Hyprland users must escape the `#` with another `#`:
+
+```
+grim -g "$(slurp -o -r -c '##ff0000ff')" -t ppm - | satty --filename - --fullscreen --output-filename ~/Pictures/Screenshots/satty-$(date '+%Y%m%d-%H:%M:%S').png
+```
 ## Build from source
 
 You first need to install the native dependencies of Satty (see below) and then run:
