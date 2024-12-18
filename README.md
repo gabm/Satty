@@ -65,8 +65,6 @@ All configuration is done either at the config file in `XDG_CONFIG_DIR/.config/s
 fullscreen = true
 # Exit directly after copy/save action
 early-exit = true
-# Draw rectangles with rounded corners
-rounded-corners = true
 # Select the tool on startup [possible values: pointer, crop, line, arrow, rectangle, text, marker, blur, brush]
 initial-tool = "brush"
 # Configure the command to be called on copy, for example `wl-copy`
@@ -117,8 +115,6 @@ Options:
           Filename to use for saving action. Omit to disable saving to file. Might contain format specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
       --early-exit
           Exit directly after copy/save action
-      --rounded-corners
-          Draw rectangles with rounded corners
       --initial-tool <TOOL>
           Select the tool on startup [aliases: init-tool] [possible values: pointer, crop, line, arrow, rectangle, text, marker, blur, brush]
       --copy-command <COPY_COMMAND>
