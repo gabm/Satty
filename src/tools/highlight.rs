@@ -11,7 +11,7 @@ use crate::{
     configuration::APP_CONFIG,
     math::{self, Vec2D},
     sketch_board::{MouseEventMsg, MouseEventType},
-    style::Style,
+    style::{Size, Style},
     tools::DrawableClone,
 };
 
@@ -99,11 +99,7 @@ impl Highlight for Highlighter<BlockHighlight> {
         let (pos, size) = math::rect_ensure_positive_size(self.data.top_left, size);
 
         let mut shadow_path = Path::new();
-        if APP_CONFIG.read().rounded_corners() {
-            shadow_path.rounded_rect(pos.x, pos.y, size.x, size.y, 12.0);
-        } else {
-            shadow_path.rect(pos.x, pos.y, size.x, size.y);
-        }
+        shadow_path.rounded_rect(pos.x, pos.y, size.x, size.y, Size::Medium.to_corner_radius());
 
         let shadow_paint = Paint::color(femtovg::Color::rgba(
             self.style.color.r,

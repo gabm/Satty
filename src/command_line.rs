@@ -24,10 +24,6 @@ pub struct CommandLine {
     #[arg(long)]
     pub early_exit: bool,
 
-    /// draw rectangles with rounded corners
-    #[arg(long)]
-    pub rounded_corners: bool,
-
     /// Select the tool on startup
     #[arg(long, value_name = "TOOL", visible_alias = "init-tool")]
     pub initial_tool: Option<Tools>,

@@ -214,4 +214,12 @@ impl Size {
             Size::Large => 45.0 * size_factor,
         }
     }
+
+    pub fn to_corner_radius(self) -> f32 {
+        match self {
+            Size::Small => 12.0,
+            Size::Medium => 12.0,
+            Size::Large => 12.0,
+        }
+    }
 }
