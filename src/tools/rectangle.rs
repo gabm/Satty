@@ -5,7 +5,7 @@ use relm4::gtk::gdk::{Key, ModifierType};
 use crate::{
     math::Vec2D,
     sketch_board::{MouseEventMsg, MouseEventType},
-    style::Style,
+    style::{Size, Style},
 };
 
 use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
@@ -30,7 +30,7 @@ impl Drawable for Rectangle {
 
         canvas.save();
         let mut path = Path::new();
-        path.rect(self.top_left.x, self.top_left.y, size.x, size.y);
+        path.rounded_rect(self.top_left.x, self.top_left.y, size.x, size.y, Size::Medium.to_corner_radius());
 
         if self.style.fill {
             canvas.fill_path(&path, &self.style.into());
