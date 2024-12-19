@@ -24,6 +24,11 @@ pub struct CommandLine {
     #[arg(long)]
     pub early_exit: bool,
 
+    /// Draw corners of rectangles round if the value is greater than 0
+    /// (Defaults to 12) (0 disables rounded corners)
+    #[arg(long)]
+    pub corner_roundness: Option<f32>,
+
     /// Select the tool on startup
     #[arg(long, value_name = "TOOL", visible_alias = "init-tool")]
     pub initial_tool: Option<Tools>,

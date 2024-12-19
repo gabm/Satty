@@ -36,6 +36,7 @@ pub struct Configuration {
     output_filename: Option<String>,
     fullscreen: bool,
     early_exit: bool,
+    corner_roundness: f32,
     initial_tool: Tools,
     copy_command: Option<String>,
     annotation_size_factor: f32,
@@ -158,6 +159,9 @@ impl Configuration {
         if let Some(v) = general.early_exit {
             self.early_exit = v;
         }
+        if let Some(v) = general.corner_roundness {
+            self.corner_roundness = v;
+        }
         if let Some(v) = general.initial_tool {
             self.initial_tool = v;
         }
@@ -207,6 +211,9 @@ impl Configuration {
         if command_line.early_exit {
             self.early_exit = command_line.early_exit;
         }
+        if let Some(v) = command_line.corner_roundness {
+            self.corner_roundness = v;
+        }
         if command_line.default_hide_toolbars {
             self.default_hide_toolbars = command_line.default_hide_toolbars;
         }
@@ -242,6 +249,10 @@ impl Configuration {
 
     pub fn early_exit(&self) -> bool {
         self.early_exit
+    }
+
+    pub fn corner_roundness(&self) -> f32 {
+        self.corner_roundness
     }
 
     pub fn initial_tool(&self) -> Tools {
@@ -298,6 +309,7 @@ impl Default for Configuration {
             output_filename: None,
             fullscreen: false,
             early_exit: false,
+            corner_roundness: 12.0,
             initial_tool: Tools::Pointer,
             copy_command: None,
             annotation_size_factor: 1.0,
@@ -344,6 +356,7 @@ struct FontFile {
 struct ConfigurationFileGeneral {
     fullscreen: Option<bool>,
     early_exit: Option<bool>,
+    corner_roundness: Option<f32>,
     initial_tool: Option<Tools>,
     copy_command: Option<String>,
     annotation_size_factor: Option<f32>,
