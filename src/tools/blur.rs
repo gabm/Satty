@@ -8,7 +8,7 @@ use relm4::gtk::gdk::Key;
 use crate::{
     math::{self, Vec2D},
     sketch_board::{MouseEventMsg, MouseEventType},
-    style::{Size, Style},
+    style::{Properties, Size, Style},
 };
 
 use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
@@ -84,7 +84,7 @@ impl Drawable for Blur {
                 self.top_left.y,
                 size.x,
                 size.y,
-                Size::Medium.to_corner_radius(),
+                Properties::corner_roundness(),
             );
 
             // draw
@@ -103,13 +103,7 @@ impl Drawable for Blur {
             }
 
             let mut path = Path::new();
-            path.rounded_rect(
-                pos.x,
-                pos.y,
-                size.x,
-                size.y,
-                Size::Medium.to_corner_radius(),
-            );
+            path.rounded_rect(pos.x, pos.y, size.x, size.y, Properties::corner_roundness());
 
             canvas.fill_path(
                 &path,

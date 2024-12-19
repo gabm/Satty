@@ -18,6 +18,9 @@ pub struct Style {
     pub fill: bool,
 }
 
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Properties {}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Color {
     pub r: u8,
@@ -176,6 +179,12 @@ impl FromVariant for Size {
     }
 }
 
+impl Properties {
+    pub fn corner_roundness() -> f32 {
+        return APP_CONFIG.read().corner_roundness();
+    }
+}
+
 impl Size {
     pub fn to_text_size(self) -> i32 {
         let size_factor = APP_CONFIG.read().annotation_size_factor();
@@ -215,11 +224,12 @@ impl Size {
         }
     }
 
-    pub fn to_corner_radius(self) -> f32 {
+    pub fn to_corner_roundness(self) -> f32 {
+        let corner_roundness = APP_CONFIG.read().corner_roundness();
         match self {
-            Size::Small => 12.0,
-            Size::Medium => 12.0,
-            Size::Large => 12.0,
+            Size::Small => corner_roundness,
+            Size::Medium => corner_roundness,
+            Size::Large => corner_roundness,
         }
     }
 }

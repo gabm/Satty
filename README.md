@@ -65,6 +65,8 @@ All configuration is done either at the config file in `XDG_CONFIG_DIR/.config/s
 fullscreen = true
 # Exit directly after copy/save action
 early-exit = true
+# Draw corners of rectangles round if the value is greater than 0 (0 disabled rounded corners)
+corner_roundness = 12,
 # Select the tool on startup [possible values: pointer, crop, line, arrow, rectangle, text, marker, blur, brush]
 initial-tool = "brush"
 # Configure the command to be called on copy, for example `wl-copy`

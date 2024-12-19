@@ -5,7 +5,7 @@ use relm4::gtk::gdk::{Key, ModifierType};
 use crate::{
     math::Vec2D,
     sketch_board::{MouseEventMsg, MouseEventType},
-    style::{Size, Style},
+    style::{Properties, Style},
 };
 
 use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
@@ -35,7 +35,7 @@ impl Drawable for Rectangle {
             self.top_left.y,
             size.x,
             size.y,
-            Size::Medium.to_corner_radius(),
+            Properties::corner_roundness(),
         );
 
         if self.style.fill {
