@@ -223,13 +223,4 @@ impl Size {
             Size::Large => 45.0 * size_factor,
         }
     }
-
-    pub fn to_corner_roundness(self) -> f32 {
-        let corner_roundness = APP_CONFIG.read().corner_roundness();
-        match self {
-            Size::Small => corner_roundness,
-            Size::Medium => corner_roundness,
-            Size::Large => corner_roundness,
-        }
-    }
 }
