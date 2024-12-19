@@ -71,57 +71,25 @@ impl FontConfiguration {
 }
 
 pub struct ColorPalette {
-    first: Color,
-    second: Color,
-    third: Color,
-    fourth: Color,
-    fifth: Color,
-    custom: Color,
+    palette: Vec<Color>,
+    custom: Vec<Color>,
 }
 
 impl ColorPalette {
-    pub fn first(&self) -> Color {
-        self.first
+    pub fn palette(&self) -> &[Color] {
+        &self.palette
     }
 
-    pub fn second(&self) -> Color {
-        self.second
-    }
-
-    pub fn third(&self) -> Color {
-        self.third
-    }
-
-    pub fn fourth(&self) -> Color {
-        self.fourth
-    }
-
-    pub fn fifth(&self) -> Color {
-        self.fifth
-    }
-
-    pub fn custom(&self) -> Color {
-        self.custom
+    pub fn custom(&self) -> &[Color] {
+        &self.custom
     }
 
     fn merge(&mut self, file_palette: ColorPaletteFile) {
-        if let Some(v) = file_palette.first {
-            self.first = v.into();
-        }
-        if let Some(v) = file_palette.second {
-            self.second = v.into();
-        }
-        if let Some(v) = file_palette.third {
-            self.third = v.into();
-        }
-        if let Some(v) = file_palette.fourth {
-            self.fourth = v.into();
-        }
-        if let Some(v) = file_palette.fifth {
-            self.fifth = v.into();
+        if let Some(v) = file_palette.palette {
+            self.palette = v.into_iter().map(Color::from).collect();
         }
         if let Some(v) = file_palette.custom {
-            self.custom = v.into();
+            self.custom = v.into_iter().map(Color::from).collect();
         }
     }
 }
@@ -314,12 +282,14 @@ impl Default for Configuration {
 impl Default for ColorPalette {
     fn default() -> Self {
         Self {
-            first: Color::orange(),
-            second: Color::red(),
-            third: Color::green(),
-            fourth: Color::blue(),
-            fifth: Color::cove(),
-            custom: Color::pink(),
+            palette: vec![
+                Color::orange(),
+                Color::red(),
+                Color::green(),
+                Color::blue(),
+                Color::cove(),
+            ],
+            custom: vec![],
         }
     }
 }
@@ -357,12 +327,8 @@ struct ConfigurationFileGeneral {
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct ColorPaletteFile {
-    first: Option<HexColor>,
-    second: Option<HexColor>,
-    third: Option<HexColor>,
-    fourth: Option<HexColor>,
-    fifth: Option<HexColor>,
-    custom: Option<HexColor>,
+    palette: Option<Vec<HexColor>>,
+    custom: Option<Vec<HexColor>>,
 }
 
 impl ConfigurationFile {

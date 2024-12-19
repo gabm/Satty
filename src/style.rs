@@ -36,7 +36,13 @@ pub enum Size {
 
 impl Default for Color {
     fn default() -> Self {
-        APP_CONFIG.read().color_palette().first()
+        APP_CONFIG
+            .read()
+            .color_palette()
+            .palette()
+            .first()
+            .copied()
+            .unwrap_or(Color::red())
     }
 }
 
