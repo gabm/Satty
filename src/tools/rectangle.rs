@@ -30,7 +30,13 @@ impl Drawable for Rectangle {
 
         canvas.save();
         let mut path = Path::new();
-        path.rounded_rect(self.top_left.x, self.top_left.y, size.x, size.y, Size::Medium.to_corner_radius());
+        path.rounded_rect(
+            self.top_left.x,
+            self.top_left.y,
+            size.x,
+            size.y,
+            Size::Medium.to_corner_radius(),
+        );
 
         if self.style.fill {
             canvas.fill_path(&path, &self.style.into());

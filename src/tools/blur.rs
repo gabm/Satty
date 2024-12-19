@@ -79,7 +79,13 @@ impl Drawable for Blur {
 
             // make rect
             let mut path = Path::new();
-            path.rounded_rect(self.top_left.x, self.top_left.y, size.x, size.y, Size::Medium.to_corner_radius());
+            path.rounded_rect(
+                self.top_left.x,
+                self.top_left.y,
+                size.x,
+                size.y,
+                Size::Medium.to_corner_radius(),
+            );
 
             // draw
             canvas.stroke_path(&path, &paint);
@@ -97,7 +103,13 @@ impl Drawable for Blur {
             }
 
             let mut path = Path::new();
-            path.rounded_rect(pos.x, pos.y, size.x, size.y, Size::Medium.to_corner_radius());
+            path.rounded_rect(
+                pos.x,
+                pos.y,
+                size.x,
+                size.y,
+                Size::Medium.to_corner_radius(),
+            );
 
             canvas.fill_path(
                 &path,
