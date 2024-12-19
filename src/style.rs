@@ -18,9 +18,6 @@ pub struct Style {
     pub fill: bool,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Properties {}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Color {
     pub r: u8,
@@ -176,12 +173,6 @@ impl FromVariant for Size {
             2 => Some(Size::Large),
             _ => None,
         })
-    }
-}
-
-impl Properties {
-    pub fn corner_roundness() -> f32 {
-        return APP_CONFIG.read().corner_roundness();
     }
 }
 
