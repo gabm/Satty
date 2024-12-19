@@ -65,7 +65,7 @@ All configuration is done either at the config file in `XDG_CONFIG_DIR/.config/s
 fullscreen = true
 # Exit directly after copy/save action
 early-exit = true
-# Draw corners of rectangles round if the value is greater than 0 (0 disabled rounded corners)
+# Draw corners of rectangles round if the value is greater than 0 (0 disables rounded corners)
 corner-roundness = 12
 # Select the tool on startup [possible values: pointer, crop, line, arrow, rectangle, text, marker, blur, brush]
 initial-tool = "brush"
@@ -118,7 +118,7 @@ Options:
       --early-exit
           Exit directly after copy/save action
       --corner-roundness <ROUNDNESS_FACTOR>
-          Draw corners of rectangles round if the value is greater than 0 (0 disabled rounded corners)
+          Draw corners of rectangles round if the value is greater than 0 (0 disables rounded corners)
       --initial-tool <TOOL>
           Select the tool on startup [aliases: init-tool] [possible values: pointer, crop, line, arrow, rectangle, text, marker, blur, brush]
       --copy-command <COPY_COMMAND>
