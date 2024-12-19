@@ -80,7 +80,7 @@ impl Tool for BrushTool {
                 }
             }
             MouseEventType::Click => {
-                if event.button == MouseButton::Primary {
+                if event.button == Some(MouseButton::Primary) {
                     let brush = Box::new(BrushDrawable {
                         start: event.pos,
                         points: Vec::new(),
@@ -91,6 +91,7 @@ impl Tool for BrushTool {
                     ToolUpdateResult::Unmodified
                 }
             }
+            _ => ToolUpdateResult::Unmodified,
         }
     }
 
