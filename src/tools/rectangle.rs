@@ -3,9 +3,10 @@ use femtovg::{FontId, Path};
 use relm4::gtk::gdk::{Key, ModifierType};
 
 use crate::{
+    configuration::APP_CONFIG,
     math::Vec2D,
     sketch_board::{MouseEventMsg, MouseEventType},
-    style::{Size, Style},
+    style::Style,
 };
 
 use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
@@ -35,7 +36,7 @@ impl Drawable for Rectangle {
             self.top_left.y,
             size.x,
             size.y,
-            Size::Medium.to_corner_radius(),
+            APP_CONFIG.read().corner_roundness(),
         );
 
         if self.style.fill {

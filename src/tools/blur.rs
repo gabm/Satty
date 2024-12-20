@@ -6,6 +6,7 @@ use femtovg::{imgref::Img, Color, ImageFilter, ImageFlags, ImageId, Paint, Path}
 use relm4::gtk::gdk::Key;
 
 use crate::{
+    configuration::APP_CONFIG,
     math::{self, Vec2D},
     sketch_board::{MouseEventMsg, MouseEventType},
     style::{Size, Style},
@@ -84,7 +85,7 @@ impl Drawable for Blur {
                 self.top_left.y,
                 size.x,
                 size.y,
-                Size::Medium.to_corner_radius(),
+                APP_CONFIG.read().corner_roundness(),
             );
 
             // draw
@@ -108,7 +109,7 @@ impl Drawable for Blur {
                 pos.y,
                 size.x,
                 size.y,
-                Size::Medium.to_corner_radius(),
+                APP_CONFIG.read().corner_roundness(),
             );
 
             canvas.fill_path(
