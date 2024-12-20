@@ -529,7 +529,7 @@ impl ToVariant for ColorButtons {
     fn to_variant(&self) -> Variant {
         Variant::from(match *self {
             Self::Palette(i) => i,
-            Self::Custom => std::u64::MAX,
+            Self::Custom => u64::MAX,
         })
     }
 }
