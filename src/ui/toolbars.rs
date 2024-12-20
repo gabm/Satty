@@ -249,12 +249,8 @@ impl SimpleComponent for ToolsToolbar {
 
 #[derive(Debug, Copy, Clone)]
 pub enum ColorButtons {
-    First = 0,
-    Second = 1,
-    Third = 2,
-    Fourth = 3,
-    Fifth = 4,
-    Custom = 5,
+    Palette(u64),
+    Custom,
 }
 
 impl StyleToolbar {
@@ -275,6 +271,23 @@ impl StyleToolbar {
             let dialog = builder.build();
             dialog.set_use_alpha(true);
 
+            let custom_colors = APP_CONFIG
+                .read()
+                .color_palette()
+                .custom()
+                .iter()
+                .copied()
+                .map(RGBA::from)
+                .collect::<Vec<_>>();
+
+            if !custom_colors.is_empty() {
+                dialog.add_palette(
+                    gtk::Orientation::Horizontal,
+                    8, // A more or less arbitrary, but reasonable value.
+                    &custom_colors,
+                );
+            }
+
             // set callback for result
             let dialog_copy = dialog.clone();
             dialog.connect_response(move |_, r| {
@@ -292,11 +305,7 @@ impl StyleToolbar {
     fn map_button_to_color(&self, button: ColorButtons) -> Color {
         let config = APP_CONFIG.read();
         match button {
-            ColorButtons::First => config.color_palette().first(),
-            ColorButtons::Second => config.color_palette().second(),
-            ColorButtons::Third => config.color_palette().third(),
-            ColorButtons::Fourth => config.color_palette().fourth(),
-            ColorButtons::Fifth => config.color_palette().fifth(),
+            ColorButtons::Palette(n) => config.color_palette().palette()[n as usize],
             ColorButtons::Custom => self.custom_color,
         }
     }
@@ -321,46 +330,6 @@ impl Component for StyleToolbar {
             #[watch]
             set_visible: model.visible,
 
-            gtk::ToggleButton {
-                set_focusable: false,
-                set_hexpand: false,
-
-                create_icon(APP_CONFIG.read().color_palette().first()),
-
-                ActionablePlus::set_action::<ColorAction>: ColorButtons::First,
-            },
-            gtk::ToggleButton {
-                set_focusable: false,
-                set_hexpand: false,
-
-                create_icon(APP_CONFIG.read().color_palette().second()),
-
-                ActionablePlus::set_action::<ColorAction>: ColorButtons::Second,
-            },
-            gtk::ToggleButton {
-                set_focusable: false,
-                set_hexpand: false,
-
-                create_icon(APP_CONFIG.read().color_palette().third()),
-
-                ActionablePlus::set_action::<ColorAction>: ColorButtons::Third,
-            },
-            gtk::ToggleButton {
-                set_focusable: false,
-                set_hexpand: false,
-
-                create_icon(APP_CONFIG.read().color_palette().fourth()),
-
-                ActionablePlus::set_action::<ColorAction>: ColorButtons::Fourth
-            },
-            gtk::ToggleButton {
-                set_focusable: false,
-                set_hexpand: false,
-
-                create_icon(APP_CONFIG.read().color_palette().fifth()),
-
-                ActionablePlus::set_action::<ColorAction>: ColorButtons::Fifth,
-            },
             gtk::Separator {},
             gtk::ToggleButton {
                 set_focusable: false,
@@ -463,10 +432,27 @@ impl Component for StyleToolbar {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
+        for (i, &color) in APP_CONFIG
+            .read()
+            .color_palette()
+            .palette()
+            .iter()
+            .enumerate()
+            .rev()
+        {
+            let btn = gtk::ToggleButton::builder()
+                .focusable(false)
+                .hexpand(false)
+                .child(&create_icon(color))
+                .build();
+            btn.set_action::<ColorAction>(ColorButtons::Palette(i as u64));
+            root.prepend(&btn);
+        }
+
         // Color Action for selecting colors
         let sender_tmp: ComponentSender<StyleToolbar> = sender.clone();
         let color_action: RelmAction<ColorAction> = RelmAction::new_stateful_with_target_value(
-            &ColorButtons::First,
+            &ColorButtons::Palette(0),
             move |_, state, value| {
                 *state = value;
 
@@ -484,7 +470,13 @@ impl Component for StyleToolbar {
                     .emit(ToolbarEvent::SizeSelected(*state));
             });
 
-        let custom_color = APP_CONFIG.read().color_palette().custom();
+        let custom_color = APP_CONFIG
+            .read()
+            .color_palette()
+            .custom()
+            .first()
+            .copied()
+            .unwrap_or(Color::red());
         let custom_color_pixbuf = create_icon_pixbuf(custom_color);
 
         // create model
@@ -529,26 +521,24 @@ relm4::new_stateful_action!(SizeAction, StyleToolbarActionGroup, "sizes", Size, 
 
 impl StaticVariantType for ColorButtons {
     fn static_variant_type() -> Cow<'static, VariantTy> {
-        Cow::Borrowed(VariantTy::UINT16)
+        Cow::Borrowed(VariantTy::UINT64)
     }
 }
 
 impl ToVariant for ColorButtons {
     fn to_variant(&self) -> Variant {
-        Variant::from(*self as u16)
+        Variant::from(match *self {
+            Self::Palette(i) => i,
+            Self::Custom => u64::MAX,
+        })
     }
 }
 
 impl FromVariant for ColorButtons {
     fn from_variant(variant: &Variant) -> Option<Self> {
-        <u16>::from_variant(variant).and_then(|v| match v {
-            0 => Some(ColorButtons::First),
-            1 => Some(ColorButtons::Second),
-            2 => Some(ColorButtons::Third),
-            3 => Some(ColorButtons::Fourth),
-            4 => Some(ColorButtons::Fifth),
-            5 => Some(ColorButtons::Custom),
-            _ => None,
+        <u64>::from_variant(variant).map(|v| match v {
+            std::u64::MAX => Self::Custom,
+            _ => Self::Palette(v),
         })
     }
 }

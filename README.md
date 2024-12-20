@@ -88,14 +88,28 @@ disable-notifications = false
 family = "Roboto"
 style = "Bold"
 
-# custom colours for the colour palette
+# Custom colours for the colour palette
 [color-palette]
-first= "#00ffff"
-second= "#a52a2a"
-third= "#dc143c"
-fourth= "#ff1493"
-fifth= "#ffd700"
-custom= "#008000"
+# These will be shown in the toolbar for quick selection
+palette = [
+    "#00ffff",
+    "#a52a2a",
+    "#dc143c",
+    "#ff1493",
+    "#ffd700",
+    "#008000",
+]
+
+# These will be available in the color picker as presets
+# Leave empty to use GTK's default
+custom = [
+    "#00ffff",
+    "#a52a2a",
+    "#dc143c",
+    "#ff1493",
+    "#ffd700",
+    "#008000",
+]
 ```
 
 ### Command Line
