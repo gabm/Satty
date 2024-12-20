@@ -191,6 +191,10 @@ Satty is based on GTK-4 and Adwaita.
 - libepoxy
 - fontconfig
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=gabm/Satty&type=Date)](https://star-history.com/#gabm/Satty&Date)
+
 ## License
 
 The source code is released under the MPL-2.0 license.
