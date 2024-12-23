@@ -10,10 +10,10 @@ export def main [version: string] {
     let requested_version = $version | version_parse
     let requested_version_tag = $requested_version | version_to_string
 
-    $"Updating version from ($read_version | version_print) to ($requested_version | version_print)" | echo_section_headline
+    $"Updating version from ($read_version | version_to_string) to ($requested_version | version_to_string)" | echo_section_headline
 
     if not (is_newer $read_version $requested_version) {
-        echo "Requested version is older than current version. Aborting."
+        print "Requested version is older than current version. Aborting."
         exit 1
     }
 
@@ -38,12 +38,12 @@ export def main [version: string] {
 
 
 def echo_section_headline []: string -> nothing {
-    echo $"\n(ansi yellow)++ ($in)(ansi reset)"
+    print $"\n(ansi yellow)++ ($in)(ansi reset)"
 }
 
 def assert_repo_is_clean [] {
     if (git diff --quiet | complete | get exit_code) != 0 {
-        echo "The git repository is not clean! Aborting..."
+        print "The git repository is not clean! Aborting..."
         exit 1
     } else {}
 }
@@ -62,7 +62,8 @@ def git_push [] {
 
 def patch_cargo_toml [version: list<int>] {
     "Updating Cargo.toml" | echo_section_headline
-    let sed_string = $"'/package/,/version =/{s/version.*/version = \"($version | str join '.')\"/}'"
+    let sed_string = $"/package/,/version =/{s/version.*/version = \"($version | str join '.')\"/}"
+    
     sed -i $sed_string Cargo.toml
     git --no-pager diff
 }
@@ -87,10 +88,6 @@ def version_to_string []: list<int> -> string {
 
 def version_read_cargo_toml []: nothing -> list<int> {
     open Cargo.toml | get package.version | version_parse
-}
-
-def version_print []: list<int> -> nothing {
-    echo $"($in | version_to_string)"
 }
 
 def is_newer [
