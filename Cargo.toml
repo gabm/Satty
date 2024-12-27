@@ -18,13 +18,13 @@ include = [
 
 
 [dependencies]
-relm4 = { version = "0.8", features = ["macros", "libadwaita", "gnome_42"] }
+relm4 = { version = "0.9.1", features = ["macros", "libadwaita", "gnome_42"] }
 tokio = { version = "1.32.0", features = ["full"] }
-gdk-pixbuf = "0.19.2"
+gdk-pixbuf = "0.20.7"
 
 # error handling
 anyhow = "1.0"
-thiserror = "1.0"
+thiserror = "2.0"
 
 # command line
 clap = { version = "4.4.10", features = ["derive"] }
@@ -38,17 +38,17 @@ hex_color = {version = "3", features = ["serde"]}
 chrono = "0.4.31"
 
 # opengl rendering backend
-femtovg = "0.8"
+femtovg = "0.11"
 libloading = "0.8"
 epoxy = "0.1.0"
-glow = "0.13.1"
-glib-macros = "0.19.2"
-glib = "0.19.2"
+glow = "0.15.0"
+glib-macros = "0.20.7"
+glib = "0.20.7"
 resource = "0.5.0"  # font emedding
-fontconfig = "0.8.0"  # font loading
+fontconfig = "0.9.0"  # font loading
 
 [dependencies.relm4-icons]
-version = "0.8.2"
+version = "0.9.0"
 
 
 [build-dependencies]
