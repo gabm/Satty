@@ -119,3 +119,27 @@ pub fn rect_ensure_positive_size(pos: Vec2D, size: Vec2D) -> (Vec2D, Vec2D) {
 
     (Vec2D::new(pos_x, pos_y), Vec2D::new(size_x, size_y))
 }
+
+pub fn rect_ensure_in_bounds(rect: (Vec2D, Vec2D), bounds: (Vec2D, Vec2D)) -> (Vec2D, Vec2D) {
+    let (mut pos, mut size) = rect;
+
+    if pos.x < bounds.0.x {
+        pos.x = bounds.0.x;
+        size.x -= bounds.0.x - pos.x;
+    }
+
+    if pos.y < bounds.0.y {
+        pos.y = bounds.0.y;
+        size.y -= bounds.0.y - pos.y;
+    }
+
+    if pos.x + size.x > bounds.1.x {
+        size.x = bounds.1.x - pos.x;
+    }
+
+    if pos.y + size.y > bounds.1.y {
+        size.y = bounds.1.y - pos.y;
+    }
+
+    (pos, size)
+}
