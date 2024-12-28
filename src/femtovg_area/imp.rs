@@ -19,7 +19,7 @@ use relm4::{gtk, Sender};
 use resource::resource;
 
 use crate::{
-    math::{rect_ensure_in_bounds, Vec2D},
+    math::{rect_ensure_in_bounds, rect_round, Vec2D},
     sketch_board::{Action, SketchBoardInput},
     tools::{CropTool, Drawable, Tool},
     APP_CONFIG,
@@ -285,6 +285,7 @@ impl FemtoVgAreaMut {
             .borrow()
             .get_crop()
             .map(|c| rect_ensure_in_bounds(c.get_rectangle(), bounds))
+            .map(rect_round)
             .unwrap_or((
                 Vec2D::zero(),
                 Vec2D::new(

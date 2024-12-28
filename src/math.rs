@@ -143,3 +143,14 @@ pub fn rect_ensure_in_bounds(rect: (Vec2D, Vec2D), bounds: (Vec2D, Vec2D)) -> (V
 
     (pos, size)
 }
+
+pub fn rect_round(rect: (Vec2D, Vec2D)) -> (Vec2D, Vec2D) {
+    let (mut pos, mut size) = rect;
+
+    pos.x = pos.x.round();
+    pos.y = pos.y.round();
+    size.x = size.x.round();
+    size.y = size.y.round();
+
+    (pos, size)
+}
