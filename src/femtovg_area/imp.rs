@@ -283,7 +283,7 @@ impl FemtoVgAreaMut {
             .crop_tool
             .borrow()
             .get_crop()
-            .and_then(|c| c.get_rectangle())
+            .map(|c| c.get_rectangle())
             .unwrap_or((
                 Vec2D::zero(),
                 Vec2D::new(

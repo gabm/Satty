@@ -13,7 +13,7 @@ use super::{Drawable, Tool, ToolUpdateResult};
 #[derive(Debug, Clone)]
 pub struct Crop {
     pos: Vec2D,
-    size: Option<Vec2D>,
+    size: Vec2D,
     active: bool,
 }
 
@@ -26,6 +26,10 @@ pub struct CropTool {
 impl Crop {
     const HANDLE_RADIUS: f32 = 5.0;
     const HANDLE_BORDER: f32 = 2.0;
+
+    fn new(pos: Vec2D) -> Self {
+        Self { pos, size: Vec2D::zero(), active: true }
+    }
 
     fn draw_single_handle(
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
@@ -50,9 +54,43 @@ impl Crop {
         canvas.stroke_path(&path, &border_paint);
     }
 
-    pub fn get_rectangle(&self) -> Option<(Vec2D, Vec2D)> {
-        self.size
-            .map(|size| math::rect_ensure_positive_size(self.pos, size))
+    pub fn get_rectangle(&self) -> (Vec2D, Vec2D) {
+        math::rect_ensure_positive_size(self.pos, self.size)
+    }
+
+    fn get_handle_pos(crop_pos: Vec2D, crop_size: Vec2D, handle: CropHandle) -> Vec2D {
+        match handle {
+            CropHandle::TopLeftCorner => crop_pos,
+            CropHandle::TopEdge => crop_pos + Vec2D::new(crop_size.x / 2.0, 0.0),
+            CropHandle::TopRightCorner => crop_pos + Vec2D::new(crop_size.x, 0.0),
+            CropHandle::RightEdge => crop_pos + Vec2D::new(crop_size.x, crop_size.y / 2.0),
+            CropHandle::BottomRightCorner => crop_pos + Vec2D::new(crop_size.x, crop_size.y),
+            CropHandle::BottomEdge => crop_pos + Vec2D::new(crop_size.x / 2.0, crop_size.y),
+            CropHandle::BottomLeftCorner => crop_pos + Vec2D::new(0.0, crop_size.y),
+            CropHandle::LeftEdge => crop_pos + Vec2D::new(0.0, crop_size.y / 2.0),
+        }
+    }
+    fn get_closest_handle(&self, mouse_pos: Vec2D) -> (CropHandle, f32) {
+        let mut min_distance_squared = f32::MAX;
+        let mut closest_handle = CropHandle::TopLeftCorner;
+        for h in CropHandle::all() {
+            let handle_pos = Self::get_handle_pos(self.pos, self.size, h);
+            let distance_squared = (handle_pos - mouse_pos).norm2();
+            if distance_squared < min_distance_squared {
+                min_distance_squared = distance_squared;
+                closest_handle = h;
+            }
+        }
+        (closest_handle, min_distance_squared)
+    }
+    fn test_handle_hit(&self, mouse_pos: Vec2D, margin2: f32) -> Option<CropHandle> {
+        const HANDLE_SIZE: f32 = Crop::HANDLE_RADIUS + Crop::HANDLE_BORDER;
+        const HANDLE_SIZE2: f32 = HANDLE_SIZE * HANDLE_SIZE;
+        let allowed_distance2 = HANDLE_SIZE2 + margin2;
+
+        let (handle, distance2) = self.get_closest_handle(mouse_pos);
+        if distance2 < allowed_distance2 { Some(handle) }
+        else { None }
     }
 }
 
@@ -62,11 +100,7 @@ impl Drawable for Crop {
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         _font: femtovg::FontId,
     ) -> Result<()> {
-        let size = match self.size {
-            Some(s) => s,
-            None => return Ok(()), // early exit if none
-        };
-
+        let size = self.size;
         let scale = canvas.transform().average_scale();
         let dimensions = Vec2D::new(
             canvas.width() as f32 / scale,
@@ -156,55 +190,28 @@ impl CropHandle {
 }
 
 impl CropTool {
-    fn get_handle_pos(crop_pos: Vec2D, crop_size: Vec2D, handle: CropHandle) -> Vec2D {
-        match handle {
-            CropHandle::TopLeftCorner => crop_pos,
-            CropHandle::TopEdge => crop_pos + Vec2D::new(crop_size.x / 2.0, 0.0),
-            CropHandle::TopRightCorner => crop_pos + Vec2D::new(crop_size.x, 0.0),
-            CropHandle::RightEdge => crop_pos + Vec2D::new(crop_size.x, crop_size.y / 2.0),
-            CropHandle::BottomRightCorner => crop_pos + Vec2D::new(crop_size.x, crop_size.y),
-            CropHandle::BottomEdge => crop_pos + Vec2D::new(crop_size.x / 2.0, crop_size.y),
-            CropHandle::BottomLeftCorner => crop_pos + Vec2D::new(0.0, crop_size.y),
-            CropHandle::LeftEdge => crop_pos + Vec2D::new(0.0, crop_size.y / 2.0),
-        }
-    }
-    fn test_handle_hit(&self, mouse_pos: Vec2D) -> Option<(CropHandle, Vec2D, Vec2D)> {
-        let crop = self.crop.as_ref()?;
+    const HANDLE_MARGIN_IN_2: f32 = 15.0 * 15.0;
+    const HANDLE_MARGIN_OUT: f32 = 40.0;
 
-        let crop_size = crop.size?;
-        let crop_pos = crop.pos;
-
-        const MAX_DISTANCE2: f32 = (Crop::HANDLE_BORDER + Crop::HANDLE_RADIUS)
-            * (Crop::HANDLE_RADIUS + Crop::HANDLE_BORDER);
-
-        for h in CropHandle::all() {
-            if (Self::get_handle_pos(crop_pos, crop_size, h) - mouse_pos).norm2() < MAX_DISTANCE2 {
-                return Some((h, crop_pos, crop_size));
-            }
-        }
-        None
-    }
-
-    fn test_inside_crop(&self, mouse_pos: Vec2D) -> bool {
+    fn test_inside_crop(&self, mouse_pos: Vec2D, margin: f32) -> bool {
         let crop = match &self.crop {
             Some(c) => c,
             None => return false,
         };
 
-        let crop_size = match crop.size {
-            Some(s) => s,
-            None => return false,
-        };
-
-        let (mut min_x, mut max_x) = (crop.pos.x, crop.pos.x + crop_size.x);
+        let (mut min_x, mut max_x) = (crop.pos.x, crop.pos.x + crop.size.x);
         if min_x > max_x {
             (min_x, max_x) = (max_x, min_x);
         }
+        min_x -= margin;
+        max_x += margin;
 
-        let (mut min_y, mut max_y) = (crop.pos.y, crop.pos.y + crop_size.y);
+        let (mut min_y, mut max_y) = (crop.pos.y, crop.pos.y + crop.size.y);
         if min_y > max_y {
             (min_y, max_y) = (max_y, min_y);
         }
+        min_y -= margin;
+        max_y += margin;
 
         min_x < mouse_pos.x && mouse_pos.x < max_x && min_y < mouse_pos.y && mouse_pos.y < max_y
     }
@@ -249,33 +256,39 @@ impl CropTool {
 
         // convert back and save
         crop.pos = tl;
-        crop.size = Some(br - tl);
+        crop.size = br - tl;
     }
 
     fn begin_drag(&mut self, pos: Vec2D) -> ToolUpdateResult {
-        if let Some((handle, pos, size)) = self.test_handle_hit(pos) {
-            let top_left_start = pos;
-            let bottom_right_start = pos + size;
-            self.action = Some(CropToolAction::DragHandle(DragHandleState {
-                handle,
-                top_left_start,
-                bottom_right_start,
-            }));
-        } else {
-            // only start a new crop if none exists
-            match &self.crop {
-                None => {
-                    self.crop = Some(Crop {
-                        pos,
-                        size: None,
-                        active: true,
-                    });
+        match &self.crop {
+            None => {
+                // No crop exists, create a new one
+                self.crop = Some(Crop::new(pos));
+                self.action = Some(CropToolAction::NewCrop);
+            }
+            Some(c) => {
+                if let Some(handle) = c.test_handle_hit(pos, CropTool::HANDLE_MARGIN_IN_2) {
+                    // Crop exists and we are near a handle, drag it
+                    self.action = Some(CropToolAction::DragHandle(DragHandleState {
+                        handle,
+                        top_left_start: c.pos,
+                        bottom_right_start: c.pos + c.size,
+                    }));
+                } else if self.test_inside_crop(pos, 0.0) {
+                    // Crop exists and we are inside it, move it
+                    self.action = Some(CropToolAction::Move(MoveState { start: c.pos }));
+                } else if self.test_inside_crop(pos, CropTool::HANDLE_MARGIN_OUT) {
+                    // Crop exists and we are near the edge, drag from the closest handle
+                    let (handle, _) = c.get_closest_handle(pos);
+                    self.action = Some(CropToolAction::DragHandle(DragHandleState {
+                        handle,
+                        top_left_start: c.pos,
+                        bottom_right_start: c.pos + c.size,
+                    }));
+                } else {
+                    // Crop exists, but we far outside from it, create a new one
+                    self.crop = Some(Crop::new(pos));
                     self.action = Some(CropToolAction::NewCrop);
-                }
-                Some(c) => {
-                    if self.test_inside_crop(pos) {
-                        self.action = Some(CropToolAction::Move(MoveState { start: c.pos }));
-                    }
                 }
             }
         }
@@ -295,7 +308,7 @@ impl CropTool {
 
         match action {
             CropToolAction::NewCrop => {
-                crop.size = Some(direction);
+                crop.size = direction;
                 ToolUpdateResult::Redraw
             }
             CropToolAction::DragHandle(state) => {
@@ -322,7 +335,7 @@ impl CropTool {
             // crop never returns "commit" because nothing gets
             // committed to the drawables stack
             CropToolAction::NewCrop => {
-                crop.size = Some(direction);
+                crop.size = direction;
                 self.action = None;
                 ToolUpdateResult::Redraw
             }
