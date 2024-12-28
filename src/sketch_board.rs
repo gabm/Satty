@@ -15,7 +15,7 @@ use gtk::prelude::*;
 use relm4::gtk::gdk::{DisplayManager, Key, ModifierType, Texture};
 use relm4::{gtk, Component, ComponentParts, ComponentSender};
 
-use crate::configuration::APP_CONFIG;
+use crate::configuration::{Action, APP_CONFIG};
 use crate::femtovg_area::FemtoVGArea;
 use crate::math::Vec2D;
 use crate::notification::log_result;
@@ -30,12 +30,6 @@ pub enum SketchBoardInput {
     InputEvent(InputEvent),
     ToolbarEvent(ToolbarEvent),
     RenderResult(RenderedImage, Action),
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Action {
-    SaveToClipboard,
-    SaveToFile,
 }
 
 #[derive(Debug, Clone)]
@@ -448,6 +442,13 @@ impl Component for SketchBoard {
                         relm4::main_application().quit();
                         // this is only here to make rust happy. The application should exit with the previous call
                         ToolUpdateResult::Unmodified
+                    } else if ke.key == Key::Return || ke.key == Key::KP_Enter {
+                        // First, let the tool handle the event. If the tool does nothing, we can do our thing (otherwise require a second Enter)
+                        let result: ToolUpdateResult = self.active_tool.borrow_mut().handle_event(ToolEvent::Input(ie));
+                        if let ToolUpdateResult::Unmodified = result {
+                            self.renderer.request_render(APP_CONFIG.read().action_on_enter());
+                        }
+                        result
                     } else {
                         self.active_tool
                             .borrow_mut()

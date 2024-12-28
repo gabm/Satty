@@ -10,8 +10,9 @@ use relm4::{
 };
 
 use crate::{
+    configuration::Action,
     math::Vec2D,
-    sketch_board::{Action, SketchBoardInput},
+    sketch_board::SketchBoardInput,
     tools::{CropTool, Drawable, Tool},
 };
 

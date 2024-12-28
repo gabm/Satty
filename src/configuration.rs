@@ -12,7 +12,7 @@ use thiserror::Error;
 use xdg::{BaseDirectories, BaseDirectoriesError};
 
 use crate::{
-    command_line::CommandLine,
+    command_line::{Action as CommandLineAction, CommandLine},
     style::Color,
     tools::{Highlighters, Tools},
 };
@@ -40,6 +40,7 @@ pub struct Configuration {
     initial_tool: Tools,
     copy_command: Option<String>,
     annotation_size_factor: f32,
+    action_on_enter: Action,
     save_after_copy: bool,
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
@@ -95,6 +96,22 @@ impl ColorPalette {
     }
 }
 
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum Action {
+    SaveToClipboard,
+    SaveToFile,
+}
+
+impl From<CommandLineAction> for Action {
+    fn from(action: CommandLineAction) -> Self {
+        match action {
+            CommandLineAction::SaveToClipboard => Self::SaveToClipboard,
+            CommandLineAction::SaveToFile => Self::SaveToFile,
+        }
+    }
+}
+
 impl Configuration {
     pub fn load() {
         // parse commandline options and exit if error
@@ -141,6 +158,9 @@ impl Configuration {
         }
         if let Some(v) = general.annotation_size_factor {
             self.annotation_size_factor = v;
+        }
+        if let Some(v) = general.action_on_enter {
+            self.action_on_enter = v;
         }
         if let Some(v) = general.save_after_copy {
             self.save_after_copy = v;
@@ -197,6 +217,9 @@ impl Configuration {
         if let Some(v) = command_line.annotation_size_factor {
             self.annotation_size_factor = v;
         }
+        if let Some(v) = command_line.action_on_enter {
+            self.action_on_enter = v.into();
+        }
         if command_line.save_after_copy {
             self.save_after_copy = command_line.save_after_copy;
         }
@@ -247,6 +270,10 @@ impl Configuration {
         self.annotation_size_factor
     }
 
+    pub fn action_on_enter(&self) -> Action {
+        self.action_on_enter
+    }
+
     pub fn save_after_copy(&self) -> bool {
         self.save_after_copy
     }
@@ -281,6 +308,7 @@ impl Default for Configuration {
             initial_tool: Tools::Pointer,
             copy_command: None,
             annotation_size_factor: 1.0,
+            action_on_enter: Action::SaveToClipboard,
             save_after_copy: false,
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
@@ -331,6 +359,7 @@ struct ConfigurationFileGeneral {
     copy_command: Option<String>,
     annotation_size_factor: Option<f32>,
     output_filename: Option<String>,
+    action_on_enter: Option<Action>,
     save_after_copy: Option<bool>,
     default_hide_toolbars: Option<bool>,
     primary_highlighter: Option<Highlighters>,
