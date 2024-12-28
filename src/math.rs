@@ -10,6 +10,38 @@ pub struct Vec2D {
     pub y: f32,
 }
 
+#[derive(Default, Debug, Copy, Clone, PartialEq)]
+pub struct Angle {
+    pub radians: f32,
+}
+impl Angle {
+    pub fn from_radians(radians: f32) -> Self {
+        Self { radians }
+    }
+
+    pub fn from_degrees(degrees: f32) -> Self {
+        Self {
+            radians: degrees * PI / 180.0,
+        }
+    }
+
+    pub fn cos(&self) -> f32 {
+        self.radians.cos()
+    }
+
+    pub fn sin(&self) -> f32 {
+        self.radians.sin()
+    }
+}
+
+impl Mul<f32> for Angle {
+    type Output = Angle;
+
+    fn mul(self, rhs: f32) -> Self::Output {
+        Angle::from_radians(self.radians * rhs)
+    }
+}
+
 impl Vec2D {
     pub fn zero() -> Self {
         Self { x: 0.0, y: 0.0 }
@@ -25,6 +57,24 @@ impl Vec2D {
 
     pub fn norm2(&self) -> f32 {
         self.x * self.x + self.y * self.y
+    }
+
+    /**
+     * Get the angle of the vector.
+     * Angle of 0 is the positive x-axis.
+     * Angle of PI/2 is the positive y-axis.
+     */
+    pub fn angle(&self) -> Angle {
+        Angle::from_radians(self.y.atan2(self.x))
+    }
+
+    /**
+     * Create a vector from an angle.
+     * Angle of 0 is the positive x-axis.
+     * Angle of PI/2 is the positive y-axis.
+     */
+    pub fn from_angle(angle: Angle) -> Vec2D {
+        Vec2D::new(angle.cos(), angle.sin())
     }
 
     pub fn snapped_vector_15deg(&self) -> Vec2D {
