@@ -75,6 +75,8 @@ copy-command = "wl-copy"
 annotation-size-factor = 2
 # Filename to use for saving action. Omit to disable saving to file. Might contain format specifiers: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
 output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
+# Action to perform when the Enter key is pressed [possible values: save-to-clipboard, save-to-file]
+action-on-enter = "save-to-clipboard"
 # After copying the screenshot, save it to a file as well
 save-after-copy = false
 # Hide toolbars by default
@@ -139,6 +141,8 @@ Options:
           Configure the command to be called on copy, for example `wl-copy`
       --annotation-size-factor <ANNOTATION_SIZE_FACTOR>
           Increase or decrease the size of the annotations
+      --action-on-enter <ACTION_ON_ENTER>
+          Action to perform when pressing Enter [possible values: save-to-clipboard, save-to-file]
       --save-after-copy
           After copying the screenshot, save it to a file as well
   -d, --default-hide-toolbars
