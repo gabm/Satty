@@ -444,9 +444,13 @@ impl Component for SketchBoard {
                         ToolUpdateResult::Unmodified
                     } else if ke.key == Key::Return || ke.key == Key::KP_Enter {
                         // First, let the tool handle the event. If the tool does nothing, we can do our thing (otherwise require a second Enter)
-                        let result: ToolUpdateResult = self.active_tool.borrow_mut().handle_event(ToolEvent::Input(ie));
+                        let result: ToolUpdateResult = self
+                            .active_tool
+                            .borrow_mut()
+                            .handle_event(ToolEvent::Input(ie));
                         if let ToolUpdateResult::Unmodified = result {
-                            self.renderer.request_render(APP_CONFIG.read().action_on_enter());
+                            self.renderer
+                                .request_render(APP_CONFIG.read().action_on_enter());
                         }
                         result
                     } else {
