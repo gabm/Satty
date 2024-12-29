@@ -278,7 +278,13 @@ impl FemtoVgAreaMut {
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         font: FontId,
     ) -> anyhow::Result<ImgVec<RGBA8>> {
-        let bounds = (Vec2D::zero(), Vec2D::new(self.background_image.width() as f32, self.background_image.height() as f32));
+        let bounds = (
+            Vec2D::zero(),
+            Vec2D::new(
+                self.background_image.width() as f32,
+                self.background_image.height() as f32,
+            ),
+        );
         // get offset and size of the area in question
         let (pos, size) = self
             .crop_tool

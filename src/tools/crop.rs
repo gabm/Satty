@@ -28,7 +28,11 @@ impl Crop {
     const HANDLE_BORDER: f32 = 2.0;
 
     fn new(pos: Vec2D) -> Self {
-        Self { pos, size: Vec2D::zero(), active: true }
+        Self {
+            pos,
+            size: Vec2D::zero(),
+            active: true,
+        }
     }
 
     fn draw_single_handle(
@@ -89,8 +93,11 @@ impl Crop {
         let allowed_distance2 = HANDLE_SIZE2 + margin2;
 
         let (handle, distance2) = self.get_closest_handle(mouse_pos);
-        if distance2 < allowed_distance2 { Some(handle) }
-        else { None }
+        if distance2 < allowed_distance2 {
+            Some(handle)
+        } else {
+            None
+        }
     }
 }
 
