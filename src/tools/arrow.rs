@@ -1,11 +1,9 @@
-use std::f32::consts::PI;
-
 use anyhow::Result;
 use femtovg::{FontId, Path};
 use relm4::gtk::gdk::{Key, ModifierType};
 
 use crate::{
-    math::Vec2D,
+    math::{Angle, Vec2D},
     sketch_board::{MouseEventMsg, MouseEventType},
     style::Style,
 };
@@ -101,30 +99,6 @@ impl Tool for ArrowTool {
     }
 }
 
-impl Arrow {
-    fn get_arrow_head_points(&self) -> (Vec2D, Vec2D) {
-        let end = match self.end {
-            Some(e) => e,
-            None => return (Vec2D::zero(), Vec2D::zero()), // exit if no end
-        };
-
-        // borrowed from: https://math.stackexchange.com/questions/1314006/drawing-an-arrow
-        let delta = self.start - end;
-        let l1 = delta.norm();
-        const L2: f32 = 30.0;
-        const PHI: f32 = PI / 6.0;
-        let (sin_phi, cos_phi) = PHI.sin_cos();
-
-        let x3 = end.x + L2 / l1 * (delta.x * cos_phi + delta.y * sin_phi);
-        let y3 = end.y + L2 / l1 * (delta.y * cos_phi - delta.x * sin_phi);
-
-        let x4 = end.x + L2 / l1 * (delta.x * cos_phi - delta.y * sin_phi);
-        let y4 = end.y + L2 / l1 * (delta.y * cos_phi + delta.x * sin_phi);
-
-        (Vec2D::new(x3, y3), Vec2D::new(x4, y4))
-    }
-}
-
 impl Drawable for Arrow {
     fn draw(
         &self,
@@ -135,19 +109,95 @@ impl Drawable for Arrow {
             Some(e) => e,
             None => return Ok(()), // exit if no end
         };
-        let (p1, p2) = self.get_arrow_head_points();
 
+        // Fat arrow:
+        //          C
+        //  E       #
+        //    ######G###
+        //  A ######D##### B
+        //    ##########
+        //  F       #
+        //
+        //
+        // Thin arrow:
+        //          C
+        //           \
+        //  A -------- B
+        //           /
+        //
+        // A: start
+        // B: end
+        // C: head side
+        // D: midpoint
+        // E: tail side
+        // F: tail side
+        // G: the cross-section of C - D on the tail side.
+        // Head: the point of the head at the end of the arrow (2, 3, 4).
+        // Tail: the line from the start to the midpoint (1 - 4).
+        // Side: the sloped side of the arrow head (3 - 2).
+        // Midpoint: where the tail ends and the head begins (4).
+        // Arrow length: the distance from the start to the end (1 - 2).
+        // Head angle: the angle of the head point at end (2).
+        // Tail width: the distance from tail side to tail side (5 - 6).
+
+        let arrow_offset = end - self.start;
+        let arrow_length = arrow_offset.norm();
+        let arrow_direction = arrow_offset * (1.0 / arrow_length);
+
+        // We rotate the canvas so that we can draw the arrow on the x-axis.
+        // start will be at (0,0)
+        // end will be at (length, 0)
         canvas.save();
+        canvas.translate(self.start.x, self.start.y);
+        canvas.rotate(arrow_direction.angle().radians);
 
-        let mut path = Path::new();
-        path.move_to(self.start.x, self.start.y);
-        path.line_to(end.x, end.y);
+        // The width of the tail (double distance from start to head side)
+        let tail_width = self.style.size.to_arrow_tail_width();
+        // The length of the (sloped) side of the arrow head (distance from end to head side).
+        let head_side_length = self.style.size.to_arrow_head_length();
+        // The offset of the midpoint is the distance the midpoint moves toward the end of the arrow.
+        // A offset of 0 will place the midpoint right below the head side.
+        // A negative value will result in a diamond head.
+        // A positive value will result in a sharper head.
+        let midpoint_offset = head_side_length * 0.1;
 
-        path.move_to(p1.x, p1.y);
-        path.line_to(end.x, end.y);
-        path.line_to(p2.x, p2.y);
+        let head_angle = Angle::from_degrees(60.0); // The angle of the point of the arrow head.
 
-        canvas.stroke_path(&path, &self.style.into());
+        let tail_half_width = tail_width / 2.0;
+        let head_half_angle = head_angle * 0.5;
+        let head_left =
+            Vec2D::new(arrow_length, 0.0) - Vec2D::from_angle(head_half_angle) * head_side_length;
+        let midpoint_x = head_left.x + midpoint_offset;
+
+        if self.style.fill {
+            // Draw a 'fat' arrow.
+            let mut path = Path::new();
+            path.move_to(midpoint_x, tail_half_width); // G
+            path.line_to(head_left.x, -head_left.y); // C
+            path.line_to(arrow_length, 0.0); // B
+            path.line_to(head_left.x, head_left.y); // C (mirrored)
+            path.line_to(midpoint_x, -tail_half_width); // G (mirrored)
+            if midpoint_x > 0.0 {
+                // If the midpoint is placed _before_ the start, there is only a head and no tail.
+                // We can skip the beginning of the tail.
+                path.line_to(0.0, -tail_half_width); // F
+                path.line_to(0.0, tail_half_width); // E
+            }
+            path.close();
+
+            canvas.fill_path(&path, &self.style.into());
+        } else {
+            // Draw a 'thin' arrow head.
+            let mut path = Path::new();
+            path.move_to(head_left.x, -head_left.y); // C
+            path.line_to(arrow_length, 0.0); // B
+            path.line_to(head_left.x, head_left.y); // C (mirrored)
+
+            path.move_to(0.0, 0.0); // A
+            path.line_to(arrow_length, 0.0); // B
+
+            canvas.stroke_path(&path, &self.style.into());
+        }
 
         canvas.restore();
         Ok(())

@@ -203,6 +203,24 @@ impl Size {
         }
     }
 
+    pub fn to_arrow_tail_width(self) -> f32 {
+        let size_factor = APP_CONFIG.read().annotation_size_factor();
+        match self {
+            Size::Small => 3.0 * size_factor,
+            Size::Medium => 10.0 * size_factor,
+            Size::Large => 25.0 * size_factor,
+        }
+    }
+
+    pub fn to_arrow_head_length(self) -> f32 {
+        let size_factor = APP_CONFIG.read().annotation_size_factor();
+        match self {
+            Size::Small => 15.0 * size_factor,
+            Size::Medium => 30.0 * size_factor,
+            Size::Large => 60.0 * size_factor,
+        }
+    }
+
     pub fn to_blur_factor(self) -> f32 {
         let size_factor = APP_CONFIG.read().annotation_size_factor();
         match self {
