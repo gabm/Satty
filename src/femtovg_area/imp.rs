@@ -19,8 +19,9 @@ use relm4::{gtk, Sender};
 use resource::resource;
 
 use crate::{
+    configuration::Action,
     math::{rect_ensure_in_bounds, rect_round, Vec2D},
-    sketch_board::{Action, SketchBoardInput},
+    sketch_board::SketchBoardInput,
     tools::{CropTool, Drawable, Tool},
     APP_CONFIG,
 };

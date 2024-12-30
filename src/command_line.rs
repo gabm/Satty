@@ -41,6 +41,10 @@ pub struct CommandLine {
     #[arg(long)]
     pub annotation_size_factor: Option<f32>,
 
+    /// Action to perform when pressing Enter
+    #[arg(long)]
+    pub action_on_enter: Option<Action>,
+
     /// After copying the screenshot, save it to a file as well
     #[arg(long)]
     pub save_after_copy: bool,
@@ -80,6 +84,13 @@ pub enum Tools {
     Blur,
     Highlight,
     Brush,
+}
+
+#[derive(Debug, Clone, Copy, Default, ValueEnum)]
+pub enum Action {
+    #[default]
+    SaveToClipboard,
+    SaveToFile,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
