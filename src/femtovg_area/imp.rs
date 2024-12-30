@@ -291,15 +291,11 @@ impl FemtoVgAreaMut {
             .crop_tool
             .borrow()
             .get_crop()
-            .map(|c| rect_ensure_in_bounds(c.get_rectangle(), bounds))
+            .map(|c| c.get_rectangle())
+            .map(|rect| rect_ensure_in_bounds(rect, bounds))
             .map(rect_round)
-            .unwrap_or((
-                Vec2D::zero(),
-                Vec2D::new(
-                    self.background_image.width() as f32,
-                    self.background_image.height() as f32,
-                ),
-            ));
+            .filter(|(_, size)| !size.is_zero())
+            .unwrap_or(bounds);
 
         // create render-target
         let image_id = canvas.create_image_empty(

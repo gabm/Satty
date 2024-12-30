@@ -54,6 +54,10 @@ impl Vec2D {
             Vec2D::new(-a, -b)
         }
     }
+
+    pub fn is_zero(&self) -> bool {
+        self.x.abs() < f32::EPSILON && self.y.abs() < f32::EPSILON
+    }
 }
 
 impl Add for Vec2D {
