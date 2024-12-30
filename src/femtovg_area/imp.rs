@@ -20,7 +20,7 @@ use resource::resource;
 
 use crate::{
     configuration::Action,
-    math::Vec2D,
+    math::{rect_ensure_in_bounds, rect_round, Vec2D},
     sketch_board::SketchBoardInput,
     tools::{CropTool, Drawable, Tool},
     APP_CONFIG,
@@ -279,19 +279,23 @@ impl FemtoVgAreaMut {
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         font: FontId,
     ) -> anyhow::Result<ImgVec<RGBA8>> {
+        let bounds = (
+            Vec2D::zero(),
+            Vec2D::new(
+                self.background_image.width() as f32,
+                self.background_image.height() as f32,
+            ),
+        );
         // get offset and size of the area in question
         let (pos, size) = self
             .crop_tool
             .borrow()
             .get_crop()
-            .and_then(|c| c.get_rectangle())
-            .unwrap_or((
-                Vec2D::zero(),
-                Vec2D::new(
-                    self.background_image.width() as f32,
-                    self.background_image.height() as f32,
-                ),
-            ));
+            .map(|c| c.get_rectangle())
+            .map(|rect| rect_ensure_in_bounds(rect, bounds))
+            .map(rect_round)
+            .filter(|(_, size)| !size.is_zero())
+            .unwrap_or(bounds);
 
         // create render-target
         let image_id = canvas.create_image_empty(
