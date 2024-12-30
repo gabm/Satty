@@ -76,6 +76,28 @@ impl FemtoVGArea {
             .expect("Did you call init before using FemtoVgArea?")
             .rel_canvas_to_image_coordinates(input, self.scale_factor() as f32)
     }
+
+    pub fn zoom(&self, factor: f32) {
+        self.imp()
+            .inner()
+            .as_mut()
+            .expect("Did you call init before using FemtoVgArea?")
+            .set_scale_factor(factor);
+    }
+
+    pub fn pan(&self, delta: Vec2D) {
+        let mut area = self.imp().inner();
+        let area_mut = area
+            .as_mut()
+            .expect("Did you call init before using FemtoVgArea?");
+
+        let curr_offset = area_mut.get_offset();
+
+        let delta = Vec2D::new(delta.x, delta.y);
+
+        area_mut.set_offset(curr_offset - delta);
+    }
+
     pub fn init(
         &mut self,
         sender: Sender<SketchBoardInput>,

@@ -96,7 +96,7 @@ impl Tool for MarkerTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
         match event.type_ {
             MouseEventType::Click => {
-                if event.button == MouseButton::Primary {
+                if event.button == Some(MouseButton::Primary) {
                     let marker = Marker {
                         pos: event.pos,
                         number: *self.next_number.borrow(),

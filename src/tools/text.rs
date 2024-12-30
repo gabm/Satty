@@ -277,7 +277,7 @@ impl Tool for TextTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
         match event.type_ {
             MouseEventType::Click => {
-                if event.button == MouseButton::Primary {
+                if event.button == Some(MouseButton::Primary) {
                     // create commit message if necessary
                     let return_value = match &mut self.text {
                         Some(l) => {
