@@ -444,6 +444,7 @@ impl Component for SketchBoard {
                         ToolUpdateResult::Unmodified
                     } else if ke.key == Key::Return || ke.key == Key::KP_Enter {
                         // First, let the tool handle the event. If the tool does nothing, we can do our thing (otherwise require a second Enter)
+                        // Relying on ToolUpdateResult::Unmodified is probably not a good idea, but it's the only way at the moment. See discussion in #144
                         let result: ToolUpdateResult = self
                             .active_tool
                             .borrow_mut()
