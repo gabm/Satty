@@ -31,6 +31,7 @@ mod ui;
 
 use crate::sketch_board::TextEventMsg;
 use crate::sketch_board::{KeyEventMsg, SketchBoard, SketchBoardInput};
+use crate::tools::Tools;
 
 struct App {
     image_dimensions: (i32, i32),
@@ -43,6 +44,7 @@ struct App {
 enum AppInput {
     Realized,
     ToggleToolbarsDisplay,
+    ToolSwitchShortcut(Tools),
 }
 
 #[derive(Debug)]
@@ -212,6 +214,11 @@ impl Component for App {
                     .sender()
                     .emit(StyleToolbarInput::ToggleVisibility);
             }
+            AppInput::ToolSwitchShortcut(tool) => {
+                self.tools_toolbar
+                    .sender()
+                    .emit(ToolsToolbarInput::SwitchSelectedTool(tool));
+            }
         }
     }
 
@@ -241,6 +248,7 @@ impl Component for App {
                 .launch(image)
                 .forward(sender.input_sender(), |t| match t {
                     SketchBoardOutput::ToggleToolbarsDisplay => AppInput::ToggleToolbarsDisplay,
+                    SketchBoardOutput::ToolSwitchShortcut(tool) => AppInput::ToolSwitchShortcut(tool),
                 });
 
         let sketch_board_sender = sketch_board.sender().clone();

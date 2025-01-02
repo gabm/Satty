@@ -5,6 +5,7 @@ use femtovg::rgb::{ComponentBytes, RGBA};
 use gdk_pixbuf::glib::Bytes;
 use gdk_pixbuf::Pixbuf;
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::process::{Command, Stdio};
@@ -20,7 +21,7 @@ use crate::femtovg_area::FemtoVGArea;
 use crate::math::Vec2D;
 use crate::notification::log_result;
 use crate::style::Style;
-use crate::tools::{Tool, ToolEvent, ToolUpdateResult, ToolsManager};
+use crate::tools::{Tool, ToolEvent, ToolUpdateResult, Tools, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
 
 type RenderedImage = Img<Vec<RGBA<u8>>>;
@@ -35,6 +36,7 @@ pub enum SketchBoardInput {
 #[derive(Debug, Clone)]
 pub enum SketchBoardOutput {
     ToggleToolbarsDisplay,
+    ToolSwitchShortcut(Tools),
 }
 
 #[derive(Debug, Clone)]
@@ -299,6 +301,19 @@ impl SketchBoard {
         ToolUpdateResult::Unmodified
     }
 
+    // Signals the tool change from a keyboard shortcut so that the toolbar UI can update itself,
+    // highlighting the according tool
+    fn handle_toolbar_ui_tool_change_keyboard(
+        &mut self,
+        tool: crate::tools::Tools,
+        sender: ComponentSender<Self>,
+    ) -> ToolUpdateResult {
+        sender
+            .output_sender()
+            .emit(SketchBoardOutput::ToolSwitchShortcut(tool));
+        ToolUpdateResult::Unmodified
+    }
+
     fn handle_toolbar_event(&mut self, toolbar_event: ToolbarEvent) -> ToolUpdateResult {
         match toolbar_event {
             ToolbarEvent::ToolSelected(tool) => {
@@ -422,42 +437,73 @@ impl Component for SketchBoard {
     }
 
     fn update(&mut self, msg: SketchBoardInput, sender: ComponentSender<Self>, _root: &Self::Root) {
+        let tool_shortcuts = HashMap::from([
+            ((Key::p, ModifierType::ALT_MASK), Tools::Pointer),
+            ((Key::c, ModifierType::ALT_MASK), Tools::Crop),
+            ((Key::b, ModifierType::ALT_MASK), Tools::Brush),
+            ((Key::l, ModifierType::ALT_MASK), Tools::Line),
+            ((Key::a, ModifierType::ALT_MASK), Tools::Arrow),
+            ((Key::r, ModifierType::ALT_MASK), Tools::Rectangle),
+            ((Key::e, ModifierType::ALT_MASK), Tools::Ellipse),
+            ((Key::t, ModifierType::ALT_MASK), Tools::Text),
+            ((Key::m, ModifierType::ALT_MASK), Tools::Marker),
+            ((Key::u, ModifierType::ALT_MASK), Tools::Blur),
+            ((Key::h, ModifierType::ALT_MASK), Tools::Highlight),
+        ]);
         // handle resize ourselves, pass everything else to tool
         let result = match msg {
             SketchBoardInput::InputEvent(mut ie) => {
                 if let InputEvent::Key(ke) = ie {
-                    if ke.key == Key::z && ke.modifier == ModifierType::CONTROL_MASK {
-                        self.handle_undo()
-                    } else if ke.key == Key::y && ke.modifier == ModifierType::CONTROL_MASK {
-                        self.handle_redo()
-                    } else if ke.key == Key::t && ke.modifier == ModifierType::CONTROL_MASK {
-                        self.handle_toggle_toolbars_display(sender)
-                    } else if ke.key == Key::s && ke.modifier == ModifierType::CONTROL_MASK {
-                        self.renderer.request_render(Action::SaveToFile);
-                        ToolUpdateResult::Unmodified
-                    } else if ke.key == Key::c && ke.modifier == ModifierType::CONTROL_MASK {
-                        self.renderer.request_render(Action::SaveToClipboard);
-                        ToolUpdateResult::Unmodified
-                    } else if ke.key == Key::Escape {
-                        relm4::main_application().quit();
-                        // this is only here to make rust happy. The application should exit with the previous call
-                        ToolUpdateResult::Unmodified
-                    } else if ke.key == Key::Return || ke.key == Key::KP_Enter {
-                        // First, let the tool handle the event. If the tool does nothing, we can do our thing (otherwise require a second Enter)
-                        // Relying on ToolUpdateResult::Unmodified is probably not a good idea, but it's the only way at the moment. See discussion in #144
-                        let result: ToolUpdateResult = self
-                            .active_tool
-                            .borrow_mut()
-                            .handle_event(ToolEvent::Input(ie));
-                        if let ToolUpdateResult::Unmodified = result {
-                            self.renderer
-                                .request_render(APP_CONFIG.read().action_on_enter());
+                    match (ke.key, ke.modifier) {
+                        (Key::z, ModifierType::CONTROL_MASK) => self.handle_undo(),
+                        (Key::y, ModifierType::CONTROL_MASK) => self.handle_redo(),
+                        (Key::t, ModifierType::CONTROL_MASK) => {
+                            self.handle_toggle_toolbars_display(sender)
                         }
-                        result
-                    } else {
-                        self.active_tool
-                            .borrow_mut()
-                            .handle_event(ToolEvent::Input(ie))
+                        (Key::s, ModifierType::CONTROL_MASK) => {
+                            self.renderer.request_render(Action::SaveToFile);
+                            ToolUpdateResult::Unmodified
+                        }
+                        (Key::c, ModifierType::CONTROL_MASK) => {
+                            self.renderer.request_render(Action::SaveToClipboard);
+                            ToolUpdateResult::Unmodified
+                        }
+                        (Key::Escape, _) => {
+                            relm4::main_application().quit();
+                            // this is only here to make rust happy. The application should exit with the previous call
+                            ToolUpdateResult::Unmodified
+                        }
+                        (Key::Return, _) | (Key::KP_Enter, _) => {
+                            // First, let the tool handle the event. If the tool does nothing, we can do our thing (otherwise require a second Enter)
+                            // Relying on ToolUpdateResult::Unmodified is probably not a good idea, but it's the only way at the moment. See discussion in #144
+                            let result: ToolUpdateResult = self
+                                .active_tool
+                                .borrow_mut()
+                                .handle_event(ToolEvent::Input(ie));
+                            if let ToolUpdateResult::Unmodified = result {
+                                self.renderer
+                                    .request_render(APP_CONFIG.read().action_on_enter());
+                            }
+                            result
+                        }
+                        _ => {
+                            // handle tool shortcuts dynamically
+                            if let Some(tool) = tool_shortcuts.get(&(ke.key, ke.modifier)) {
+                                self.handle_toolbar_event(ToolbarEvent::ToolSelected(*tool));
+                                self.handle_toolbar_ui_tool_change_keyboard(*tool, sender);
+
+                                if *tool == Tools::Crop {
+                                    // redraw cropping handle
+                                    ToolUpdateResult::Redraw
+                                } else {
+                                    ToolUpdateResult::Unmodified
+                                }
+                            } else {
+                                self.active_tool
+                                    .borrow_mut()
+                                    .handle_event(ToolEvent::Input(ie))
+                            }
+                        }
                     }
                 } else {
                     ie.remap_event_coordinates(&self.renderer);
