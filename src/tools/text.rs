@@ -13,7 +13,7 @@ use crate::{
     style::Style,
 };
 
-use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
+use super::{Drawable, DrawableClone, Tool, ToolUpdateResult, Tools};
 
 #[derive(Clone, Debug)]
 pub struct Text {
@@ -155,9 +155,22 @@ impl Drawable for Text {
 pub struct TextTool {
     text: Option<Text>,
     style: Style,
+    input_enabled: bool,
 }
 
 impl Tool for TextTool {
+    fn get_tool_type(&self) -> super::Tools {
+        Tools::Text
+    }
+
+    fn input_enabled(&self) -> bool {
+        self.input_enabled
+    }
+
+    fn set_input_enabled(&mut self, value: bool) {
+        self.input_enabled = value;
+    }
+
     fn get_drawable(&self) -> Option<&dyn Drawable> {
         match &self.text {
             Some(d) => Some(d),
@@ -198,6 +211,7 @@ impl Tool for TextTool {
                     t.editing = false;
                     let result = t.clone_box();
                     self.text = None;
+                    self.input_enabled = false;
                     return ToolUpdateResult::Commit(result);
                 }
             } else if event.key == Key::Escape {
@@ -290,8 +304,11 @@ impl Tool for TextTool {
                     // create a new Text
                     self.text = Some(Text::new(event.pos, self.style));
 
+                    self.set_input_enabled(true);
+
                     return_value
                 } else {
+                    self.set_input_enabled(false);
                     ToolUpdateResult::Unmodified
                 }
             }

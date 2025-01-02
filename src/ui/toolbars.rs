@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, collections::HashMap};
 
 use crate::{
     configuration::APP_CONFIG,
@@ -11,6 +11,7 @@ use gdk_pixbuf::{
     glib::{Variant, VariantTy},
     Pixbuf,
 };
+use gtk::ToggleButton;
 use relm4::{
     actions::{ActionablePlus, RelmAction, RelmActionGroup},
     gtk::{gdk::RGBA, prelude::*, Align, ColorChooserDialog, ResponseType, Window},
@@ -19,6 +20,8 @@ use relm4::{
 
 pub struct ToolsToolbar {
     visible: bool,
+    active_button: Option<ToggleButton>,
+    tool_buttons: HashMap<Tools, ToggleButton>,
 }
 
 pub struct StyleToolbar {
@@ -43,6 +46,7 @@ pub enum ToolbarEvent {
 #[derive(Debug, Copy, Clone)]
 pub enum ToolsToolbarInput {
     ToggleVisibility,
+    SwitchSelectedTool(Tools),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -98,92 +102,103 @@ impl SimpleComponent for ToolsToolbar {
                 connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::Redo);},
             },
             gtk::Separator {},
+            #[name(pointer_button)]
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
 
                 set_icon_name: "cursor-regular",
-                set_tooltip: "Pointer",
+                set_tooltip: "Pointer (P)",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Pointer,
             },
+            #[name(crop_button)]
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
 
                 set_icon_name: "crop-filled",
-                set_tooltip: "Crop",
+                set_tooltip: "Crop (C)",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Crop,
             },
+            #[name(brush_button)]
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
 
                 set_icon_name: "pen-regular",
-                set_tooltip: "Brush tool",
+                set_tooltip: "Brush tool (B)",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Brush,
             },
+            #[name(line_button)]
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
 
                 set_icon_name: "minus-large",
-                set_tooltip: "Line tool",
+                set_tooltip: "Line tool (L)",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Line,
             },
+            #[name(arrow_button)]
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
 
                 set_icon_name: "arrow-up-right-filled",
-                set_tooltip: "Arrow tool",
+                set_tooltip: "Arrow tool (A)",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Arrow,
             },
+            #[name(rectangle_button)]
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
 
                 set_icon_name: "checkbox-unchecked-regular",
-                set_tooltip: "Rectangle tool",
+                set_tooltip: "Rectangle tool (R)",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Rectangle,
             },
+            #[name(ellipse_button)]
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
 
                 set_icon_name: "circle-regular",
-                set_tooltip: "Ellipse tool",
+                set_tooltip: "Ellipse tool (E)",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Ellipse,
             },
+            #[name(text_button)]
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
 
                 set_icon_name: "text-case-title-regular",
-                set_tooltip: "Text tool",
+                set_tooltip: "Text tool (T)",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Text,
             },
+            #[name(marker_button)]
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
 
                 set_icon_name: "number-circle-1-regular",
-                set_tooltip: "Numbered Marker",
+                set_tooltip: "Numbered Marker (M)",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Marker,
             },
+            #[name(blur_button)]
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
 
                 set_icon_name: "drop-regular",
-                set_tooltip: "Blur",
+                set_tooltip: "Blur (U)",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Blur,
             },
+            #[name(highlight_button)]
             gtk::ToggleButton {
                 set_focusable: false,
                 set_hexpand: false,
 
                 set_icon_name: "highlight-regular",
-                set_tooltip: "Highlight",
+                set_tooltip: "Highlight (H)",
                 ActionablePlus::set_action::<ToolsAction>: Tools::Highlight,
             },
             gtk::Separator {},
@@ -214,6 +229,16 @@ impl SimpleComponent for ToolsToolbar {
             ToolsToolbarInput::ToggleVisibility => {
                 self.visible = !self.visible;
             }
+            ToolsToolbarInput::SwitchSelectedTool(tool) => {
+                if let Some(previous_button) = &self.active_button {
+                    previous_button.set_active(false);
+                }
+
+                if let Some(selected_tool_button) = self.tool_buttons.get(&tool) {
+                    selected_tool_button.set_active(true);
+                    self.active_button = Some(selected_tool_button.clone());
+                }
+            }
         }
     }
 
@@ -222,10 +247,28 @@ impl SimpleComponent for ToolsToolbar {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
-        let model = ToolsToolbar {
+        let mut model = ToolsToolbar {
             visible: !APP_CONFIG.read().default_hide_toolbars(),
+            active_button: None,
+            tool_buttons: HashMap::new(),
         };
         let widgets = view_output!();
+
+        model.tool_buttons = HashMap::from([
+            (Tools::Pointer, widgets.pointer_button.clone()),
+            (Tools::Crop, widgets.crop_button.clone()),
+            (Tools::Brush, widgets.brush_button.clone()),
+            (Tools::Line, widgets.line_button.clone()),
+            (Tools::Arrow, widgets.arrow_button.clone()),
+            (Tools::Rectangle, widgets.rectangle_button.clone()),
+            (Tools::Ellipse, widgets.ellipse_button.clone()),
+            (Tools::Text, widgets.text_button.clone()),
+            (Tools::Marker, widgets.marker_button.clone()),
+            (Tools::Blur, widgets.blur_button.clone()),
+            (Tools::Highlight, widgets.highlight_button.clone()),
+        ]);
+
+        model.active_button = Some(widgets.pointer_button.clone());
 
         // Tools Action for selecting tools
         let sender_tmp: ComponentSender<ToolsToolbar> = sender.clone();
@@ -236,6 +279,11 @@ impl SimpleComponent for ToolsToolbar {
                 sender_tmp
                     .output_sender()
                     .emit(ToolbarEvent::ToolSelected(*state));
+                sender_tmp
+                    .input_sender()
+                    // Updates the active_button from the toolbar UI with the newly selected tool whenever a mouse
+                    // click occurs, so that selection by mouse and by keyboard don't coexist in the UI
+                    .emit(ToolsToolbarInput::SwitchSelectedTool(*state));
             },
         );
 

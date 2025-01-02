@@ -15,7 +15,7 @@ use crate::{
     tools::DrawableClone,
 };
 
-use super::{Drawable, Tool, ToolUpdateResult};
+use super::{Drawable, Tool, ToolUpdateResult, Tools};
 
 const HIGHLIGHT_OPACITY: f64 = 0.4;
 
@@ -129,6 +129,7 @@ enum HighlightKind {
 pub struct HighlightTool {
     highlighter: Option<HighlightKind>,
     style: Style,
+    input_enabled: bool,
 }
 
 impl Drawable for HighlightKind {
@@ -145,6 +146,18 @@ impl Drawable for HighlightKind {
 }
 
 impl Tool for HighlightTool {
+    fn input_enabled(&self) -> bool {
+        self.input_enabled
+    }
+
+    fn set_input_enabled(&mut self, value: bool) {
+        self.input_enabled = value;
+    }
+
+    fn get_tool_type(&self) -> super::Tools {
+        Tools::Highlight
+    }
+
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
         let shift_pressed = event.modifier.intersects(ModifierType::SHIFT_MASK);
         let ctrl_pressed = event.modifier.intersects(ModifierType::CONTROL_MASK);
