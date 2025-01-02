@@ -8,11 +8,12 @@ use crate::sketch_board::{MouseButton, MouseEventType};
 use crate::style::Style;
 use crate::{math::Vec2D, sketch_board::MouseEventMsg};
 
-use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
+use super::{Drawable, DrawableClone, Tool, ToolUpdateResult, Tools};
 
 pub struct MarkerTool {
     style: Style,
     next_number: Rc<RefCell<u16>>,
+    input_enabled: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -84,6 +85,18 @@ impl Drawable for Marker {
 }
 
 impl Tool for MarkerTool {
+    fn input_enabled(&self) -> bool {
+        self.input_enabled
+    }
+
+    fn set_input_enabled(&mut self, value: bool) {
+        self.input_enabled = value;
+    }
+
+    fn get_tool_type(&self) -> super::Tools {
+        Tools::Marker
+    }
+
     fn get_drawable(&self) -> Option<&dyn Drawable> {
         None
     }
@@ -122,6 +135,7 @@ impl Default for MarkerTool {
         Self {
             style: Default::default(),
             next_number: Rc::new(RefCell::new(1)),
+            input_enabled: true
         }
     }
 }

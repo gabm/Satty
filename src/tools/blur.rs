@@ -12,7 +12,7 @@ use crate::{
     style::{Size, Style},
 };
 
-use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
+use super::{Drawable, DrawableClone, Tool, ToolUpdateResult, Tools};
 
 #[derive(Clone, Debug)]
 pub struct Blur {
@@ -133,9 +133,22 @@ impl Drawable for Blur {
 pub struct BlurTool {
     blur: Option<Blur>,
     style: Style,
+    input_enabled: bool,
 }
 
 impl Tool for BlurTool {
+    fn input_enabled(&self) -> bool {
+        self.input_enabled
+    }
+
+    fn set_input_enabled(&mut self, value: bool) {
+        self.input_enabled = value;
+    }
+
+    fn get_tool_type(&self) -> super::Tools {
+        Tools::Blur
+    }
+
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
         match event.type_ {
             MouseEventType::BeginDrag => {

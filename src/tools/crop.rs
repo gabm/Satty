@@ -8,7 +8,7 @@ use anyhow::Result;
 use femtovg::{Color, Paint, Path};
 use relm4::gtk::gdk::Key;
 
-use super::{Drawable, Tool, ToolUpdateResult};
+use super::{Drawable, Tool, ToolUpdateResult, Tools};
 
 #[derive(Debug, Clone)]
 pub struct Crop {
@@ -21,6 +21,7 @@ pub struct Crop {
 pub struct CropTool {
     crop: Option<Crop>,
     action: Option<CropToolAction>,
+    input_enabled: bool,
 }
 
 impl Crop {
@@ -361,6 +362,18 @@ impl CropTool {
 }
 
 impl Tool for CropTool {
+    fn input_enabled(&self) -> bool {
+        self.input_enabled
+    }
+
+    fn set_input_enabled(&mut self, value: bool) {
+        self.input_enabled = value;
+    }
+
+    fn get_tool_type(&self) -> super::Tools {
+        Tools::Crop
+    }
+
     fn handle_key_event(&mut self, event: KeyEventMsg) -> ToolUpdateResult {
         if event.key == Key::Escape && self.crop.is_some() {
             self.handle_deactivated()

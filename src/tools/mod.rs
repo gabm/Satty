@@ -91,6 +91,10 @@ pub trait Tool {
         false
     }
 
+    fn input_enabled(&self) -> bool;
+
+    fn set_input_enabled(&mut self, value: bool);
+
     fn handle_undo(&mut self) -> ToolUpdateResult {
         ToolUpdateResult::Unmodified
     }
@@ -100,6 +104,8 @@ pub trait Tool {
     }
 
     fn get_drawable(&self) -> Option<&dyn Drawable>;
+
+    fn get_tool_type(&self) -> Tools;
 }
 
 // the clone method below has been adapted from: https://stackoverflow.com/questions/30353462/how-to-clone-a-struct-storing-a-boxed-trait-object
