@@ -4,6 +4,7 @@ use femtovg::imgref::Img;
 use femtovg::rgb::{ComponentBytes, RGBA};
 use gdk_pixbuf::glib::Bytes;
 use gdk_pixbuf::Pixbuf;
+use keycode::{KeyMap, KeyMappingId};
 use std::cell::RefCell;
 use std::fs;
 use std::io::Write;
@@ -426,16 +427,26 @@ impl Component for SketchBoard {
         let result = match msg {
             SketchBoardInput::InputEvent(mut ie) => {
                 if let InputEvent::Key(ke) = ie {
-                    if ke.key == Key::z && ke.modifier == ModifierType::CONTROL_MASK {
+                    if ke.is_one_of(Key::z, KeyMappingId::UsZ)
+                        && ke.modifier == ModifierType::CONTROL_MASK
+                    {
                         self.handle_undo()
-                    } else if ke.key == Key::y && ke.modifier == ModifierType::CONTROL_MASK {
+                    } else if ke.is_one_of(Key::y, KeyMappingId::UsY)
+                        && ke.modifier == ModifierType::CONTROL_MASK
+                    {
                         self.handle_redo()
-                    } else if ke.key == Key::t && ke.modifier == ModifierType::CONTROL_MASK {
+                    } else if ke.is_one_of(Key::t, KeyMappingId::UsT)
+                        && ke.modifier == ModifierType::CONTROL_MASK
+                    {
                         self.handle_toggle_toolbars_display(sender)
-                    } else if ke.key == Key::s && ke.modifier == ModifierType::CONTROL_MASK {
+                    } else if ke.is_one_of(Key::s, KeyMappingId::UsS)
+                        && ke.modifier == ModifierType::CONTROL_MASK
+                    {
                         self.renderer.request_render(Action::SaveToFile);
                         ToolUpdateResult::Unmodified
-                    } else if ke.key == Key::c && ke.modifier == ModifierType::CONTROL_MASK {
+                    } else if ke.is_one_of(Key::c, KeyMappingId::UsC)
+                        && ke.modifier == ModifierType::CONTROL_MASK
+                    {
                         self.renderer.request_render(Action::SaveToClipboard);
                         ToolUpdateResult::Unmodified
                     } else if ke.key == Key::Escape {
@@ -522,5 +533,16 @@ impl KeyEventMsg {
             code,
             modifier,
         }
+    }
+
+    /// Matches one of providen keys. The modifier is not considered.
+    /// And the key has more priority over keycode.
+    fn is_one_of(&self, key: Key, code: KeyMappingId) -> bool {
+        // INFO: on linux the keycode from gtk4 is evdev keycode, so need to match by him if need
+        // to use layout-independent shortcuts. And notice that there is substraction by 8, it's
+        // because of x11 compatibility in which the keycodes are in range [8,255]. So need shift
+        // them to get correct evdev keycode.
+        let keymap = KeyMap::from(code);
+        self.key == key || self.code as u16 - 8 == keymap.evdev
     }
 }
