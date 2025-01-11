@@ -155,6 +155,7 @@ pub enum Tools {
     Blur = 8,
     Highlight = 9,
     Brush = 10,
+    Zoom = 11,
 }
 
 pub struct ToolsManager {
@@ -237,6 +238,7 @@ impl FromVariant for Tools {
             8 => Some(Tools::Blur),
             9 => Some(Tools::Highlight),
             10 => Some(Tools::Brush),
+            11 => Some(Tools::Zoom),
             _ => None,
         })
     }

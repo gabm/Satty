@@ -525,10 +525,27 @@ impl FemtoVgAreaMut {
             (input.y * dpi_scale_factor - self.offset.y) / self.scale_factor,
         )
     }
+
     pub fn rel_canvas_to_image_coordinates(&self, input: Vec2D, dpi_scale_factor: f32) -> Vec2D {
         Vec2D::new(
             input.x * dpi_scale_factor / self.scale_factor,
             input.y * dpi_scale_factor / self.scale_factor,
         )
+    }
+
+    pub fn set_scale_factor(&mut self, factor: f32) {
+        self.scale_factor += factor;
+    }
+
+    pub fn get_scale_factor(&mut self) -> f32 {
+        self.scale_factor
+    }
+
+    pub fn get_offset(&mut self) -> Vec2D {
+        self.offset
+    }
+
+    pub fn set_offset(&mut self, new_offset: Vec2D) {
+        self.offset = new_offset;
     }
 }

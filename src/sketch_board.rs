@@ -20,7 +20,7 @@ use crate::configuration::{Action, APP_CONFIG};
 use crate::femtovg_area::FemtoVGArea;
 use crate::math::Vec2D;
 use crate::notification::log_result;
-use crate::style::Style;
+use crate::style::{Style, ZoomDirection};
 use crate::tools::{Tool, ToolEvent, ToolUpdateResult, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
 
@@ -72,27 +72,35 @@ pub enum MouseEventType {
     EndDrag,
     UpdateDrag,
     Click,
-    //Motion(Vec2D),
+    Scroll,
+    ScrollBegin,
+    ScrollEnd,
+    Motion,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct MouseEventMsg {
     pub type_: MouseEventType,
-    pub button: MouseButton,
+    pub button: Option<MouseButton>,
     pub modifier: ModifierType,
     pub pos: Vec2D,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct MouseDragEventMsg {
+    delta: Vec2D,
 }
 
 impl SketchBoardInput {
     pub fn new_mouse_event(
         event_type: MouseEventType,
-        button: u32,
+        button: Option<u32>,
         modifier: ModifierType,
         pos: Vec2D,
     ) -> SketchBoardInput {
         SketchBoardInput::InputEvent(InputEvent::Mouse(MouseEventMsg {
             type_: event_type,
-            button: button.into(),
+            button: button.map(|btn| btn.into()),
             modifier,
             pos,
         }))
@@ -131,6 +139,7 @@ impl InputEvent {
                 MouseEventType::EndDrag | MouseEventType::UpdateDrag => {
                     me.pos = renderer.rel_canvas_to_image_coordinates(me.pos)
                 }
+                _ => {}
             }
         };
     }
@@ -141,6 +150,8 @@ pub struct SketchBoard {
     active_tool: Rc<RefCell<dyn Tool>>,
     tools: ToolsManager,
     style: Style,
+    cursor_pos: Option<Vec2D>,
+    drag_event: Option<MouseDragEventMsg>,
 }
 
 impl SketchBoard {
@@ -289,6 +300,18 @@ impl SketchBoard {
         }
     }
 
+    fn handle_pan(&mut self, delta: Vec2D) -> ToolUpdateResult {
+        self.renderer.pan(delta);
+        return ToolUpdateResult::Redraw;
+    }
+
+    fn handle_zoom(&mut self, dir: ZoomDirection) {
+        match dir {
+            ZoomDirection::In => self.renderer.zoom(0.1f32),
+            ZoomDirection::Out => self.renderer.zoom(-0.1f32),
+        }
+    }
+
     // Toolbars = Tools Toolbar + Style Toolbar
     fn handle_toggle_toolbars_display(
         &mut self,
@@ -363,6 +386,11 @@ impl SketchBoard {
                     .borrow_mut()
                     .handle_event(ToolEvent::StyleChanged(self.style))
             }
+            ToolbarEvent::Zoom(dir) => {
+                self.handle_zoom(dir);
+                //ToolUpdateResult::Unmodified
+                ToolUpdateResult::Redraw
+            }
         }
     }
 }
@@ -387,7 +415,7 @@ impl Component for SketchBoard {
                         connect_drag_begin[sender] => move |controller, x, y| {
                             sender.input(SketchBoardInput::new_mouse_event(
                                 MouseEventType::BeginDrag,
-                                controller.current_button(),
+                                Some(controller.current_button()),
                                 controller.current_event_state(),
                                 Vec2D::new(x as f32, y as f32)));
 
@@ -395,14 +423,14 @@ impl Component for SketchBoard {
                         connect_drag_update[sender] => move |controller, x, y| {
                             sender.input(SketchBoardInput::new_mouse_event(
                                 MouseEventType::UpdateDrag,
-                                controller.current_button(),
+                                Some(controller.current_button()),
                                 controller.current_event_state(),
                                 Vec2D::new(x as f32, y as f32)));
                         },
                         connect_drag_end[sender] => move |controller, x, y| {
                             sender.input(SketchBoardInput::new_mouse_event(
                                 MouseEventType::EndDrag,
-                                controller.current_button(),
+                                Some(controller.current_button()),
                                 controller.current_event_state(),
                                 Vec2D::new(x as f32, y as f32)
                             ));
@@ -413,7 +441,7 @@ impl Component for SketchBoard {
                     connect_pressed[sender] => move |controller, _, x, y| {
                         sender.input(SketchBoardInput::new_mouse_event(
                             MouseEventType::Click,
-                            controller.current_button(),
+                            Some(controller.current_button()),
                             controller.current_event_state(),
                             Vec2D::new(x as f32, y as f32)));
                     }
@@ -470,7 +498,46 @@ impl Component for SketchBoard {
                             .borrow_mut()
                             .handle_event(ToolEvent::Input(ie))
                     }
+                } else if let InputEvent::Mouse(me) = ie {
+                    match me.button {
+                        Some(MouseButton::Middle) => {
+                            if me.type_ == MouseEventType::BeginDrag {
+                                self.drag_event = Some(MouseDragEventMsg {
+                                    delta: Vec2D::new(0f32, 0f32),
+                                });
+                            } else if me.type_ == MouseEventType::UpdateDrag {
+                                // Convert the delta to a Vec2D that only has +1 or -1
+                                let mut event = self
+                                    .drag_event
+                                    .expect("Begin drag did not setup sketch_board.drag_event!");
+
+                                self.handle_pan(event.delta - me.pos);
+
+                                // Update self.drag_event.delta to the latest value
+                                event.delta = me.pos;
+                                self.drag_event = Some(event);
+                            } else if me.type_ == MouseEventType::Scroll {
+                                match me.pos.y {
+                                    v if v < 0.0 => self.handle_zoom(ZoomDirection::In),
+                                    v if v > 0.0 => self.handle_zoom(ZoomDirection::Out),
+                                    _ => {}
+                                }
+                            }
+                            ToolUpdateResult::Redraw
+                        }
+                        None => {
+                            self.cursor_pos = Some(me.pos);
+                            ToolUpdateResult::Unmodified
+                        }
+                        _ => {
+                            ie.remap_event_coordinates(&self.renderer);
+                            self.active_tool
+                                .borrow_mut()
+                                .handle_event(ToolEvent::Input(ie))
+                        }
+                    }
                 } else {
+                    println!("{:?}", ie);
                     ie.remap_event_coordinates(&self.renderer);
                     self.active_tool
                         .borrow_mut()
@@ -510,6 +577,8 @@ impl Component for SketchBoard {
             active_tool: tools.get(&config.initial_tool()),
             style: Style::default(),
             tools,
+            cursor_pos: None,
+            drag_event: None,
         };
 
         let area = &mut model.renderer;
