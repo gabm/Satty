@@ -76,7 +76,8 @@ impl Drawable for Blur {
         };
         if self.editing {
             // set style
-            let paint = Paint::color(Color::black()).with_line_width(Size::Medium.to_line_width());
+            let paint = Paint::color(Color::black())
+                .with_line_width(Size::Medium.to_line_width(self.style.annotation_size_factor));
 
             // make rect
             let mut path = Path::new();
@@ -99,7 +100,9 @@ impl Drawable for Blur {
                     canvas,
                     pos,
                     size,
-                    self.style.size.to_blur_factor(),
+                    self.style
+                        .size
+                        .to_blur_factor(self.style.annotation_size_factor),
                 )?);
             }
 
