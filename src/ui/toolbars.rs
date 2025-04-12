@@ -27,6 +27,7 @@ pub struct StyleToolbar {
     color_action: SimpleAction,
     visible: bool,
     annotation_size: f32,
+    annotation_size_formatted: String,
     annotation_dialog_controller: Option<Controller<AnnotationSizeDialog>>,
 }
 
@@ -427,13 +428,12 @@ impl Component for StyleToolbar {
 
                 set_text: "x",
             },
-            #[name = "spin_revealer"]
             gtk::Button {
                 set_focusable: false,
                 set_hexpand: false,
 
-                // TODO: this doesn't format properly, e.g. in de_DE
-                set_label: &format!("{:.2}", model.annotation_size),
+                #[watch]
+                set_label: &model.annotation_size_formatted,
                 set_tooltip: "Edit Annotation Size Factor",
 
                 connect_clicked => StyleToolbarInput::ShowAnnotationDialog
@@ -458,13 +458,7 @@ impl Component for StyleToolbar {
         },
     }
 
-    fn update_with_view(
-        &mut self,
-        widgets: &mut Self::Widgets,
-        message: Self::Input,
-        sender: ComponentSender<Self>,
-        root: &Self::Root,
-    ) {
+    fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             StyleToolbarInput::ShowColorDialog => {
                 self.show_color_dialog(sender, root.toplevel_window());
@@ -497,9 +491,8 @@ impl Component for StyleToolbar {
 
             StyleToolbarInput::AnnotationDialogFinished(value) => {
                 if let Some(value) = value {
-                    // TODO: format error, see above
-                    widgets.spin_revealer.set_label(&format!("{0:.2}", value));
                     self.annotation_size = value;
+                    self.annotation_size_formatted = format!("{0:.2}", value);
 
                     sender
                         .output_sender()
@@ -572,6 +565,10 @@ impl Component for StyleToolbar {
             color_action: SimpleAction::from(color_action.clone()),
             visible: !APP_CONFIG.read().default_hide_toolbars(),
             annotation_size: APP_CONFIG.read().annotation_size_factor(),
+            annotation_size_formatted: format!(
+                "{0:.2}",
+                APP_CONFIG.read().annotation_size_factor()
+            ),
             annotation_dialog_controller: None,
         };
 
@@ -764,7 +761,7 @@ impl Component for AnnotationSizeDialog {
             AnnotationSizeDialogInput::Submit => {
                 // yeah, not sure if this can even happen.
                 if let Err(e) = sender.output(AnnotationSizeDialogOutput::AnnotationSizeSubmitted(
-                    widgets.spin.value() as f32,
+                    self.annotation_size,
                 )) {
                     eprintln!("Error submitting annotation size factor: {:?}", e);
                 }
