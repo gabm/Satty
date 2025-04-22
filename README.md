@@ -79,6 +79,8 @@ output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
 action-on-enter = "save-to-clipboard"
 # After copying the screenshot, save it to a file as well
 save-after-copy = false
+# Right click to copy
+right-click-copy = false
 # Hide toolbars by default
 default-hide-toolbars = false
 # The primary highlighter to use, the other is accessible by holding CTRL at the start of a highlight [possible values: block, freehand]
@@ -145,6 +147,8 @@ Options:
           Action to perform when pressing Enter [possible values: save-to-clipboard, save-to-file]
       --save-after-copy
           After copying the screenshot, save it to a file as well
+      --right-click-copy
+          Right click to copy
   -d, --default-hide-toolbars
           Hide toolbars by default
       --primary-highlighter <PRIMARY_HIGHLIGHTER>

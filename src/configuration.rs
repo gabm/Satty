@@ -42,6 +42,7 @@ pub struct Configuration {
     annotation_size_factor: f32,
     action_on_enter: Action,
     save_after_copy: bool,
+    right_click_copy: bool,
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
     font: FontConfiguration,
@@ -165,6 +166,9 @@ impl Configuration {
         if let Some(v) = general.save_after_copy {
             self.save_after_copy = v;
         }
+        if let Some(v) = general.right_click_copy {
+            self.right_click_copy = v;
+        }
         if let Some(v) = general.default_hide_toolbars {
             self.default_hide_toolbars = v;
         }
@@ -223,6 +227,9 @@ impl Configuration {
         if command_line.save_after_copy {
             self.save_after_copy = command_line.save_after_copy;
         }
+        if command_line.right_click_copy {
+            self.right_click_copy = command_line.right_click_copy;
+        }
         if let Some(v) = command_line.font_family {
             self.font.family = Some(v);
         }
@@ -278,6 +285,10 @@ impl Configuration {
         self.save_after_copy
     }
 
+    pub fn right_click_copy(&self) -> bool {
+        self.right_click_copy
+    }
+
     pub fn color_palette(&self) -> &ColorPalette {
         &self.color_palette
     }
@@ -310,6 +321,7 @@ impl Default for Configuration {
             annotation_size_factor: 1.0,
             action_on_enter: Action::SaveToClipboard,
             save_after_copy: false,
+            right_click_copy: false,
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
             font: FontConfiguration::default(),
@@ -361,6 +373,7 @@ struct ConfigurationFileGeneral {
     output_filename: Option<String>,
     action_on_enter: Option<Action>,
     save_after_copy: Option<bool>,
+    right_click_copy: Option<bool>,
     default_hide_toolbars: Option<bool>,
     primary_highlighter: Option<Highlighters>,
     disable_notifications: Option<bool>,
