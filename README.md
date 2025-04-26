@@ -57,6 +57,16 @@ Start by providing a filename or a screenshot via stdin and annotate using the a
 
 All configuration is done either at the config file in `XDG_CONFIG_DIR/.config/satty/config.toml` or via the command line interface. In case both are specified, the command line options always override the configuration file.
 
+### Shortcuts
+
+- `Enter`: as configured (see below)
+- `Esc`: Exit application
+- `Ctrl+C`: Save to clipboard
+- `Ctrl+S`: Save to specified output file
+- `Ctrl+T`: Toggle toolbars
+- `Ctrl+Y`: Redo
+- `Ctrl+Z`: Undo
+
 ### Configuration File
 
 ```toml
