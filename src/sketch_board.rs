@@ -122,17 +122,36 @@ impl From<u32> for MouseButton {
 }
 
 impl InputEvent {
-    fn remap_event_coordinates(&mut self, renderer: &FemtoVGArea) {
+    fn handle_event_mouse_input(
+        &mut self,
+        renderer: &FemtoVGArea,
+        sender: &ComponentSender<SketchBoard>,
+    ) -> Option<ToolUpdateResult> {
         if let InputEvent::Mouse(me) = self {
             match me.type_ {
-                MouseEventType::BeginDrag | MouseEventType::Click => {
-                    me.pos = renderer.abs_canvas_to_image_coordinates(me.pos)
+                MouseEventType::Click => {
+                    if me.button == MouseButton::Secondary && APP_CONFIG.read().right_click_copy() {
+                        sender
+                            .input_sender()
+                            .send(SketchBoardInput::ToolbarEvent(ToolbarEvent::CopyClipboard))
+                            .unwrap();
+                        None
+                    } else {
+                        None
+                    }
+                }
+                MouseEventType::BeginDrag => {
+                    me.pos = renderer.abs_canvas_to_image_coordinates(me.pos);
+                    None
                 }
                 MouseEventType::EndDrag | MouseEventType::UpdateDrag => {
-                    me.pos = renderer.rel_canvas_to_image_coordinates(me.pos)
+                    me.pos = renderer.rel_canvas_to_image_coordinates(me.pos);
+                    None
                 }
             }
-        };
+        } else {
+            None
+        }
     }
 }
 
@@ -477,7 +496,7 @@ impl Component for SketchBoard {
                             .handle_event(ToolEvent::Input(ie))
                     }
                 } else {
-                    ie.remap_event_coordinates(&self.renderer);
+                    ie.handle_event_mouse_input(&self.renderer, &sender);
                     self.active_tool
                         .borrow_mut()
                         .handle_event(ToolEvent::Input(ie))

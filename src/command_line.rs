@@ -49,6 +49,10 @@ pub struct CommandLine {
     #[arg(long)]
     pub save_after_copy: bool,
 
+    /// Right click to copy
+    #[arg(long)]
+    pub right_click_copy: bool,
+
     /// Hide toolbars by default
     #[arg(short, long)]
     pub default_hide_toolbars: bool,
