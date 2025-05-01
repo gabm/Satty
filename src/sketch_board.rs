@@ -193,7 +193,7 @@ impl SketchBoard {
     }
 
     fn handle_save(&self, image: Pixbuf) {
-        let output_filename = match APP_CONFIG.read().output_filename() {
+        let mut output_filename = match APP_CONFIG.read().output_filename() {
             None => {
                 println!("No Output filename specified!");
                 return;
@@ -209,13 +209,12 @@ impl SketchBoard {
 
         if result.is_err() {
             println!(
-                "Filename {} caused a chrono format error, cannot save file.",
+                "Warning: Could not format filename {} due to chrono format error, falling back to literal filename.",
                 output_filename
             );
-            return;
+        } else {
+            output_filename = format!("{}", delayed_format);
         }
-
-        let output_filename = format!("{}", delayed_format);
 
         // TODO: we could support more data types
         if !output_filename.ends_with(".png") {
