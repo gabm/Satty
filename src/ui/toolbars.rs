@@ -65,8 +65,9 @@ pub enum StyleToolbarInput {
 
 #[derive(Debug, Copy, Clone)]
 pub enum AnnotationSizeDialogInput {
-    ValueChanged,
+    ValueChanged(f32),
     Reset,
+    Show(f32),
     Submit,
     Cancel,
 }
@@ -338,22 +339,26 @@ impl StyleToolbar {
         sender: ComponentSender<StyleToolbar>,
         root: Option<Window>,
     ) {
-        let mut builder = AnnotationSizeDialog::builder();
-        if let Some(w) = root {
-            builder = builder.transient_for(&w);
+        if self.annotation_dialog_controller.is_none() {
+            let mut builder = AnnotationSizeDialog::builder();
+            if let Some(w) = root {
+                builder = builder.transient_for(&w);
+            }
+
+            let connector = builder.launch(self.annotation_size);
+
+            let mut controller = connector.forward(sender.input_sender(), |output| match output {
+                AnnotationSizeDialogOutput::AnnotationSizeSubmitted(value) => {
+                    StyleToolbarInput::AnnotationDialogFinished(Some(value))
+                }
+            });
+
+            controller.detach_runtime();
+            self.annotation_dialog_controller = Some(controller);
         }
 
-        let connector = builder.launch(self.annotation_size);
-
-        let controller = connector.forward(sender.input_sender(), |output| match output {
-            AnnotationSizeDialogOutput::AnnotationSizeSubmitted(value) => {
-                StyleToolbarInput::AnnotationDialogFinished(Some(value))
-            }
-        });
-        controller.widget().present();
-
-        // this is needed so the controller doesn't get dropped, causing panic
-        self.annotation_dialog_controller = Some(controller);
+        let ctrl = self.annotation_dialog_controller.as_mut().unwrap();
+        ctrl.emit(AnnotationSizeDialogInput::Show(self.annotation_size));
     }
 }
 
@@ -655,13 +660,16 @@ impl Component for AnnotationSizeDialog {
 
                     set_tooltip: "Annotation Size Factor",
                     set_numeric: true,
-                    set_adjustment: &gtk::Adjustment::new(model.annotation_size.into(), 0.0, 100.0, 0.01, 0.1, 0.0),
+                    set_adjustment: &gtk::Adjustment::new(0.0, 0.0, 100.0, 0.01, 0.1, 0.0),
                     set_climb_rate: 0.1,
                     set_digits: 2,
+                    #[watch]
+                    #[block_signal(value_changed)]
+                    set_value: model.annotation_size.into(),
 
-                    connect_value_changed[sender] => move |_| {
-                        sender.input(AnnotationSizeDialogInput::ValueChanged);
-                    },
+                    connect_value_changed[sender] => move |button| {
+                        sender.input(AnnotationSizeDialogInput::ValueChanged(button.value() as f32));
+                        } @value_changed,
                 },
                 #[name = "spin_reset"]
                 gtk::Button {
@@ -739,24 +747,24 @@ impl Component for AnnotationSizeDialog {
         ComponentParts { model, widgets }
     }
 
-    fn update_with_view(
+    fn update(
         &mut self,
-        widgets: &mut Self::Widgets,
         message: AnnotationSizeDialogInput,
         sender: ComponentSender<Self>,
         root: &Self::Root,
     ) {
         match message {
-            AnnotationSizeDialogInput::ValueChanged => {
-                self.annotation_size = widgets.spin.value() as f32
-            }
+            AnnotationSizeDialogInput::ValueChanged(value) => self.annotation_size = value,
             AnnotationSizeDialogInput::Reset => {
                 let a = APP_CONFIG.read().annotation_size_factor();
-                widgets.spin.set_value(a.into());
                 self.annotation_size = a;
             }
+            AnnotationSizeDialogInput::Show(value) => {
+                self.annotation_size = value;
+                root.show();
+            }
             AnnotationSizeDialogInput::Cancel => {
-                root.close();
+                root.hide();
             }
             AnnotationSizeDialogInput::Submit => {
                 // yeah, not sure if this can even happen.
@@ -765,7 +773,7 @@ impl Component for AnnotationSizeDialog {
                 )) {
                     eprintln!("Error submitting annotation size factor: {:?}", e);
                 }
-                root.close();
+                root.hide();
             }
         }
     }
