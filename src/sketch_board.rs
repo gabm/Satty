@@ -8,6 +8,7 @@ use keycode::{KeyMap, KeyMappingId};
 use std::cell::RefCell;
 use std::fs;
 use std::io::Write;
+use std::panic;
 use std::process::{Command, Stdio};
 use std::rc::Rc;
 
@@ -201,7 +202,20 @@ impl SketchBoard {
         };
 
         // run the output filename by "chrono date format"
-        let output_filename = format!("{}", chrono::Local::now().format(&output_filename));
+        let delayed_format = chrono::Local::now().format(&output_filename);
+        let result = panic::catch_unwind(|| {
+            delayed_format.to_string();
+        });
+
+        if result.is_err() {
+            println!(
+                "Filename {} caused a chrono format error, cannot save file.",
+                output_filename
+            );
+            return;
+        }
+
+        let output_filename = format!("{}", delayed_format);
 
         // TODO: we could support more data types
         if !output_filename.ends_with(".png") {
