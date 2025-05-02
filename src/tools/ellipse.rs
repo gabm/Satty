@@ -12,6 +12,7 @@ use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Ellipse {
+    origin: Vec2D,
     middle: Vec2D,
     radii: Option<Vec2D>,
     style: Style,
@@ -51,11 +52,11 @@ pub struct EllipseTool {
 
 impl Tool for EllipseTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
-        let shift_pressed = event.modifier.intersects(ModifierType::SHIFT_MASK);
         match event.type_ {
             MouseEventType::BeginDrag => {
                 // start new
                 self.ellipse = Some(Ellipse {
+                    origin: event.pos,
                     middle: event.pos,
                     radii: None,
                     style: self.style,
@@ -70,18 +71,9 @@ impl Tool for EllipseTool {
 
                         ToolUpdateResult::Redraw
                     } else {
-                        if shift_pressed {
-                            let max_size = event.pos.x.abs().max(event.pos.y.abs());
-                            ellipse.radii = Some(Vec2D {
-                                x: max_size * event.pos.x.signum(),
-                                y: max_size * event.pos.y.signum(),
-                            });
-                        } else {
-                            ellipse.radii = Some(event.pos);
-                        }
+                        EllipseTool::calculate_shape(ellipse, &event);
                         let result = ellipse.clone_box();
                         self.ellipse = None;
-
                         ToolUpdateResult::Commit(result)
                     }
                 } else {
@@ -93,16 +85,7 @@ impl Tool for EllipseTool {
                     if event.pos == Vec2D::zero() {
                         return ToolUpdateResult::Unmodified;
                     }
-                    if shift_pressed {
-                        let max_size = event.pos.x.abs().max(event.pos.y.abs());
-                        ellipse.radii = Some(Vec2D {
-                            x: max_size * event.pos.x.signum(),
-                            y: max_size * event.pos.y.signum(),
-                        });
-                    } else {
-                        ellipse.radii = Some(event.pos);
-                    }
-
+                    EllipseTool::calculate_shape(ellipse, &event);
                     ToolUpdateResult::Redraw
                 } else {
                     ToolUpdateResult::Unmodified
@@ -130,6 +113,42 @@ impl Tool for EllipseTool {
         match &self.ellipse {
             Some(d) => Some(d),
             None => None,
+        }
+    }
+}
+
+impl EllipseTool {
+    fn calculate_shape(ellipse: &mut Ellipse, event: &MouseEventMsg) {
+        match event.modifier & (ModifierType::CONTROL_MASK | ModifierType::SHIFT_MASK) {
+            v if v == ModifierType::CONTROL_MASK | ModifierType::SHIFT_MASK => {
+                let max_size = (event.pos.x / 2.0).abs().max((event.pos.y / 2.0).abs());
+                ellipse.radii = Some(Vec2D {
+                    x: max_size * event.pos.x.signum(),
+                    y: max_size * event.pos.y.signum(),
+                });
+                ellipse.middle.x = ellipse.origin.x + max_size * event.pos.x.signum();
+                ellipse.middle.y = ellipse.origin.y + max_size * event.pos.y.signum();
+            }
+            ModifierType::CONTROL_MASK => {
+                ellipse.radii = Some(Vec2D {
+                    x: event.pos.x / 2.0,
+                    y: event.pos.y / 2.0,
+                });
+                ellipse.middle.x = ellipse.origin.x + event.pos.x / 2.0;
+                ellipse.middle.y = ellipse.origin.y + event.pos.y / 2.0;
+            }
+            ModifierType::SHIFT_MASK => {
+                ellipse.middle = ellipse.origin;
+                let max_size = event.pos.x.abs().max(event.pos.y.abs());
+                ellipse.radii = Some(Vec2D {
+                    x: max_size * event.pos.x.signum(),
+                    y: max_size * event.pos.y.signum(),
+                });
+            }
+            _ => {
+                ellipse.middle = ellipse.origin;
+                ellipse.radii = Some(event.pos);
+            }
         }
     }
 }
