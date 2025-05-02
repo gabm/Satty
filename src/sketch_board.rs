@@ -8,6 +8,7 @@ use keycode::{KeyMap, KeyMappingId};
 use std::cell::RefCell;
 use std::fs;
 use std::io::Write;
+use std::panic;
 use std::process::{Command, Stdio};
 use std::rc::Rc;
 
@@ -193,7 +194,7 @@ impl SketchBoard {
     }
 
     fn handle_save(&self, image: Pixbuf) {
-        let output_filename = match APP_CONFIG.read().output_filename() {
+        let mut output_filename = match APP_CONFIG.read().output_filename() {
             None => {
                 println!("No Output filename specified!");
                 return;
@@ -202,7 +203,19 @@ impl SketchBoard {
         };
 
         // run the output filename by "chrono date format"
-        let output_filename = format!("{}", chrono::Local::now().format(&output_filename));
+        let delayed_format = chrono::Local::now().format(&output_filename);
+        let result = panic::catch_unwind(|| {
+            delayed_format.to_string();
+        });
+
+        if result.is_err() {
+            println!(
+                "Warning: Could not format filename {} due to chrono format error, falling back to literal filename.",
+                output_filename
+            );
+        } else {
+            output_filename = format!("{}", delayed_format);
+        }
 
         // TODO: we could support more data types
         if !output_filename.ends_with(".png") {
