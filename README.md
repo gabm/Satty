@@ -19,6 +19,7 @@ Thanks to our package maintainers, Satty is available for many distributions on 
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/satty.svg)](https://repology.org/project/satty/versions)
 
+
 ### Arch Linux
 
 You can get the official Arch Linux package from the AUR:
@@ -222,6 +223,16 @@ Satty is based on GTK-4 and Adwaita.
 - gdk-pixbuf2
 - libepoxy
 - fontconfig
+
+## Maintainers and Contributors
+
+Satty wouldn't exist without the help of our contributors and maintainers. Current maintainers are @RobertMueller2 (maintainer) and @gabm (maintainer, original author). Our contributors are:
+
+<a href="https://github.com/gabm/satty/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=gabm/satty" />
+</a>
+
+Made with [contrib.rocks](https://contrib.rocks).
 
 ## Star History
 
