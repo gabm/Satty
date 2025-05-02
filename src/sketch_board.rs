@@ -137,6 +137,7 @@ impl InputEvent {
                             .unwrap();
                         None
                     } else {
+                        me.pos = renderer.abs_canvas_to_image_coordinates(me.pos);
                         None
                     }
                 }
