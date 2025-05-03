@@ -16,6 +16,8 @@ pub struct Ellipse {
     middle: Vec2D,
     radii: Option<Vec2D>,
     style: Style,
+    centered: bool,
+    finishing: bool,
 }
 
 impl Drawable for Ellipse {
@@ -33,6 +35,20 @@ impl Drawable for Ellipse {
         let mut path = Path::new();
         path.ellipse(self.middle.x, self.middle.y, radii.x, radii.y);
 
+        if !self.finishing {
+            let mut helpers = Path::new();
+            if self.centered {
+                helpers.circle(self.middle.x, self.middle.y, 2.0);
+            } else {
+                helpers.rect(self.origin.x, self.origin.y, radii.x * 2.0, radii.y * 2.0);
+            }
+            canvas.stroke_path(
+                &helpers,
+                &femtovg::Paint::color(femtovg::Color::rgba(128, 128, 128, 255))
+                    .with_line_width(2.0), //TODO: hardcoding this is no good if we use this in more places
+            );
+        }
+
         if self.style.fill {
             canvas.fill_path(&path, &self.style.into());
         } else {
@@ -41,6 +57,43 @@ impl Drawable for Ellipse {
         canvas.restore();
 
         Ok(())
+    }
+}
+
+impl Ellipse {
+    fn calculate_shape(&mut self, event: &MouseEventMsg) {
+        self.centered = event.modifier & ModifierType::ALT_MASK == ModifierType::ALT_MASK;
+        match event.modifier & (ModifierType::ALT_MASK | ModifierType::SHIFT_MASK) {
+            v if v == ModifierType::ALT_MASK | ModifierType::SHIFT_MASK => {
+                self.middle = self.origin;
+                let max_size = event.pos.x.abs().max(event.pos.y.abs());
+                self.radii = Some(Vec2D {
+                    x: max_size * event.pos.x.signum(),
+                    y: max_size * event.pos.y.signum(),
+                });
+            }
+            ModifierType::ALT_MASK => {
+                self.middle = self.origin;
+                self.radii = Some(event.pos);
+            }
+            ModifierType::SHIFT_MASK => {
+                let max_size = (event.pos.x / 2.0).abs().max((event.pos.y / 2.0).abs());
+                self.radii = Some(Vec2D {
+                    x: max_size * event.pos.x.signum(),
+                    y: max_size * event.pos.y.signum(),
+                });
+                self.middle.x = self.origin.x + max_size * event.pos.x.signum();
+                self.middle.y = self.origin.y + max_size * event.pos.y.signum();
+            }
+            _ => {
+                self.radii = Some(Vec2D {
+                    x: event.pos.x / 2.0,
+                    y: event.pos.y / 2.0,
+                });
+                self.middle.x = self.origin.x + event.pos.x / 2.0;
+                self.middle.y = self.origin.y + event.pos.y / 2.0;
+            }
+        }
     }
 }
 
@@ -60,18 +113,21 @@ impl Tool for EllipseTool {
                     middle: event.pos,
                     radii: None,
                     style: self.style,
+                    centered: true,
+                    finishing: false,
                 });
 
                 ToolUpdateResult::Redraw
             }
             MouseEventType::EndDrag => {
                 if let Some(ellipse) = &mut self.ellipse {
+                    ellipse.finishing = true;
                     if event.pos == Vec2D::zero() {
                         self.ellipse = None;
 
                         ToolUpdateResult::Redraw
                     } else {
-                        EllipseTool::calculate_shape(ellipse, &event);
+                        ellipse.calculate_shape(&event);
                         let result = ellipse.clone_box();
                         self.ellipse = None;
                         ToolUpdateResult::Commit(result)
@@ -85,7 +141,7 @@ impl Tool for EllipseTool {
                     if event.pos == Vec2D::zero() {
                         return ToolUpdateResult::Unmodified;
                     }
-                    EllipseTool::calculate_shape(ellipse, &event);
+                    ellipse.calculate_shape(&event);
                     ToolUpdateResult::Redraw
                 } else {
                     ToolUpdateResult::Unmodified
@@ -113,42 +169,6 @@ impl Tool for EllipseTool {
         match &self.ellipse {
             Some(d) => Some(d),
             None => None,
-        }
-    }
-}
-
-impl EllipseTool {
-    fn calculate_shape(ellipse: &mut Ellipse, event: &MouseEventMsg) {
-        match event.modifier & (ModifierType::CONTROL_MASK | ModifierType::SHIFT_MASK) {
-            v if v == ModifierType::CONTROL_MASK | ModifierType::SHIFT_MASK => {
-                let max_size = (event.pos.x / 2.0).abs().max((event.pos.y / 2.0).abs());
-                ellipse.radii = Some(Vec2D {
-                    x: max_size * event.pos.x.signum(),
-                    y: max_size * event.pos.y.signum(),
-                });
-                ellipse.middle.x = ellipse.origin.x + max_size * event.pos.x.signum();
-                ellipse.middle.y = ellipse.origin.y + max_size * event.pos.y.signum();
-            }
-            ModifierType::CONTROL_MASK => {
-                ellipse.radii = Some(Vec2D {
-                    x: event.pos.x / 2.0,
-                    y: event.pos.y / 2.0,
-                });
-                ellipse.middle.x = ellipse.origin.x + event.pos.x / 2.0;
-                ellipse.middle.y = ellipse.origin.y + event.pos.y / 2.0;
-            }
-            ModifierType::SHIFT_MASK => {
-                ellipse.middle = ellipse.origin;
-                let max_size = event.pos.x.abs().max(event.pos.y.abs());
-                ellipse.radii = Some(Vec2D {
-                    x: max_size * event.pos.x.signum(),
-                    y: max_size * event.pos.y.signum(),
-                });
-            }
-            _ => {
-                ellipse.middle = ellipse.origin;
-                ellipse.radii = Some(event.pos);
-            }
         }
     }
 }
