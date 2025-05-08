@@ -348,7 +348,7 @@ impl Default for Configuration {
             corner_roundness: 12.0,
             initial_tool: Tools::Pointer,
             copy_command: None,
-            annotation_size_factor: 1.0,
+            annotation_size_factor: 100.0, /* 100% ~ medium | 33% ~ small | 300% ~ large */
             action_on_enter: Action::SaveToClipboard,
             action_on_escape: Action::Exit,
             save_after_copy: false,

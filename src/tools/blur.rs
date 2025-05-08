@@ -111,9 +111,7 @@ impl Drawable for Blur {
                     canvas,
                     pos,
                     size,
-                    self.style
-                        .size
-                        .to_blur_factor(self.style.annotation_size_factor),
+                    self.style.size.to_blur_factor(),
                 )?);
             }
 

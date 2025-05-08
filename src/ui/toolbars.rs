@@ -26,13 +26,8 @@ pub struct StyleToolbar {
     custom_color_pixbuf: Pixbuf,
     color_action: SimpleAction,
     visible: bool,
-    annotation_size: f32,
-    annotation_size_formatted: String,
-    annotation_dialog_controller: Option<Controller<AnnotationSizeDialog>>,
-}
-
-pub struct AnnotationSizeDialog {
-    annotation_size: f32,
+    size: Size,
+    // annotation_size: f32,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -45,7 +40,6 @@ pub enum ToolbarEvent {
     SaveFile,
     CopyClipboard,
     ToggleFill,
-    AnnotationSizeChanged(f32),
     Reset,
 }
 
@@ -60,22 +54,7 @@ pub enum StyleToolbarInput {
     ShowColorDialog,
     ColorDialogFinished(Option<Color>),
     ToggleVisibility,
-    ShowAnnotationDialog,
-    AnnotationDialogFinished(Option<f32>),
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum AnnotationSizeDialogInput {
-    ValueChanged(f32),
-    Reset,
-    Show(f32),
-    Submit,
-    Cancel,
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum AnnotationSizeDialogOutput {
-    AnnotationSizeSubmitted(f32),
+    SizeSelected(Size),
 }
 
 fn create_icon_pixbuf(color: Color) -> Pixbuf {
@@ -343,33 +322,6 @@ impl StyleToolbar {
             ColorButtons::Custom => self.custom_color,
         }
     }
-
-    fn show_annotation_dialog(
-        &mut self,
-        sender: ComponentSender<StyleToolbar>,
-        root: Option<Window>,
-    ) {
-        if self.annotation_dialog_controller.is_none() {
-            let mut builder = AnnotationSizeDialog::builder();
-            if let Some(w) = root {
-                builder = builder.transient_for(&w);
-            }
-
-            let connector = builder.launch(self.annotation_size);
-
-            let mut controller = connector.forward(sender.input_sender(), |output| match output {
-                AnnotationSizeDialogOutput::AnnotationSizeSubmitted(value) => {
-                    StyleToolbarInput::AnnotationDialogFinished(Some(value))
-                }
-            });
-
-            controller.detach_runtime();
-            self.annotation_dialog_controller = Some(controller);
-        }
-
-        let ctrl = self.annotation_dialog_controller.as_mut().unwrap();
-        ctrl.emit(AnnotationSizeDialogInput::Show(self.annotation_size));
-    }
 }
 
 #[relm4::component(pub)]
@@ -419,7 +371,7 @@ impl Component for StyleToolbar {
 
                 set_label: "S",
                 set_tooltip: "Small size",
-                ActionablePlus::set_action::<SizeAction>: Size::Small,
+                ActionablePlus::set_action::<SizeAction>: SizeEnum::Small,
             },
             gtk::ToggleButton {
                 set_focusable: false,
@@ -427,7 +379,7 @@ impl Component for StyleToolbar {
 
                 set_label: "M",
                 set_tooltip: "Medium size",
-                ActionablePlus::set_action::<SizeAction>: Size::Medium,
+                ActionablePlus::set_action::<SizeAction>: SizeEnum::Medium,
             },
             gtk::ToggleButton {
                 set_focusable: false,
@@ -435,23 +387,29 @@ impl Component for StyleToolbar {
 
                 set_label: "L",
                 set_tooltip: "Large size",
-                ActionablePlus::set_action::<SizeAction>: Size::Large,
+                ActionablePlus::set_action::<SizeAction>: SizeEnum::Large,
             },
-            gtk::Label {
-                set_focusable: false,
+            #[name = "spin"]
+            gtk::SpinButton {
+                set_editable: true,
+                set_can_focus: false,
                 set_hexpand: false,
 
-                set_text: "x",
-            },
-            gtk::Button {
-                set_focusable: false,
-                set_hexpand: false,
-
+                set_tooltip: "Size",
+                set_numeric: true,
+                // 1% to 400%, default to 100% - increment 10%
+                set_adjustment: &gtk::Adjustment::new(100., 1., 400.0, 10., 100., 0.0),
+                set_digits: 0,
                 #[watch]
-                set_label: &model.annotation_size_formatted,
-                set_tooltip: "Edit Annotation Size Factor",
+                set_value: model.size.value as f64,
 
-                connect_clicked => StyleToolbarInput::ShowAnnotationDialog
+                connect_value_changed[sender] => move |button| {
+                    sender.input(StyleToolbarInput::SizeSelected(
+                        Size {
+                            value: button.value() as f32,
+                        },
+                    ));
+                },
             },
             gtk::Separator {},
             gtk::Button {
@@ -499,24 +457,14 @@ impl Component for StyleToolbar {
                     .output_sender()
                     .emit(ToolbarEvent::ColorSelected(color));
             }
-
-            StyleToolbarInput::ShowAnnotationDialog => {
-                self.show_annotation_dialog(sender, root.toplevel_window());
-            }
-
-            StyleToolbarInput::AnnotationDialogFinished(value) => {
-                if let Some(value) = value {
-                    self.annotation_size = value;
-                    self.annotation_size_formatted = format!("{0:.2}", value);
-
-                    sender
-                        .output_sender()
-                        .emit(ToolbarEvent::AnnotationSizeChanged(value));
-                }
-            }
-
             StyleToolbarInput::ToggleVisibility => {
                 self.visible = !self.visible;
+            }
+            StyleToolbarInput::SizeSelected(size) => {
+                self.size = size;
+                sender
+                    .output_sender()
+                    .emit(ToolbarEvent::SizeSelected(size));
             }
         }
     }
@@ -556,13 +504,13 @@ impl Component for StyleToolbar {
 
         // Size Action for selecting sizes
         let sender_tmp = sender.clone();
-        let size_action: RelmAction<SizeAction> =
-            RelmAction::new_stateful_with_target_value(&Size::Medium, move |_, state, value| {
+        let size_action: RelmAction<SizeAction> = RelmAction::new_stateful_with_target_value(
+            &SizeEnum::Medium,
+            move |_, state, value: SizeEnum| {
                 *state = value;
-                sender_tmp
-                    .output_sender()
-                    .emit(ToolbarEvent::SizeSelected(*state));
-            });
+                sender_tmp.input(StyleToolbarInput::SizeSelected(value.into()));
+            },
+        );
 
         let custom_color = APP_CONFIG
             .read()
@@ -579,12 +527,11 @@ impl Component for StyleToolbar {
             custom_color_pixbuf,
             color_action: SimpleAction::from(color_action.clone()),
             visible: !APP_CONFIG.read().default_hide_toolbars(),
-            annotation_size: APP_CONFIG.read().annotation_size_factor(),
-            annotation_size_formatted: format!(
-                "{0:.2}",
-                APP_CONFIG.read().annotation_size_factor()
-            ),
-            annotation_dialog_controller: None,
+            size: Size {
+                // TODO: rename this in conf (and CLI)
+                value: APP_CONFIG.read().annotation_size_factor(),
+            },
+            // annotation_size: APP_CONFIG.read().annotation_size_factor(),
         };
 
         // create widgets
@@ -617,7 +564,71 @@ impl Clone for ColorAction {
     }
 }
 
-relm4::new_stateful_action!(SizeAction, StyleToolbarActionGroup, "sizes", Size, Size);
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy)]
+enum SizeEnum {
+    Small,
+    Medium,
+    Large,
+}
+
+impl ToVariant for SizeEnum {
+    fn to_variant(&self) -> Variant {
+        Variant::from(match *self {
+            SizeEnum::Small => 33.,
+            SizeEnum::Medium => 100.,
+            SizeEnum::Large => 300.,
+        })
+    }
+}
+
+impl FromVariant for SizeEnum {
+    fn from_variant(variant: &Variant) -> Option<Self> {
+        variant.get::<f64>().and_then(|v| match v {
+            33. => Some(SizeEnum::Small),
+            100. => Some(SizeEnum::Medium),
+            300. => Some(SizeEnum::Large),
+            _ => None,
+        })
+    }
+}
+
+impl StaticVariantType for SizeEnum {
+    fn static_variant_type() -> Cow<'static, VariantTy> {
+        Cow::Borrowed(VariantTy::DOUBLE)
+    }
+}
+
+impl From<SizeEnum> for Size {
+    fn from(value: SizeEnum) -> Self {
+        Size {
+            value: value.into(),
+        }
+    }
+}
+
+impl From<SizeEnum> for f32 {
+    fn from(value: SizeEnum) -> Self {
+        match value {
+            SizeEnum::Small => 33.,
+            SizeEnum::Medium => 100.,
+            SizeEnum::Large => 300.,
+        }
+    }
+}
+
+impl From<SizeEnum> for f64 {
+    fn from(value: SizeEnum) -> Self {
+        <SizeEnum as Into<f32>>::into(value) as f64
+    }
+}
+
+relm4::new_stateful_action!(
+    SizeAction,
+    StyleToolbarActionGroup,
+    "sizes",
+    SizeEnum,
+    SizeEnum
+);
 
 impl StaticVariantType for ColorButtons {
     fn static_variant_type() -> Cow<'static, VariantTy> {
@@ -640,151 +651,5 @@ impl FromVariant for ColorButtons {
             std::u64::MAX => Self::Custom,
             _ => Self::Palette(v),
         })
-    }
-}
-
-#[relm4::component(pub)]
-impl Component for AnnotationSizeDialog {
-    type Init = f32;
-    type Input = AnnotationSizeDialogInput;
-    type Output = AnnotationSizeDialogOutput;
-    type CommandOutput = ();
-
-    view! {
-        gtk::Window {
-            set_modal: true,
-            set_title: Some("Choose Annotation Size"),
-            set_titlebar: Some(&header_bar),
-
-            #[wrap(Some)]
-            set_child = &gtk::Box {
-                set_spacing: 10,
-                set_margin_all: 12,
-                set_orientation: gtk::Orientation::Horizontal,
-
-                #[name = "spin"]
-                gtk::SpinButton {
-                    set_editable: true,
-                    set_can_focus: true,
-                    set_hexpand: false,
-
-                    set_tooltip: "Annotation Size Factor",
-                    set_numeric: true,
-                    set_adjustment: &gtk::Adjustment::new(0.0, 0.0, 100.0, 0.01, 0.1, 0.0),
-                    set_climb_rate: 0.1,
-                    set_digits: 2,
-                    #[watch]
-                    #[block_signal(value_changed)]
-                    set_value: model.annotation_size.into(),
-
-                    connect_value_changed[sender] => move |button| {
-                        sender.input(AnnotationSizeDialogInput::ValueChanged(button.value() as f32));
-                        } @value_changed,
-                },
-                #[name = "spin_reset"]
-                gtk::Button {
-                    set_focusable: false,
-                    set_hexpand: false,
-
-                    set_tooltip: "Reset Annotation Size Factor",
-                    set_icon_name: "edit-reset-symbolic",
-                    connect_clicked[sender] => move |_| {
-                        sender.input(AnnotationSizeDialogInput::Reset);
-                    },
-                },
-
-            },
-        }
-    }
-
-    fn init(
-        init_value: f32,
-        root: Self::Root,
-        sender: ComponentSender<Self>,
-    ) -> ComponentParts<Self> {
-        let model = AnnotationSizeDialog {
-            annotation_size: init_value,
-        };
-
-        // the title bar didn't really work within the view! macro.
-        let title_label = gtk::Label::builder()
-            .label("Choose Annotation Size")
-            .margin_start(6)
-            .build();
-
-        let cancel_button = gtk::Button::builder().label("Cancel").build();
-        let sender_clone = sender.clone();
-        cancel_button.connect_clicked(move |_| {
-            sender_clone.input(AnnotationSizeDialogInput::Cancel);
-        });
-
-        let ok_button = gtk::Button::builder().label("OK").build();
-
-        let sender_clone = sender.clone();
-        ok_button.connect_clicked(move |_| {
-            sender_clone.input(AnnotationSizeDialogInput::Submit);
-        });
-
-        let header_bar = gtk::HeaderBar::builder().show_title_buttons(false).build();
-
-        header_bar.set_title_widget(Some(&title_label));
-        header_bar.pack_start(&cancel_button);
-        header_bar.pack_end(&ok_button);
-
-        let widgets = view_output!();
-
-        let key_controller = gtk::EventControllerKey::builder()
-            // not sure if this is the correct phase, but anything higher and Enter to close doesn't work consistently
-            .propagation_phase(gtk::PropagationPhase::Capture)
-            .build();
-
-        key_controller.connect_key_pressed(move |_, keyval, _, _| {
-            use gtk::gdk::Key;
-            match keyval {
-                Key::Return => {
-                    sender.input(AnnotationSizeDialogInput::Submit);
-                    glib::Propagation::Stop
-                }
-                Key::Escape => {
-                    sender.input(AnnotationSizeDialogInput::Cancel);
-                    glib::Propagation::Stop
-                }
-                _ => glib::Propagation::Proceed,
-            }
-        });
-        root.add_controller(key_controller);
-
-        ComponentParts { model, widgets }
-    }
-
-    fn update(
-        &mut self,
-        message: AnnotationSizeDialogInput,
-        sender: ComponentSender<Self>,
-        root: &Self::Root,
-    ) {
-        match message {
-            AnnotationSizeDialogInput::ValueChanged(value) => self.annotation_size = value,
-            AnnotationSizeDialogInput::Reset => {
-                let a = APP_CONFIG.read().annotation_size_factor();
-                self.annotation_size = a;
-            }
-            AnnotationSizeDialogInput::Show(value) => {
-                self.annotation_size = value;
-                root.show();
-            }
-            AnnotationSizeDialogInput::Cancel => {
-                root.hide();
-            }
-            AnnotationSizeDialogInput::Submit => {
-                // yeah, not sure if this can even happen.
-                if let Err(e) = sender.output(AnnotationSizeDialogOutput::AnnotationSizeSubmitted(
-                    self.annotation_size,
-                )) {
-                    eprintln!("Error submitting annotation size factor: {:?}", e);
-                }
-                root.hide();
-            }
-        }
     }
 }
