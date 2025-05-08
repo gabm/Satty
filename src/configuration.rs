@@ -48,6 +48,7 @@ pub struct Configuration {
     font: FontConfiguration,
     primary_highlighter: Highlighters,
     disable_notifications: bool,
+    profile_startup: bool,
 }
 
 #[derive(Default)]
@@ -243,6 +244,9 @@ impl Configuration {
         if command_line.disable_notifications {
             self.disable_notifications = command_line.disable_notifications;
         }
+        if command_line.profile_startup {
+            self.profile_startup = command_line.profile_startup;
+        }
     }
 
     pub fn early_exit(&self) -> bool {
@@ -303,6 +307,11 @@ impl Configuration {
     pub fn disable_notifications(&self) -> bool {
         self.disable_notifications
     }
+
+    pub fn profile_startup(&self) -> bool {
+        self.profile_startup
+    }
+
     pub fn font(&self) -> &FontConfiguration {
         &self.font
     }
@@ -327,6 +336,7 @@ impl Default for Configuration {
             font: FontConfiguration::default(),
             primary_highlighter: Highlighters::Block,
             disable_notifications: false,
+            profile_startup: false,
         }
     }
 }
