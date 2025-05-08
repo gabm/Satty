@@ -9,7 +9,7 @@ use crate::{
     style::Style,
 };
 
-use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
+use super::{Drawable, DrawableClone, Tool, ToolUpdateResult, Tools};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Rectangle {
@@ -54,9 +54,18 @@ impl Drawable for Rectangle {
 pub struct RectangleTool {
     rectangle: Option<Rectangle>,
     style: Style,
+    input_enabled: bool,
 }
 
 impl Tool for RectangleTool {
+    fn input_enabled(&self) -> bool {
+        self.input_enabled
+    }
+
+    fn set_input_enabled(&mut self, value: bool) {
+        self.input_enabled = value;
+    }
+
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
         let shift_pressed = event.modifier.intersects(ModifierType::SHIFT_MASK);
         match event.type_ {
@@ -138,5 +147,9 @@ impl Tool for RectangleTool {
             Some(d) => Some(d),
             None => None,
         }
+    }
+
+    fn get_tool_type(&self) -> super::Tools {
+        Tools::Rectangle
     }
 }

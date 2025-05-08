@@ -8,7 +8,7 @@ use crate::{
     style::Style,
 };
 
-use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
+use super::{Drawable, DrawableClone, Tool, ToolUpdateResult, Tools};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Arrow {
@@ -21,9 +21,22 @@ pub struct Arrow {
 pub struct ArrowTool {
     arrow: Option<Arrow>,
     style: Style,
+    input_enabled: bool,
 }
 
 impl Tool for ArrowTool {
+    fn input_enabled(&self) -> bool {
+        self.input_enabled
+    }
+
+    fn set_input_enabled(&mut self, value: bool) {
+        self.input_enabled = value;
+    }
+
+    fn get_tool_type(&self) -> super::Tools {
+        Tools::Arrow
+    }
+
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
         match event.type_ {
             MouseEventType::BeginDrag => {

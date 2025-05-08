@@ -8,12 +8,13 @@ use crate::{
     style::Style,
 };
 
-use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
+use super::{Drawable, DrawableClone, Tool, ToolUpdateResult, Tools};
 
 #[derive(Default)]
 pub struct LineTool {
     line: Option<Line>,
     style: Style,
+    input_enabled: bool,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -49,6 +50,14 @@ impl Drawable for Line {
 }
 
 impl Tool for LineTool {
+    fn input_enabled(&self) -> bool {
+        self.input_enabled
+    }
+
+    fn set_input_enabled(&mut self, value: bool) {
+        self.input_enabled = value;
+    }
+
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
         match event.type_ {
             MouseEventType::BeginDrag => {
@@ -117,5 +126,9 @@ impl Tool for LineTool {
             Some(d) => Some(d),
             None => None,
         }
+    }
+
+    fn get_tool_type(&self) -> super::Tools {
+        Tools::Line
     }
 }

@@ -6,6 +6,7 @@ use gdk_pixbuf::glib::Bytes;
 use gdk_pixbuf::Pixbuf;
 use keycode::{KeyMap, KeyMappingId};
 use std::cell::RefCell;
+use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 use std::panic;
@@ -22,7 +23,7 @@ use crate::femtovg_area::FemtoVGArea;
 use crate::math::Vec2D;
 use crate::notification::log_result;
 use crate::style::Style;
-use crate::tools::{Tool, ToolEvent, ToolUpdateResult, ToolsManager};
+use crate::tools::{Tool, ToolEvent, ToolUpdateResult, Tools, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
 
 type RenderedImage = Img<Vec<RGBA<u8>>>;
@@ -32,11 +33,13 @@ pub enum SketchBoardInput {
     InputEvent(InputEvent),
     ToolbarEvent(ToolbarEvent),
     RenderResult(RenderedImage, Action),
+    CommitEvent(TextEventMsg),
 }
 
 #[derive(Debug, Clone)]
 pub enum SketchBoardOutput {
     ToggleToolbarsDisplay,
+    ToolSwitchShortcut(Tools),
 }
 
 #[derive(Debug, Clone)]
@@ -108,6 +111,10 @@ impl SketchBoardInput {
 
     pub fn new_text_event(event: TextEventMsg) -> SketchBoardInput {
         SketchBoardInput::InputEvent(InputEvent::Text(event))
+    }
+
+    pub fn new_commit_event(event: TextEventMsg) -> SketchBoardInput {
+        SketchBoardInput::CommitEvent(event)
     }
 }
 
@@ -404,6 +411,68 @@ impl SketchBoard {
             }
         }
     }
+
+    fn handle_text_commit(
+        &self,
+        event: TextEventMsg,
+        sender: ComponentSender<Self>,
+    ) -> ToolUpdateResult {
+        let tool_shortcuts = HashMap::from([
+            (("p", ""), Tools::Pointer),
+            (("c", "1"), Tools::Crop),
+            (("b", "2"), Tools::Brush),
+            (("l", "3"), Tools::Line),
+            (("a", "4"), Tools::Arrow),
+            (("r", "5"), Tools::Rectangle),
+            (("e", "6"), Tools::Ellipse),
+            (("t", "7"), Tools::Text),
+            (("m", "8"), Tools::Marker),
+            (("u", "9"), Tools::Blur),
+            (("h", "0"), Tools::Highlight),
+        ]);
+        match event {
+            TextEventMsg::Commit(txt) => {
+                // NOTE:
+                // If there's an IMContext binded to the controller, single letter-key events will
+                // always go through it first, denying a bypass, so the only way we can do single-key
+                // bindings is to act upon the IMMulticontext's commit event itself.
+                // NOTE:
+                // Here we're basically bypassing the IMMulticontext. If the text tool is active
+                // and wants text inputs, we're interested in the single-letter keypress as a text character.
+                // If not, we parse it as a shortcut event.
+                if self.active_tool_type() == Tools::Text
+                    && self.active_tool.borrow().input_enabled()
+                {
+                    sender.input(SketchBoardInput::new_text_event(TextEventMsg::Commit(
+                        txt.to_string(),
+                    )));
+                    ToolUpdateResult::Unmodified
+                } else {
+                    let key = txt.as_str();
+                    if let Some(tool) = tool_shortcuts
+                        .iter()
+                        .find(|item| item.0.0 == key || item.0.1 == key)
+                        .map(|(_, tool)| tool)
+                    {
+                        sender.input(SketchBoardInput::ToolbarEvent(ToolbarEvent::ToolSelected(
+                            *tool,
+                        )));
+                        sender
+                            .output_sender()
+                            .emit(SketchBoardOutput::ToolSwitchShortcut(*tool));
+
+                        ToolUpdateResult::Unmodified
+                    } else {
+                        ToolUpdateResult::Unmodified
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn active_tool_type(&self) -> Tools {
+        self.active_tool.borrow().get_tool_type()
+    }
 }
 
 #[relm4::component(pub)]
@@ -419,6 +488,8 @@ impl Component for SketchBoard {
             area -> FemtoVGArea {
                 set_vexpand: true,
                 set_hexpand: true,
+                set_can_focus: true,
+                set_focusable: true,
                 grab_focus: (),
 
                 add_controller = gtk::GestureDrag {
@@ -457,6 +528,38 @@ impl Component for SketchBoard {
                             Vec2D::new(x as f32, y as f32)));
                     }
                 },
+
+                add_controller = gtk::EventControllerKey {
+                    connect_key_pressed[sender] => move |controller, key, code, modifier | {
+                        if let Some(im_context) = controller.im_context() {
+                            im_context.focus_in();
+                            if !im_context.filter_keypress(controller.current_event().unwrap()) {
+                                sender.input(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
+                            }
+                        } else {
+                            sender.input(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
+                        }
+                        glib::Propagation::Stop
+                    },
+
+                    connect_key_released[sender] => move |controller, key, code, modifier | {
+                        if let Some(im_context) = controller.im_context() {
+                            im_context.focus_in();
+                            if !im_context.filter_keypress(controller.current_event().unwrap()) {
+                                sender.input(SketchBoardInput::new_key_release_event(KeyEventMsg::new(key, code, modifier)));
+                            }
+                        } else {
+                            sender.input(SketchBoardInput::new_key_release_event(KeyEventMsg::new(key, code, modifier)));
+                        }
+                    },
+
+                    #[wrap(Some)]
+                    set_im_context = &gtk::IMMulticontext {
+                        connect_commit[sender] => move |_cx, txt| {
+                            sender.input(SketchBoardInput::new_commit_event(TextEventMsg::Commit(txt.to_string())));
+                        },
+                    },
+                }
             }
         },
     }
@@ -466,48 +569,61 @@ impl Component for SketchBoard {
         let result = match msg {
             SketchBoardInput::InputEvent(mut ie) => {
                 if let InputEvent::Key(ke) = ie {
-                    if ke.is_one_of(Key::z, KeyMappingId::UsZ)
-                        && ke.modifier == ModifierType::CONTROL_MASK
-                    {
-                        self.handle_undo()
-                    } else if ke.is_one_of(Key::y, KeyMappingId::UsY)
-                        && ke.modifier == ModifierType::CONTROL_MASK
-                    {
-                        self.handle_redo()
-                    } else if ke.is_one_of(Key::t, KeyMappingId::UsT)
-                        && ke.modifier == ModifierType::CONTROL_MASK
-                    {
-                        self.handle_toggle_toolbars_display(sender)
-                    } else if ke.is_one_of(Key::s, KeyMappingId::UsS)
-                        && ke.modifier == ModifierType::CONTROL_MASK
-                    {
-                        self.renderer.request_render(Action::SaveToFile);
-                        ToolUpdateResult::Unmodified
-                    } else if ke.is_one_of(Key::c, KeyMappingId::UsC)
-                        && ke.modifier == ModifierType::CONTROL_MASK
-                    {
-                        self.renderer.request_render(Action::SaveToClipboard);
-                        ToolUpdateResult::Unmodified
-                    } else if ke.key == Key::Escape {
-                        relm4::main_application().quit();
-                        // this is only here to make rust happy. The application should exit with the previous call
-                        ToolUpdateResult::Unmodified
-                    } else if ke.key == Key::Return || ke.key == Key::KP_Enter {
-                        // First, let the tool handle the event. If the tool does nothing, we can do our thing (otherwise require a second Enter)
-                        // Relying on ToolUpdateResult::Unmodified is probably not a good idea, but it's the only way at the moment. See discussion in #144
-                        let result: ToolUpdateResult = self
-                            .active_tool
-                            .borrow_mut()
-                            .handle_event(ToolEvent::Input(ie));
-                        if let ToolUpdateResult::Unmodified = result {
-                            self.renderer
-                                .request_render(APP_CONFIG.read().action_on_enter());
+                    match (true, ke.modifier) {
+                        (z, ModifierType::CONTROL_MASK)
+                            if z == ke.is_one_of(Key::z, KeyMappingId::UsZ) =>
+                        {
+                            self.handle_undo()
                         }
-                        result
-                    } else {
-                        self.active_tool
+                        (y, ModifierType::CONTROL_MASK)
+                            if y == ke.is_one_of(Key::y, KeyMappingId::UsY) =>
+                        {
+                            self.handle_redo()
+                        }
+                        (t, ModifierType::CONTROL_MASK)
+                            if t == ke.is_one_of(Key::t, KeyMappingId::UsT) =>
+                        {
+                            self.handle_toggle_toolbars_display(sender)
+                        }
+                        (s, ModifierType::CONTROL_MASK)
+                            if s == ke.is_one_of(Key::s, KeyMappingId::UsS) =>
+                        {
+                            self.renderer.request_render(Action::SaveToFile);
+                            ToolUpdateResult::Unmodified
+                        }
+                        (c, ModifierType::CONTROL_MASK)
+                            if c == ke.is_one_of(Key::c, KeyMappingId::UsC) =>
+                        {
+                            self.renderer.request_render(Action::SaveToClipboard);
+                            ToolUpdateResult::Unmodified
+                        }
+                        (esc, _) if esc == ke.is_one_of(Key::Escape, KeyMappingId::Escape) => {
+                            relm4::main_application().quit();
+                            // this is only here to make rust happy. The application should exit with the previous call
+                            ToolUpdateResult::Unmodified
+                        }
+                        (enter, _)
+                            if enter
+                                == ke.is_one_of(Key::Return, KeyMappingId::Enter)
+                                    | ke.is_one_of(Key::KP_Enter, KeyMappingId::Enter) =>
+                        {
+                            // First, let the tool handle the event. If the tool does nothing, we can do our thing (otherwise require a second Enter)
+                            // Relying on ToolUpdateResult::Unmodified is probably not a good idea, but it's the only way at the moment. See discussion in #144
+                            let result: ToolUpdateResult = self
+                                .active_tool
+                                .borrow_mut()
+                                .handle_event(ToolEvent::Input(ie));
+                            if let ToolUpdateResult::Unmodified = result {
+                                self.renderer
+                                    .request_render(APP_CONFIG.read().action_on_enter());
+                            }
+                            result
+                        }
+                        _ => {
+                            self.active_tool
                             .borrow_mut()
                             .handle_event(ToolEvent::Input(ie))
+                        },
                     }
                 } else {
                     ie.handle_event_mouse_input(&self.renderer, &sender);
@@ -521,6 +637,10 @@ impl Component for SketchBoard {
             }
             SketchBoardInput::RenderResult(img, action) => {
                 self.handle_render_result(img, action);
+                ToolUpdateResult::Unmodified
+            }
+            SketchBoardInput::CommitEvent(txt) => {
+                self.handle_text_commit(txt, sender);
                 ToolUpdateResult::Unmodified
             }
         };
