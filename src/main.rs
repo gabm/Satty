@@ -42,7 +42,7 @@ macro_rules! generate_profile_output {
             eprintln!(
                 "{:5} ms time elapsed: {}",
                 (chrono::Local::now() - *START_TIME).num_milliseconds(),
-                stringify!($e)
+                $e
             );
         }
     };
@@ -355,7 +355,7 @@ fn main() -> Result<()> {
     if APP_CONFIG.read().profile_startup() {
         eprintln!(
             "startup timestamp was {}",
-            START_TIME.format("%s.%f %Y-%M-%d %H:%M:%S")
+            START_TIME.format("%s.%f %Y-%m-%d %H:%M:%S")
         );
     }
     generate_profile_output!("configuration loaded");
