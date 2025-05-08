@@ -45,6 +45,10 @@ pub struct CommandLine {
     #[arg(long)]
     pub action_on_enter: Option<Action>,
 
+    /// Action to perform when pressing Escape
+    #[arg(long)]
+    pub action_on_escape: Option<Action>,
+
     /// After copying the screenshot, save it to a file as well
     #[arg(long)]
     pub save_after_copy: bool,
@@ -94,11 +98,13 @@ pub enum Tools {
     Brush,
 }
 
-#[derive(Debug, Clone, Copy, Default, ValueEnum)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum Action {
-    #[default]
     SaveToClipboard,
     SaveToFile,
+    SaveToClipboardAndExit,
+    SaveToFileAndExit,
+    Exit,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
