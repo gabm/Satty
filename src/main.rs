@@ -1,5 +1,6 @@
 use std::io::Read;
 use std::ptr;
+use std::sync::LazyLock;
 use std::{io, time::Duration};
 
 use configuration::{Configuration, APP_CONFIG};
@@ -31,6 +32,21 @@ mod ui;
 
 use crate::sketch_board::TextEventMsg;
 use crate::sketch_board::{KeyEventMsg, SketchBoard, SketchBoardInput};
+
+pub static START_TIME: LazyLock<chrono::DateTime<chrono::Local>> =
+    LazyLock::new(chrono::Local::now);
+
+macro_rules! generate_profile_output {
+    ($e: expr) => {
+        if (APP_CONFIG.read().profile_startup()) {
+            eprintln!(
+                "{:5} ms time elapsed: {}",
+                (chrono::Local::now() - *START_TIME).num_milliseconds(),
+                stringify!($e)
+            );
+        }
+    };
+}
 
 struct App {
     image_dimensions: (i32, i32),
@@ -151,6 +167,7 @@ impl Component for App {
             set_default_size: (500, 500),
 
             connect_show[sender] => move |_| {
+                generate_profile_output!("gui show event");
                 sender.input(AppInput::Realized);
             },
 
@@ -264,6 +281,12 @@ impl Component for App {
 
         let widgets = view_output!();
 
+        generate_profile_output!("app init end");
+
+        glib::idle_add_local_once(move || {
+            generate_profile_output!("main loop idle");
+        });
+
         ComponentParts { model, widgets }
     }
 }
@@ -290,10 +313,12 @@ fn load_gl() -> Result<()> {
 fn run_satty() -> Result<()> {
     // load OpenGL
     load_gl()?;
+    generate_profile_output!("loaded gl");
 
     // load app config
     let config = APP_CONFIG.read();
 
+    generate_profile_output!("loading image");
     // load input image
     let image = if config.input_filename() == "-" {
         let mut buf = Vec::<u8>::new();
@@ -308,6 +333,7 @@ fn run_satty() -> Result<()> {
         Pixbuf::from_file(config.input_filename()).context("couldn't load image")?
     };
 
+    generate_profile_output!("image loaded, starting gui");
     // start GUI
     let app = relm4::main_application();
     app.set_application_id(Some("com.gabm.satty"));
@@ -322,9 +348,17 @@ fn run_satty() -> Result<()> {
 }
 
 fn main() -> Result<()> {
+    let _ = *START_TIME;
     // populate the APP_CONFIG from commandline and
     // config file. this might exit, if an error occurred.
     Configuration::load();
+    if APP_CONFIG.read().profile_startup() {
+        eprintln!(
+            "startup timestamp was {}",
+            START_TIME.format("%s.%f %Y-%M-%d %H:%M:%S")
+        );
+    }
+    generate_profile_output!("configuration loaded");
 
     // run the application
     match run_satty() {

@@ -72,6 +72,10 @@ pub struct CommandLine {
     /// Disable notifications
     #[arg(long)]
     pub disable_notifications: bool,
+
+    /// print profiling
+    #[arg(long)]
+    pub profile_startup: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
