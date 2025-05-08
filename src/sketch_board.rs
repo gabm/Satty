@@ -6,11 +6,11 @@ use gdk_pixbuf::glib::Bytes;
 use gdk_pixbuf::Pixbuf;
 use keycode::{KeyMap, KeyMappingId};
 use std::cell::RefCell;
-use std::fs;
 use std::io::Write;
 use std::panic;
 use std::process::{Command, Stdio};
 use std::rc::Rc;
+use std::{fs, io};
 
 use gtk::prelude::*;
 
@@ -232,7 +232,7 @@ impl SketchBoard {
         }
 
         // TODO: we could support more data types
-        if !output_filename.ends_with(".png") {
+        if output_filename != "-" && !output_filename.ends_with(".png") {
             log_result(
                 "The only supported format is png, but the filename does not end in png",
                 !APP_CONFIG.read().disable_notifications(),
@@ -248,6 +248,15 @@ impl SketchBoard {
             }
         };
 
+        if output_filename == "-" {
+            // "-" means stdout
+            let stdout = io::stdout();
+            let mut handle = stdout.lock();
+            if let Err(e) = handle.write_all(&data) {
+                eprintln!("Error writing image to stdout: {e}");
+            }
+            return;
+        }
         match fs::write(&output_filename, data) {
             Err(e) => log_result(
                 &format!("Error while saving file: {e}"),
