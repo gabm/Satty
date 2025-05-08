@@ -407,13 +407,11 @@ impl ConfigurationFile {
     }
 
     fn try_read_xdg() -> Result<Option<ConfigurationFile>, ConfigurationFileError> {
-        let dirs = BaseDirectories::with_prefix("satty")?;
-        let config_file_path = dirs.get_config_file("config.toml");
-        if !config_file_path.exists() {
-            return Ok(None);
+        let dirs = BaseDirectories::with_prefix("satty");
+        match dirs.get_config_file("config.toml") {
+            Some(path) => Self::try_read_path(path),
+            None => Ok(None),
         }
-
-        Self::try_read_path(config_file_path)
     }
 
     fn try_read_path<P: AsRef<Path>>(
