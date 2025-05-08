@@ -72,8 +72,8 @@ impl Drawable for BrushDrawable {
 
         let start_x = self.points[0].pos.0 as f32;
         let start_y = self.points[0].pos.1 as f32;
-        path.move_to(self.points[0].pos.0 as f32, self.points[0].pos.1 as f32);
-        for p in result_stroke {
+        path.move_to(start_x, start_y);
+        for p in result_stroke.iter().skip(1) {
             path.line_to(start_x + p.pos.0 as f32, start_y + p.pos.1 as f32);
         }
         canvas.stroke_path(&path, &self.style.into());
@@ -93,7 +93,7 @@ impl Tool for BrushTool {
                         event_type: ModelerInputEventType::Down,
                         pos: (event.pos.x as f64, event.pos.y as f64),
                         time: 0.,
-                        pressure: 0.5,
+                        pressure: 0.,
                     }],
                     style: self.style,
                 });
@@ -135,16 +135,16 @@ impl Tool for BrushTool {
                 }
             }
             MouseEventType::Click => {
-                if event.button == MouseButton::Primary {
-                    let brush = Box::new(BrushDrawable {
-                        start_at: time::Instant::now(),
-                        points: vec![],
-                        style: self.style,
-                    });
-                    ToolUpdateResult::Commit(brush)
-                } else {
-                    ToolUpdateResult::Unmodified
-                }
+                // if event.button == MouseButton::Primary {
+                //     let brush = Box::new(BrushDrawable {
+                //         start_at: time::Instant::now(),
+                //         points: vec![],
+                //         style: self.style,
+                //     });
+                //     ToolUpdateResult::Commit(brush)
+                // } else {
+                ToolUpdateResult::Unmodified
+                // }
             }
         }
     }
