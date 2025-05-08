@@ -345,6 +345,16 @@ impl SketchBoard {
         }
     }
 
+    fn handle_reset(&mut self) -> ToolUpdateResult {
+        if self.active_tool.borrow().active() {
+            self.active_tool.borrow_mut().handle_undo()
+        } else if self.renderer.reset() {
+            ToolUpdateResult::Redraw
+        } else {
+            ToolUpdateResult::Unmodified
+        }
+    }
+
     // Toolbars = Tools Toolbar + Style Toolbar
     fn handle_toggle_toolbars_display(
         &mut self,
@@ -413,6 +423,7 @@ impl SketchBoard {
             }
             ToolbarEvent::Undo => self.handle_undo(),
             ToolbarEvent::Redo => self.handle_redo(),
+            ToolbarEvent::Reset => self.handle_reset(),
             ToolbarEvent::ToggleFill => {
                 self.style.fill = !self.style.fill;
                 self.active_tool

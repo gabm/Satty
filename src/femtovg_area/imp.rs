@@ -269,6 +269,19 @@ impl FemtoVgAreaMut {
             None => false,
         }
     }
+    pub fn reset(&mut self) -> bool {
+        let mut any_undone = false;
+        while let Some(mut d) = self.drawables.pop() {
+            // notify of the undo action
+            d.handle_undo();
+
+            // push to redo stack
+            self.redo_stack.push(d);
+
+            any_undone = true;
+        }
+        any_undone
+    }
 
     pub fn set_active_tool(&mut self, active_tool: Rc<RefCell<dyn Tool>>) {
         self.active_tool = active_tool;

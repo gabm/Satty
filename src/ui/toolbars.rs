@@ -46,6 +46,7 @@ pub enum ToolbarEvent {
     CopyClipboard,
     ToggleFill,
     AnnotationSizeChanged(f32),
+    Reset,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -105,6 +106,15 @@ impl SimpleComponent for ToolsToolbar {
             set_visible: model.visible,
 
 
+            gtk::Button {
+                set_focusable: false,
+                set_hexpand: false,
+
+                set_icon_name: "recycling-bin",
+                set_tooltip: "Reset",
+                connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::Reset);},
+            },
+            gtk::Separator {},
             gtk::Button {
                 set_focusable: false,
                 set_hexpand: false,
