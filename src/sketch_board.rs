@@ -185,12 +185,26 @@ impl SketchBoard {
 
     fn handle_render_result(&self, image: RenderedImage, action: Action) {
         match action {
-            Action::SaveToClipboard => self.handle_copy_clipboard(Self::image_to_pixbuf(image)),
-            Action::SaveToFile => self.handle_save(Self::image_to_pixbuf(image)),
+            Action::SaveToClipboard | Action::SaveToClipboardAndExit => {
+                self.handle_copy_clipboard(Self::image_to_pixbuf(image))
+            }
+            Action::SaveToFile | Action::SaveToFileAndExit => {
+                self.handle_save(Self::image_to_pixbuf(image))
+            }
+            _ => (),
         };
-        if APP_CONFIG.read().early_exit() {
-            relm4::main_application().quit();
+        if APP_CONFIG.read().early_exit()
+            || matches!(
+                action,
+                Action::Exit | Action::SaveToFileAndExit | Action::SaveToClipboardAndExit
+            )
+        {
+            self.handle_exit();
         }
+    }
+
+    fn handle_exit(&self) {
+        relm4::main_application().quit();
     }
 
     fn handle_save(&self, image: Pixbuf) {
@@ -488,21 +502,21 @@ impl Component for SketchBoard {
                     {
                         self.renderer.request_render(Action::SaveToClipboard);
                         ToolUpdateResult::Unmodified
-                    } else if ke.key == Key::Escape {
-                        relm4::main_application().quit();
-                        // this is only here to make rust happy. The application should exit with the previous call
-                        ToolUpdateResult::Unmodified
-                    } else if ke.key == Key::Return || ke.key == Key::KP_Enter {
-                        // First, let the tool handle the event. If the tool does nothing, we can do our thing (otherwise require a second Enter)
+                    } else if ke.key == Key::Escape
+                        || ke.key == Key::Return
+                        || ke.key == Key::KP_Enter
+                    {
+                        // First, let the tool handle the event. If the tool does nothing, we can do our thing (otherwise require a second keyboard press)
                         // Relying on ToolUpdateResult::Unmodified is probably not a good idea, but it's the only way at the moment. See discussion in #144
                         let result: ToolUpdateResult = self
                             .active_tool
                             .borrow_mut()
                             .handle_event(ToolEvent::Input(ie));
-                        if let ToolUpdateResult::Unmodified = result {
-                            self.renderer
-                                .request_render(APP_CONFIG.read().action_on_enter());
-                        }
+                        self.renderer.request_render(if ke.key == Key::Escape {
+                            APP_CONFIG.read().action_on_escape()
+                        } else {
+                            APP_CONFIG.read().action_on_enter()
+                        });
                         result
                     } else {
                         self.active_tool

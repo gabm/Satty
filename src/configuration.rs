@@ -41,6 +41,7 @@ pub struct Configuration {
     copy_command: Option<String>,
     annotation_size_factor: f32,
     action_on_enter: Action,
+    action_on_escape: Action,
     save_after_copy: bool,
     right_click_copy: bool,
     color_palette: ColorPalette,
@@ -103,6 +104,9 @@ impl ColorPalette {
 pub enum Action {
     SaveToClipboard,
     SaveToFile,
+    Exit,
+    SaveToClipboardAndExit,
+    SaveToFileAndExit,
 }
 
 impl From<CommandLineAction> for Action {
@@ -110,6 +114,9 @@ impl From<CommandLineAction> for Action {
         match action {
             CommandLineAction::SaveToClipboard => Self::SaveToClipboard,
             CommandLineAction::SaveToFile => Self::SaveToFile,
+            CommandLineAction::Exit => Self::Exit,
+            CommandLineAction::SaveToClipboardAndExit => Self::SaveToClipboardAndExit,
+            CommandLineAction::SaveToFileAndExit => Self::SaveToFileAndExit,
         }
     }
 }
@@ -167,6 +174,9 @@ impl Configuration {
         }
         if let Some(v) = general.action_on_enter {
             self.action_on_enter = v;
+        }
+        if let Some(v) = general.action_on_escape {
+            self.action_on_escape = v;
         }
         if let Some(v) = general.save_after_copy {
             self.save_after_copy = v;
@@ -229,6 +239,9 @@ impl Configuration {
         if let Some(v) = command_line.action_on_enter {
             self.action_on_enter = v.into();
         }
+        if let Some(v) = command_line.action_on_escape {
+            self.action_on_escape = v.into();
+        }
         if command_line.save_after_copy {
             self.save_after_copy = command_line.save_after_copy;
         }
@@ -289,6 +302,10 @@ impl Configuration {
         self.action_on_enter
     }
 
+    pub fn action_on_escape(&self) -> Action {
+        self.action_on_escape
+    }
+
     pub fn save_after_copy(&self) -> bool {
         self.save_after_copy
     }
@@ -333,6 +350,7 @@ impl Default for Configuration {
             copy_command: None,
             annotation_size_factor: 1.0,
             action_on_enter: Action::SaveToClipboard,
+            action_on_escape: Action::Exit,
             save_after_copy: false,
             right_click_copy: false,
             color_palette: ColorPalette::default(),
@@ -386,6 +404,7 @@ struct ConfigurationFileGeneral {
     annotation_size_factor: Option<f32>,
     output_filename: Option<String>,
     action_on_enter: Option<Action>,
+    action_on_escape: Option<Action>,
     save_after_copy: Option<bool>,
     right_click_copy: Option<bool>,
     default_hide_toolbars: Option<bool>,
