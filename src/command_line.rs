@@ -84,6 +84,12 @@ pub struct CommandLine {
     /// Disable the window decoration (title bar, borders, etc.)
     #[arg(long)]
     pub no_window_decoration: bool,
+
+    /// How much points to use for the brush smoothing algorithm
+    /// 0 disables smoothing.
+    /// The default value is 0 (disabled).
+    #[arg(long)]
+    pub brush_smooth_history_size: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
