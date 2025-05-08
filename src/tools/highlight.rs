@@ -82,7 +82,7 @@ impl Highlight for Highlighter<FreehandHighlight> {
         paint.set_line_width(
             self.style
                 .size
-                .to_highlight_width(self.style.annotation_size_factor),
+                .to_highlight_width(),
         );
         paint.set_line_join(femtovg::LineJoin::Round);
         paint.set_line_cap(femtovg::LineCap::Square);

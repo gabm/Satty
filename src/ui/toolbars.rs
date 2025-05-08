@@ -403,45 +403,47 @@ impl Component for StyleToolbar {
                 connect_clicked => StyleToolbarInput::ShowColorDialog,
             },
             gtk::Separator {},
-            gtk::ToggleButton {
-                set_focusable: false,
+            // gtk::ToggleButton {
+            //     set_focusable: false,
+            //     set_hexpand: false,
+
+            //     set_label: "S",
+            //     set_tooltip: "Small size",
+            //     ActionablePlus::set_action::<SizeAction>: Size::Small,
+            // },
+            // gtk::ToggleButton {
+            //     set_focusable: false,
+            //     set_hexpand: false,
+
+            //     set_label: "M",
+            //     set_tooltip: "Medium size",
+            //     ActionablePlus::set_action::<SizeAction>: Size::Medium,
+            // },
+            // gtk::ToggleButton {
+            //     set_focusable: false,
+            //     set_hexpand: false,
+
+            //     set_label: "L",
+            //     set_tooltip: "Large size",
+            //     ActionablePlus::set_action::<SizeAction>: Size::Large,
+            // },
+            #[name = "spin"]
+            gtk::SpinButton {
+                set_editable: true,
+                set_can_focus: true,
                 set_hexpand: false,
 
-                set_label: "S",
-                set_tooltip: "Small size",
-                ActionablePlus::set_action::<SizeAction>: Size::Small,
-            },
-            gtk::ToggleButton {
-                set_focusable: false,
-                set_hexpand: false,
-
-                set_label: "M",
-                set_tooltip: "Medium size",
-                ActionablePlus::set_action::<SizeAction>: Size::Medium,
-            },
-            gtk::ToggleButton {
-                set_focusable: false,
-                set_hexpand: false,
-
-                set_label: "L",
-                set_tooltip: "Large size",
-                ActionablePlus::set_action::<SizeAction>: Size::Large,
-            },
-            gtk::Label {
-                set_focusable: false,
-                set_hexpand: false,
-
-                set_text: "x",
-            },
-            gtk::Button {
-                set_focusable: false,
-                set_hexpand: false,
-
+                set_tooltip: "Annotation Size Factor",
+                set_numeric: true,
+                // 1% to 400%, default to 100% - increment 10%
+                set_adjustment: &gtk::Adjustment::new(100., 1., 400.0, 10., 100., 0.0),
+                set_digits: 0,
                 #[watch]
-                set_label: &model.annotation_size_formatted,
-                set_tooltip: "Edit Annotation Size Factor",
+                set_value: model.annotation_size.into(),
 
-                connect_clicked => StyleToolbarInput::ShowAnnotationDialog
+                connect_value_changed[sender] => move |button| {
+                    let _ = sender.output(ToolbarEvent::AnnotationSizeChanged(button.value() as f32));
+                    },
             },
             gtk::Separator {},
             gtk::Button {
@@ -546,13 +548,13 @@ impl Component for StyleToolbar {
 
         // Size Action for selecting sizes
         let sender_tmp = sender.clone();
-        let size_action: RelmAction<SizeAction> =
-            RelmAction::new_stateful_with_target_value(&Size::Medium, move |_, state, value| {
-                *state = value;
-                sender_tmp
-                    .output_sender()
-                    .emit(ToolbarEvent::SizeSelected(*state));
-            });
+        // let size_action: RelmAction<SizeAction> =
+        //     RelmAction::new_stateful_with_target_value(&Size::Medium, move |_, state, value| {
+        //         *state = value;
+        //         sender_tmp
+        //             .output_sender()
+        //             .emit(ToolbarEvent::SizeSelected(*state));
+        //     });
 
         let custom_color = APP_CONFIG
             .read()
@@ -582,7 +584,7 @@ impl Component for StyleToolbar {
 
         let mut group = RelmActionGroup::<StyleToolbarActionGroup>::new();
         group.add_action(color_action);
-        group.add_action(size_action);
+        // group.add_action(size_action);
 
         group.register_for_widget(&widgets.root);
 
