@@ -125,6 +125,10 @@ impl Configuration {
         // read configuration file and exit on error
         let file = match ConfigurationFile::try_read(&command_line.config) {
             Ok(c) => c,
+            Err(ConfigurationFileError::ReadFile(e)) if e.kind() == io::ErrorKind::NotFound => {
+                eprintln!("config file not found");
+                None
+            }
             Err(e) => {
                 eprintln!("Error reading config file: {e}");
 
