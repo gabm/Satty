@@ -36,7 +36,9 @@ impl Default for Style {
         Self {
             color: Color::default(),
             fill: bool::default(),
-            size: Size { value: APP_CONFIG.read().annotation_size_factor() },
+            size: Size {
+                value: APP_CONFIG.read().annotation_size_factor(),
+            },
         }
     }
 }
@@ -166,46 +168,28 @@ impl From<Style> for Paint {
     }
 }
 
-impl StaticVariantType for Size {
-    fn static_variant_type() -> Cow<'static, VariantTy> {
-        Cow::Borrowed(VariantTy::UINT32)
-    }
-}
-
-impl ToVariant for Size {
-    fn to_variant(&self) -> Variant {
-        Variant::from(self.value as u32)
-    }
-}
-
-impl FromVariant for Size {
-    fn from_variant(variant: &Variant) -> Option<Self> {
-        variant.get::<u32>().and_then(|v| Some(Size{value:v as f32}))
-    }
-}
-
 impl Size {
     pub fn to_text_size(self) -> f32 {
-        return self.value;
+        self.value
     }
 
     pub fn to_line_width(self) -> f32 {
-        return 0.1 * self.value;
+        0.1 * self.value
     }
 
     pub fn to_arrow_tail_width(self) -> f32 {
-        return 0.2 * self.value;
+        0.2 * self.value
     }
 
     pub fn to_arrow_head_length(self) -> f32 {
-        return 0.6 * self.value;
+        0.6 * self.value
     }
 
     pub fn to_blur_factor(self) -> f32 {
-        return 0.4 * self.value;
+        0.4 * self.value
     }
 
     pub fn to_highlight_width(self) -> f32 {
-        return 0.6 * self.value;
+        0.6 * self.value
     }
 }
