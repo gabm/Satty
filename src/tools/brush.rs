@@ -1,7 +1,11 @@
+use std::time;
+
 use femtovg::{FontId, Path};
+use ink_stroke_modeler_rs::{
+    ModelerInput, ModelerInputEventType, ModelerParams, ModelerResult, StrokeModeler,
+};
 
 use crate::{
-    math::Vec2D,
     sketch_board::{MouseButton, MouseEventMsg, MouseEventType},
     style::Style,
 };
@@ -16,8 +20,8 @@ pub struct BrushTool {
 
 #[derive(Debug, Clone)]
 pub struct BrushDrawable {
-    start: Vec2D,
-    points: Vec<Vec2D>,
+    start_at: time::Instant,
+    points: Vec<ModelerInput>,
     style: Style,
 }
 
@@ -27,18 +31,54 @@ impl Drawable for BrushDrawable {
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         _font: FontId,
     ) -> anyhow::Result<()> {
+        if self.points.is_empty() {
+            return Ok(());
+        }
+
+        let mut params = ModelerParams::suggested();
+        // params.wobble_smoother_timeout = 0.04;
+        // params.wobble_smoother_speed_floor = 1.31;
+        // params.wobble_smoother_speed_ceiling = 1.44;
+        // params.position_modeler_spring_mass_constant = 11.0 / 32400.0;
+        params.position_modeler_drag_constant = 200.0;
+        // params.sampling_min_output_rate = 180.0;
+        // params.sampling_end_of_stroke_stopping_distance = 0.001;
+        // params.sampling_end_of_stroke_max_iterations = 20;
+        // params.sampling_max_outputs_per_call = 20;
+        // params.stylus_state_modeler_max_input_samples = 10;
+        let Ok(mut modeler) = StrokeModeler::new(params) else {
+            // TODO:
+            return Ok(());
+        };
+
+        let result_stroke = self
+            .points
+            .iter()
+            .filter_map(|i| {
+                modeler
+                    .update(i.clone())
+                    .map_err(|e| eprintln!("modeler updated, Err: {e:?}"))
+                    .ok()
+            })
+            .flatten()
+            .collect::<Vec<ModelerResult>>();
+
+        if result_stroke.is_empty() {
+            return Ok(());
+        }
+
         canvas.save();
         let mut path = Path::new();
 
-        if !self.points.is_empty() {
-            path.move_to(self.start.x, self.start.y);
-            for p in &self.points {
-                path.line_to(self.start.x + p.x, self.start.y + p.y);
-            }
-
-            canvas.stroke_path(&path, &self.style.into());
+        let start_x = self.points[0].pos.0 as f32;
+        let start_y = self.points[0].pos.1 as f32;
+        path.move_to(start_x, start_y);
+        for p in result_stroke.iter().skip(1) {
+            path.line_to(start_x + p.pos.0 as f32, start_y + p.pos.1 as f32);
         }
+        canvas.stroke_path(&path, &self.style.into());
         canvas.restore();
+
         Ok(())
     }
 }
@@ -48,8 +88,13 @@ impl Tool for BrushTool {
         match event.type_ {
             MouseEventType::BeginDrag => {
                 self.drawable = Some(BrushDrawable {
-                    start: event.pos,
-                    points: Vec::new(),
+                    start_at: time::Instant::now(),
+                    points: vec![ModelerInput {
+                        event_type: ModelerInputEventType::Down,
+                        pos: (event.pos.x as f64, event.pos.y as f64),
+                        time: 0.,
+                        pressure: 0.,
+                    }],
                     style: self.style,
                 });
 
@@ -58,7 +103,12 @@ impl Tool for BrushTool {
             MouseEventType::EndDrag => {
                 if let Some(brush) = &mut self.drawable {
                     // add last point
-                    brush.points.push(event.pos);
+                    brush.points.push(ModelerInput {
+                        event_type: ModelerInputEventType::Up,
+                        pos: (event.pos.x as f64, event.pos.y as f64),
+                        time: brush.start_at.elapsed().as_secs_f64(),
+                        pressure: 0.5,
+                    });
 
                     // commit
                     let result = brush.clone_box();
@@ -72,7 +122,12 @@ impl Tool for BrushTool {
             MouseEventType::UpdateDrag => {
                 if let Some(brush) = &mut self.drawable {
                     // add point
-                    brush.points.push(event.pos);
+                    brush.points.push(ModelerInput {
+                        event_type: ModelerInputEventType::Move,
+                        pos: (event.pos.x as f64, event.pos.y as f64),
+                        time: brush.start_at.elapsed().as_secs_f64(),
+                        pressure: 0.5,
+                    });
 
                     ToolUpdateResult::Redraw
                 } else {
@@ -80,16 +135,16 @@ impl Tool for BrushTool {
                 }
             }
             MouseEventType::Click => {
-                if event.button == MouseButton::Primary {
-                    let brush = Box::new(BrushDrawable {
-                        start: event.pos,
-                        points: Vec::new(),
-                        style: self.style,
-                    });
-                    ToolUpdateResult::Commit(brush)
-                } else {
-                    ToolUpdateResult::Unmodified
-                }
+                // if event.button == MouseButton::Primary {
+                //     let brush = Box::new(BrushDrawable {
+                //         start_at: time::Instant::now(),
+                //         points: vec![],
+                //         style: self.style,
+                //     });
+                //     ToolUpdateResult::Commit(brush)
+                // } else {
+                ToolUpdateResult::Unmodified
+                // }
             }
         }
     }
