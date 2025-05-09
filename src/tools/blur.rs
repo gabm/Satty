@@ -92,6 +92,9 @@ impl Drawable for Blur {
             // draw
             canvas.stroke_path(&path, &paint);
         } else {
+            canvas.save();
+            canvas.flush();
+
             let (pos, size) = math::rect_ensure_positive_size(self.top_left, size);
 
             // create new cached image
@@ -127,6 +130,7 @@ impl Drawable for Blur {
                     1f32,
                 ),
             );
+            canvas.restore();
         }
         Ok(())
     }
