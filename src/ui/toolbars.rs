@@ -53,6 +53,7 @@ pub enum StyleToolbarInput {
     ShowColorDialog,
     ColorDialogFinished(Option<Color>),
     ToggleVisibility,
+    SizeSelected(Size),
 }
 
 fn create_icon_pixbuf(color: Color) -> Pixbuf {
@@ -393,7 +394,7 @@ impl Component for StyleToolbar {
                 set_value: model.size.value as f64,
 
                 connect_value_changed[sender] => move |button| {
-                    let _ = sender.output(ToolbarEvent::SizeSelected(
+                    sender.input(StyleToolbarInput::SizeSelected(
                         Size {
                             value: button.value() as f32,
                         },
@@ -446,9 +447,14 @@ impl Component for StyleToolbar {
                     .output_sender()
                     .emit(ToolbarEvent::ColorSelected(color));
             }
-
             StyleToolbarInput::ToggleVisibility => {
                 self.visible = !self.visible;
+            }
+            StyleToolbarInput::SizeSelected(size) => {
+                self.size = size;
+                sender
+                    .output_sender()
+                    .emit(ToolbarEvent::SizeSelected(size));
             }
         }
     }
@@ -492,9 +498,7 @@ impl Component for StyleToolbar {
             &SizeEnum::Medium,
             move |_, state, value: SizeEnum| {
                 *state = value;
-                sender_tmp
-                    .output_sender()
-                    .emit(ToolbarEvent::SizeSelected(value.into()));
+                sender_tmp.input(StyleToolbarInput::SizeSelected(value.into()));
             },
         );
 
