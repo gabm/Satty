@@ -123,19 +123,12 @@ impl From<u32> for MouseButton {
 }
 
 impl InputEvent {
-    fn handle_event_mouse_input(
-        &mut self,
-        renderer: &FemtoVGArea,
-        sender: &ComponentSender<SketchBoard>,
-    ) -> Option<ToolUpdateResult> {
+    fn handle_event_mouse_input(&mut self, renderer: &FemtoVGArea) -> Option<ToolUpdateResult> {
         if let InputEvent::Mouse(me) = self {
             match me.type_ {
                 MouseEventType::Click => {
-                    if me.button == MouseButton::Secondary && APP_CONFIG.read().right_click_copy() {
-                        sender
-                            .input_sender()
-                            .send(SketchBoardInput::ToolbarEvent(ToolbarEvent::CopyClipboard))
-                            .unwrap();
+                    if me.button == MouseButton::Secondary {
+                        renderer.request_render(&APP_CONFIG.read().actions_on_copy());
                         None
                     } else {
                         me.pos = renderer.abs_canvas_to_image_coordinates(me.pos);
@@ -184,16 +177,16 @@ impl SketchBoard {
     }
 
     fn handle_render_result(&self, image: RenderedImage, actions: Vec<Action>) {
-        let needs_pixbuf = actions.iter().any(|action| {
-            matches!(action, Action::SaveToClipboard | Action::SaveToFile)
-        });
-    
+        let needs_pixbuf = actions
+            .iter()
+            .any(|action| matches!(action, Action::SaveToClipboard | Action::SaveToFile));
+
         let pix_buf = if needs_pixbuf {
             Some(Self::image_to_pixbuf(image))
         } else {
             None
         };
-    
+
         for action in actions {
             match action {
                 Action::SaveToClipboard => {
@@ -208,7 +201,7 @@ impl SketchBoard {
                 }
                 _ => (),
             }
-    
+
             if APP_CONFIG.read().early_exit() || action == Action::Exit {
                 self.handle_exit();
                 return;
@@ -543,7 +536,7 @@ impl Component for SketchBoard {
                             .handle_event(ToolEvent::Input(ie))
                     }
                 } else {
-                    ie.handle_event_mouse_input(&self.renderer, &sender);
+                    ie.handle_event_mouse_input(&self.renderer);
                     self.active_tool
                         .borrow_mut()
                         .handle_event(ToolEvent::Input(ie))

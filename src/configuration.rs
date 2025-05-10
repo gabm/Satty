@@ -321,14 +321,22 @@ impl Configuration {
 
     pub fn actions_on_copy(&self) -> Vec<Action> {
         let mut actions = self.actions_on_copy.clone();
-        if APP_CONFIG.read().save_after_copy() {
+        if self.save_after_copy() && !actions.contains(&Action::SaveToClipboard) {
             actions.push(Action::SaveToFile);
         }
         actions
     }
 
     pub fn actions_on_right_click(&self) -> Vec<Action> {
-        self.actions_on_right_click.clone()
+        let mut actions = self.actions_on_right_click.clone();
+        if self.right_click_copy()
+            && !self
+                .actions_on_right_click
+                .contains(&Action::SaveToClipboard)
+        {
+            actions.push(Action::SaveToClipboard);
+        }
+        actions
     }
 
     pub fn color_palette(&self) -> &ColorPalette {
