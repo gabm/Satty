@@ -42,6 +42,7 @@ impl Drawable for Text {
         &self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         font: FontId,
+        _bounds: (Vec2D, Vec2D),
     ) -> Result<()> {
         let gtext = self.text_buffer.text(
             &self.text_buffer.start_iter(),

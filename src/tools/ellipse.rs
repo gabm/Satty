@@ -25,6 +25,7 @@ impl Drawable for Ellipse {
         &self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         _font: FontId,
+        _bounds: (Vec2D, Vec2D),
     ) -> Result<()> {
         let radii = match self.radii {
             Some(s) => s,

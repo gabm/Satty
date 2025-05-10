@@ -23,6 +23,7 @@ impl Drawable for Rectangle {
         &self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         _font: FontId,
+        _bounds: (Vec2D, Vec2D),
     ) -> Result<()> {
         let size = match self.size {
             Some(s) => s,

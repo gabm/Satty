@@ -140,6 +140,7 @@ impl Drawable for HighlightKind {
         &self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         _font: femtovg::FontId,
+        _bounds: (Vec2D, Vec2D),
     ) -> Result<()> {
         match self {
             HighlightKind::Block(highlighter) => highlighter.highlight(canvas),
