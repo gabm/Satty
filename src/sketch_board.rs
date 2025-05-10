@@ -184,14 +184,31 @@ impl SketchBoard {
     }
 
     fn handle_render_result(&self, image: RenderedImage, actions: Vec<Action>) {
-        // TODO: optimisation - save to pixbuf only if on actions require it
-        let pix_buf = Self::image_to_pixbuf(image);
+        let needs_pixbuf = actions.iter().any(|action| {
+            matches!(action, Action::SaveToClipboard | Action::SaveToFile)
+        });
+    
+        let pix_buf = if needs_pixbuf {
+            Some(Self::image_to_pixbuf(image))
+        } else {
+            None
+        };
+    
         for action in actions {
             match action {
-                Action::SaveToClipboard => self.handle_copy_clipboard(&pix_buf),
-                Action::SaveToFile => self.handle_save(&pix_buf),
+                Action::SaveToClipboard => {
+                    if let Some(ref pix_buf) = pix_buf {
+                        self.handle_copy_clipboard(pix_buf);
+                    }
+                }
+                Action::SaveToFile => {
+                    if let Some(ref pix_buf) = pix_buf {
+                        self.handle_save(pix_buf);
+                    }
+                }
                 _ => (),
-            };
+            }
+    
             if APP_CONFIG.read().early_exit() || action == Action::Exit {
                 self.handle_exit();
                 return;
