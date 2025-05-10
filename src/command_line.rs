@@ -42,20 +42,20 @@ pub struct CommandLine {
     pub annotation_size_factor: Option<f32>,
 
     /// Action to perform when pressing Enter
-    #[arg(long)]
-    pub action_on_enter: Option<Action>,
+    #[arg(long, value_delimiter = ',')]
+    pub action_on_enter: Option<Vec<Action>>,
 
     /// Action to perform when pressing Escape
-    #[arg(long)]
-    pub action_on_escape: Option<Action>,
+    #[arg(long, value_delimiter = ',')]
+    pub action_on_escape: Option<Vec<Action>>,
 
-    /// After copying the screenshot, save it to a file as well
-    #[arg(long)]
-    pub save_after_copy: bool,
+    /// Action to perform when hitting the copy Button.
+    #[arg(long, value_delimiter = ',')]
+    pub action_on_copy: Option<Vec<Action>>,
 
-    /// Right click to copy
-    #[arg(long)]
-    pub right_click_copy: bool,
+    /// Action to perform when hitting the copy Button.
+    #[arg(long, value_delimiter = ',')]
+    pub action_on_right_click: Option<Vec<Action>>,
 
     /// Hide toolbars by default
     #[arg(short, long)]
@@ -80,6 +80,16 @@ pub struct CommandLine {
     /// print profiling
     #[arg(long)]
     pub profile_startup: bool,
+
+    /// After copying the screenshot, save it to a file as well
+    #[deprecated(since = "0.18.0", note = "use action_on_copy instead")]
+    #[arg(long)]
+    pub save_after_copy: bool,
+
+    /// Right click to copy
+    #[deprecated(since = "0.18.0", note = "use action_on_right_click instead")]
+    #[arg(long)]
+    pub right_click_copy: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
@@ -102,8 +112,6 @@ pub enum Tools {
 pub enum Action {
     SaveToClipboard,
     SaveToFile,
-    SaveToClipboardAndExit,
-    SaveToFileAndExit,
     Exit,
 }
 

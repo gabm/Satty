@@ -57,8 +57,8 @@ impl FemtoVGArea {
             .expect("Did you call init before using FemtoVgArea?")
             .redo()
     }
-    pub fn request_render(&self, action: Action) {
-        self.imp().request_render(action);
+    pub fn request_render(&self, actions: &Vec<Action>) {
+        self.imp().request_render(actions);
     }
 
     pub fn abs_canvas_to_image_coordinates(&self, input: Vec2D) -> Vec2D {

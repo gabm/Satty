@@ -40,16 +40,21 @@ pub struct Configuration {
     initial_tool: Tools,
     copy_command: Option<String>,
     annotation_size_factor: f32,
-    action_on_enter: Action,
-    action_on_escape: Action,
-    save_after_copy: bool,
-    right_click_copy: bool,
+    actions_on_enter: Vec<Action>,
+    actions_on_escape: Vec<Action>,
+    actions_on_copy: Vec<Action>,
+    actions_on_right_click: Vec<Action>,
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
     font: FontConfiguration,
     primary_highlighter: Highlighters,
     disable_notifications: bool,
     profile_startup: bool,
+
+    #[deprecated(since = "0.18.0", note = "use action_on_right_click instead")]
+    save_after_copy: bool,
+    #[deprecated(since = "0.18.0", note = "use action_on_right_click instead")]
+    right_click_copy: bool,
 }
 
 #[derive(Default)]
@@ -99,14 +104,12 @@ impl ColorPalette {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum Action {
     SaveToClipboard,
     SaveToFile,
     Exit,
-    SaveToClipboardAndExit,
-    SaveToFileAndExit,
 }
 
 impl From<CommandLineAction> for Action {
@@ -115,8 +118,6 @@ impl From<CommandLineAction> for Action {
             CommandLineAction::SaveToClipboard => Self::SaveToClipboard,
             CommandLineAction::SaveToFile => Self::SaveToFile,
             CommandLineAction::Exit => Self::Exit,
-            CommandLineAction::SaveToClipboardAndExit => Self::SaveToClipboardAndExit,
-            CommandLineAction::SaveToFileAndExit => Self::SaveToFileAndExit,
         }
     }
 }
@@ -173,10 +174,10 @@ impl Configuration {
             self.annotation_size_factor = v;
         }
         if let Some(v) = general.action_on_enter {
-            self.action_on_enter = v;
+            self.actions_on_enter = v;
         }
         if let Some(v) = general.action_on_escape {
-            self.action_on_escape = v;
+            self.actions_on_escape = v;
         }
         if let Some(v) = general.save_after_copy {
             self.save_after_copy = v;
@@ -237,10 +238,16 @@ impl Configuration {
             self.annotation_size_factor = v;
         }
         if let Some(v) = command_line.action_on_enter {
-            self.action_on_enter = v.into();
+            self.actions_on_enter = v.iter().cloned().map(Into::into).collect();
         }
         if let Some(v) = command_line.action_on_escape {
-            self.action_on_escape = v.into();
+            self.actions_on_escape = v.iter().cloned().map(Into::into).collect();
+        }
+        if let Some(v) = command_line.action_on_copy {
+            self.actions_on_copy = v.iter().cloned().map(Into::into).collect();
+        }
+        if let Some(v) = command_line.action_on_right_click {
+            self.actions_on_right_click = v.iter().cloned().map(Into::into).collect();
         }
         if command_line.save_after_copy {
             self.save_after_copy = command_line.save_after_copy;
@@ -298,20 +305,20 @@ impl Configuration {
         self.annotation_size_factor
     }
 
-    pub fn action_on_enter(&self) -> Action {
-        self.action_on_enter
+    pub fn actions_on_enter(&self) -> Vec<Action> {
+        self.actions_on_enter.clone()
     }
 
-    pub fn action_on_escape(&self) -> Action {
-        self.action_on_escape
+    pub fn actions_on_escape(&self) -> Vec<Action> {
+        self.actions_on_escape.clone()
     }
 
-    pub fn save_after_copy(&self) -> bool {
-        self.save_after_copy
+    pub fn actions_on_copy(&self) -> Vec<Action> {
+        self.actions_on_copy.clone()
     }
 
-    pub fn right_click_copy(&self) -> bool {
-        self.right_click_copy
+    pub fn actions_on_right_click(&self) -> Vec<Action> {
+        self.actions_on_right_click.clone()
     }
 
     pub fn color_palette(&self) -> &ColorPalette {
@@ -336,6 +343,16 @@ impl Configuration {
     pub fn font(&self) -> &FontConfiguration {
         &self.font
     }
+
+    #[deprecated(since = "0.18.0", note = "use action_on_copy instead")]
+    pub fn save_after_copy(&self) -> bool {
+        self.save_after_copy
+    }
+
+    #[deprecated(since = "0.18.0", note = "use action_on_right_click instead")]
+    pub fn right_click_copy(&self) -> bool {
+        self.right_click_copy
+    }
 }
 
 impl Default for Configuration {
@@ -349,16 +366,18 @@ impl Default for Configuration {
             initial_tool: Tools::Pointer,
             copy_command: None,
             annotation_size_factor: 1.0,
-            action_on_enter: Action::SaveToClipboard,
-            action_on_escape: Action::Exit,
-            save_after_copy: false,
-            right_click_copy: false,
+            actions_on_enter: vec![],
+            actions_on_escape: vec![Action::Exit],
+            actions_on_copy: vec![Action::SaveToClipboard],
+            actions_on_right_click: vec![],
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
             font: FontConfiguration::default(),
             primary_highlighter: Highlighters::Block,
             disable_notifications: false,
             profile_startup: false,
+            save_after_copy: false,
+            right_click_copy: false,
         }
     }
 }
@@ -403,13 +422,18 @@ struct ConfigurationFileGeneral {
     copy_command: Option<String>,
     annotation_size_factor: Option<f32>,
     output_filename: Option<String>,
-    action_on_enter: Option<Action>,
-    action_on_escape: Option<Action>,
-    save_after_copy: Option<bool>,
-    right_click_copy: Option<bool>,
+    action_on_enter: Option<Vec<Action>>,
+    action_on_escape: Option<Vec<Action>>,
+    action_on_copy: Option<Vec<Action>>,
+    action_on_right_click: Option<Vec<Action>>,
     default_hide_toolbars: Option<bool>,
     primary_highlighter: Option<Highlighters>,
     disable_notifications: Option<bool>,
+
+    #[deprecated(since = "0.18.0", note = "use action_on_copy instead")]
+    save_after_copy: Option<bool>,
+    #[deprecated(since = "0.18.0", note = "use action_on_right_click instead")]
+    right_click_copy: Option<bool>,
 }
 
 #[derive(Deserialize)]
