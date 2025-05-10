@@ -58,3 +58,7 @@ package: clean build-release
 	
 	# clean up
 	rm -rf $(TMP)
+
+fix:
+	cargo fmt --all
+	cargo clippy --fix --allow-dirty --all-targets --all-features -- -D warnings
