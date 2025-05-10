@@ -69,11 +69,16 @@ impl Drawable for Blur {
         &self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         _font: femtovg::FontId,
+        bounds: (Vec2D, Vec2D),
     ) -> Result<()> {
         let size = match self.size {
             Some(s) => s,
             None => return Ok(()), // early exit if none
         };
+        let (pos, size) = math::rect_ensure_in_bounds(
+            math::rect_ensure_positive_size(self.top_left, size),
+            bounds,
+        );
         if self.editing {
             // set style
             let paint = Paint::color(Color::black())
@@ -82,8 +87,8 @@ impl Drawable for Blur {
             // make rect
             let mut path = Path::new();
             path.rounded_rect(
-                self.top_left.x,
-                self.top_left.y,
+                pos.x,
+                pos.y,
                 size.x,
                 size.y,
                 APP_CONFIG.read().corner_roundness(),
@@ -92,10 +97,12 @@ impl Drawable for Blur {
             // draw
             canvas.stroke_path(&path, &paint);
         } else {
+            if size.x <= 0.0 || size.y <= 0.0 {
+                return Ok(());
+            }
+
             canvas.save();
             canvas.flush();
-
-            let (pos, size) = math::rect_ensure_positive_size(self.top_left, size);
 
             // create new cached image
             if self.cached_image.borrow().is_none() {

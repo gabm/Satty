@@ -106,6 +106,7 @@ impl Drawable for Crop {
         &self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         _font: femtovg::FontId,
+        _bounds: (Vec2D, Vec2D),
     ) -> Result<()> {
         let size = self.size;
         let scale = canvas.transform().average_scale();

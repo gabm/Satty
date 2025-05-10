@@ -363,20 +363,27 @@ impl FemtoVgAreaMut {
         // render background
         self.render_background_image(canvas)?;
 
+        let bounds = (
+            Vec2D::zero(),
+            Vec2D::new(
+                self.background_image.width() as f32,
+                self.background_image.height() as f32,
+            ),
+        );
         // render the whole stack
         for d in &mut self.drawables {
-            d.draw(canvas, font)?;
+            d.draw(canvas, font, bounds)?;
         }
 
         // render active tool
         if let Some(d) = self.active_tool.borrow().get_drawable() {
-            d.draw(canvas, font)?;
+            d.draw(canvas, font, bounds)?;
         }
 
         // render crop tool
         if render_crop {
             if let Some(c) = self.crop_tool.borrow().get_crop() {
-                c.draw(canvas, font)?;
+                c.draw(canvas, font, bounds)?;
             }
         }
 

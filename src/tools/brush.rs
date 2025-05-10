@@ -26,6 +26,7 @@ impl Drawable for BrushDrawable {
         &self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         _font: FontId,
+        _bounds: (Vec2D, Vec2D),
     ) -> anyhow::Result<()> {
         canvas.save();
         let mut path = Path::new();

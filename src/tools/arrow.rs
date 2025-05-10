@@ -104,6 +104,7 @@ impl Drawable for Arrow {
         &self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         _font: FontId,
+        _bounds: (Vec2D, Vec2D),
     ) -> Result<()> {
         let end = match self.end {
             Some(e) => e,
