@@ -179,11 +179,11 @@ impl Configuration {
         if let Some(v) = general.action_on_escape {
             self.actions_on_escape = v;
         }
-        if let Some(v) = general.save_after_copy {
-            self.save_after_copy = v;
+        if let Some(v) = general.action_on_copy {
+            self.actions_on_copy = v;
         }
-        if let Some(v) = general.right_click_copy {
-            self.right_click_copy = v;
+        if let Some(v) = general.action_on_right_click {
+            self.actions_on_right_click = v;
         }
         if let Some(v) = general.default_hide_toolbars {
             self.default_hide_toolbars = v;
@@ -193,6 +193,12 @@ impl Configuration {
         }
         if let Some(v) = general.disable_notifications {
             self.disable_notifications = v;
+        }
+        if let Some(v) = general.save_after_copy {
+            self.save_after_copy = v;
+        }
+        if let Some(v) = general.right_click_copy {
+            self.right_click_copy = v;
         }
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
@@ -314,7 +320,11 @@ impl Configuration {
     }
 
     pub fn actions_on_copy(&self) -> Vec<Action> {
-        self.actions_on_copy.clone()
+        let mut actions = self.actions_on_copy.clone();
+        if APP_CONFIG.read().save_after_copy() {
+            actions.push(Action::SaveToFile);
+        }
+        actions
     }
 
     pub fn actions_on_right_click(&self) -> Vec<Action> {

@@ -312,11 +312,6 @@ impl SketchBoard {
                     "Copied to clipboard.",
                     !APP_CONFIG.read().disable_notifications(),
                 );
-
-                // TODO: rethink order and messaging patterns
-                if APP_CONFIG.read().save_after_copy() {
-                    self.handle_save(image);
-                };
             }
         }
     }
@@ -505,11 +500,8 @@ impl Component for SketchBoard {
                     } else if ke.is_one_of(Key::c, KeyMappingId::UsC)
                         && ke.modifier == ModifierType::CONTROL_MASK
                     {
-                        let mut actions = APP_CONFIG.read().actions_on_copy();
-                        if APP_CONFIG.read().save_after_copy() {
-                            actions.push(Action::SaveToFile);
-                        }
-                        self.renderer.request_render(&actions);
+                        self.renderer
+                            .request_render(&APP_CONFIG.read().actions_on_copy());
                         ToolUpdateResult::Unmodified
                     } else if ke.key == Key::Escape
                         || ke.key == Key::Return
