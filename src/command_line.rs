@@ -41,21 +41,22 @@ pub struct CommandLine {
     #[arg(long)]
     pub annotation_size_factor: Option<f32>,
 
-    /// Action to perform when pressing Enter
-    #[arg(long)]
-    pub action_on_enter: Option<Action>,
-
-    /// Action to perform when pressing Escape
-    #[arg(long)]
-    pub action_on_escape: Option<Action>,
-
     /// After copying the screenshot, save it to a file as well
+    /// Preferably use the `action_on_copy` option instead.
     #[arg(long)]
     pub save_after_copy: bool,
 
-    /// Right click to copy
-    #[arg(long)]
-    pub right_click_copy: bool,
+    /// Actions to perform when pressing Enter
+    #[arg(long, value_delimiter = ',')]
+    pub actions_on_enter: Option<Vec<Action>>,
+
+    /// Actions to perform when pressing Escape
+    #[arg(long, value_delimiter = ',')]
+    pub actions_on_escape: Option<Vec<Action>>,
+
+    /// Actions to perform when hitting the copy Button.
+    #[arg(long, value_delimiter = ',')]
+    pub actions_on_right_click: Option<Vec<Action>>,
 
     /// Hide toolbars by default
     #[arg(short, long)]
@@ -90,6 +91,17 @@ pub struct CommandLine {
     /// The default value is 0 (disabled).
     #[arg(long)]
     pub brush_smooth_history_size: Option<usize>,
+
+    // --- deprecated options ---
+    /// Right click to copy.
+    /// Preferably use the `action_on_right_click` option instead.
+    #[arg(long)]
+    pub right_click_copy: bool,
+    /// Action to perform when pressing Enter.
+    /// Preferably use the `actions_on_enter` option instead.
+    #[arg(long, value_delimiter = ',')]
+    pub action_on_enter: Option<Action>,
+    // ---
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
@@ -112,8 +124,6 @@ pub enum Tools {
 pub enum Action {
     SaveToClipboard,
     SaveToFile,
-    SaveToClipboardAndExit,
-    SaveToFileAndExit,
     Exit,
 }
 

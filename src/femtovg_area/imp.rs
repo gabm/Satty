@@ -31,7 +31,7 @@ pub struct FemtoVGArea {
     canvas: RefCell<Option<femtovg::Canvas<femtovg::renderer::OpenGl>>>,
     font: RefCell<Option<FontId>>,
     inner: RefCell<Option<FemtoVgAreaMut>>,
-    request_render: RefCell<Option<Action>>,
+    request_render: RefCell<Option<Vec<Action>>>,
     sender: RefCell<Option<Sender<SketchBoardInput>>>,
 }
 
@@ -98,10 +98,10 @@ impl GLAreaImpl for FemtoVGArea {
         let mut bc = self.canvas.borrow_mut();
         let canvas = bc.as_mut().unwrap(); // this unwrap is safe as long as we call "ensure_canvas" before
         let font = self.font.borrow().unwrap(); // this unwrap is safe as long as we call "ensure_canvas" before
-        let mut action = self.request_render.borrow_mut();
+        let mut actions = self.request_render.borrow_mut();
 
         // if we got requested to render a frame
-        if let Some(a) = action.as_ref() {
+        if let Some(a) = actions.take() {
             // render image
             let image = match self
                 .inner()
@@ -121,10 +121,10 @@ impl GLAreaImpl for FemtoVGArea {
                 .borrow()
                 .as_ref()
                 .expect("Did you call init before using FemtoVgArea?")
-                .emit(SketchBoardInput::RenderResult(image, *a));
+                .emit(SketchBoardInput::RenderResult(image, a));
 
             // reset request
-            *action = None;
+            *actions = None;
         }
         if let Err(e) = self
             .inner()
@@ -227,8 +227,8 @@ impl FemtoVGArea {
     pub fn inner(&self) -> RefMut<'_, Option<FemtoVgAreaMut>> {
         self.inner.borrow_mut()
     }
-    pub fn request_render(&self, action: Action) {
-        self.request_render.borrow_mut().replace(action);
+    pub fn request_render(&self, actions: &[Action]) {
+        self.request_render.borrow_mut().replace(actions.into());
         self.obj().queue_render();
     }
     pub fn set_parent_sender(&self, sender: Sender<SketchBoardInput>) {

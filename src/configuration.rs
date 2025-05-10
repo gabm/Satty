@@ -40,10 +40,10 @@ pub struct Configuration {
     initial_tool: Tools,
     copy_command: Option<String>,
     annotation_size_factor: f32,
-    action_on_enter: Action,
-    action_on_escape: Action,
     save_after_copy: bool,
-    right_click_copy: bool,
+    actions_on_enter: Vec<Action>,
+    actions_on_escape: Vec<Action>,
+    actions_on_right_click: Vec<Action>,
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
     font: FontConfiguration,
@@ -101,14 +101,12 @@ impl ColorPalette {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum Action {
     SaveToClipboard,
     SaveToFile,
     Exit,
-    SaveToClipboardAndExit,
-    SaveToFileAndExit,
 }
 
 impl From<CommandLineAction> for Action {
@@ -117,8 +115,6 @@ impl From<CommandLineAction> for Action {
             CommandLineAction::SaveToClipboard => Self::SaveToClipboard,
             CommandLineAction::SaveToFile => Self::SaveToFile,
             CommandLineAction::Exit => Self::Exit,
-            CommandLineAction::SaveToClipboardAndExit => Self::SaveToClipboardAndExit,
-            CommandLineAction::SaveToFileAndExit => Self::SaveToFileAndExit,
         }
     }
 }
@@ -174,17 +170,17 @@ impl Configuration {
         if let Some(v) = general.annotation_size_factor {
             self.annotation_size_factor = v;
         }
-        if let Some(v) = general.action_on_enter {
-            self.action_on_enter = v;
-        }
-        if let Some(v) = general.action_on_escape {
-            self.action_on_escape = v;
-        }
         if let Some(v) = general.save_after_copy {
             self.save_after_copy = v;
         }
-        if let Some(v) = general.right_click_copy {
-            self.right_click_copy = v;
+        if let Some(v) = general.actions_on_enter {
+            self.actions_on_enter = v;
+        }
+        if let Some(v) = general.actions_on_escape {
+            self.actions_on_escape = v;
+        }
+        if let Some(v) = general.actions_on_right_click {
+            self.actions_on_right_click = v;
         }
         if let Some(v) = general.default_hide_toolbars {
             self.default_hide_toolbars = v;
@@ -201,6 +197,21 @@ impl Configuration {
         if let Some(v) = general.brush_smooth_history_size {
             self.brush_smooth_history_size = v;
         }
+
+        // --- deprecated options ---
+        if let Some(v) = general.right_click_copy {
+            if v && !self
+                .actions_on_right_click
+                .contains(&Action::SaveToClipboard)
+            {
+                self.actions_on_right_click
+                    .insert(0, Action::SaveToClipboard);
+            }
+        }
+        if let Some(v) = general.action_on_enter {
+            self.actions_on_enter.insert(0, v);
+        }
+        // ---
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
         // input_filename is required and needs to be overwritten
@@ -244,17 +255,17 @@ impl Configuration {
         if let Some(v) = command_line.annotation_size_factor {
             self.annotation_size_factor = v;
         }
-        if let Some(v) = command_line.action_on_enter {
-            self.action_on_enter = v.into();
-        }
-        if let Some(v) = command_line.action_on_escape {
-            self.action_on_escape = v.into();
-        }
         if command_line.save_after_copy {
             self.save_after_copy = command_line.save_after_copy;
         }
-        if command_line.right_click_copy {
-            self.right_click_copy = command_line.right_click_copy;
+        if let Some(v) = command_line.actions_on_enter {
+            self.actions_on_enter = v.iter().cloned().map(Into::into).collect();
+        }
+        if let Some(v) = command_line.actions_on_escape {
+            self.actions_on_escape = v.iter().cloned().map(Into::into).collect();
+        }
+        if let Some(v) = command_line.actions_on_right_click {
+            self.actions_on_right_click = v.iter().cloned().map(Into::into).collect();
         }
         if let Some(v) = command_line.font_family {
             self.font.family = Some(v);
@@ -277,6 +288,20 @@ impl Configuration {
         if let Some(v) = command_line.brush_smooth_history_size {
             self.brush_smooth_history_size = v;
         }
+
+        // --- deprecated options ---
+        if command_line.right_click_copy
+            && !self
+                .actions_on_right_click
+                .contains(&Action::SaveToClipboard)
+        {
+            self.actions_on_right_click
+                .insert(0, Action::SaveToClipboard);
+        }
+        if let Some(v) = command_line.action_on_enter {
+            self.actions_on_enter.insert(0, v.into());
+        }
+        // ---
     }
 
     pub fn early_exit(&self) -> bool {
@@ -311,20 +336,20 @@ impl Configuration {
         self.annotation_size_factor
     }
 
-    pub fn action_on_enter(&self) -> Action {
-        self.action_on_enter
-    }
-
-    pub fn action_on_escape(&self) -> Action {
-        self.action_on_escape
-    }
-
     pub fn save_after_copy(&self) -> bool {
         self.save_after_copy
     }
 
-    pub fn right_click_copy(&self) -> bool {
-        self.right_click_copy
+    pub fn actions_on_enter(&self) -> Vec<Action> {
+        self.actions_on_enter.clone()
+    }
+
+    pub fn actions_on_escape(&self) -> Vec<Action> {
+        self.actions_on_escape.clone()
+    }
+
+    pub fn actions_on_right_click(&self) -> Vec<Action> {
+        self.actions_on_right_click.clone()
     }
 
     pub fn color_palette(&self) -> &ColorPalette {
@@ -371,10 +396,10 @@ impl Default for Configuration {
             initial_tool: Tools::Pointer,
             copy_command: None,
             annotation_size_factor: 1.0,
-            action_on_enter: Action::SaveToClipboard,
-            action_on_escape: Action::Exit,
             save_after_copy: false,
-            right_click_copy: false,
+            actions_on_enter: vec![],
+            actions_on_escape: vec![Action::Exit],
+            actions_on_right_click: vec![],
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
             font: FontConfiguration::default(),
@@ -426,16 +451,21 @@ struct ConfigurationFileGeneral {
     initial_tool: Option<Tools>,
     copy_command: Option<String>,
     annotation_size_factor: Option<f32>,
-    output_filename: Option<String>,
-    action_on_enter: Option<Action>,
-    action_on_escape: Option<Action>,
     save_after_copy: Option<bool>,
-    right_click_copy: Option<bool>,
+    output_filename: Option<String>,
+    actions_on_enter: Option<Vec<Action>>,
+    actions_on_escape: Option<Vec<Action>>,
+    actions_on_right_click: Option<Vec<Action>>,
     default_hide_toolbars: Option<bool>,
     primary_highlighter: Option<Highlighters>,
     disable_notifications: Option<bool>,
     no_window_decoration: Option<bool>,
     brush_smooth_history_size: Option<usize>,
+
+    // --- deprecated options ---
+    right_click_copy: Option<bool>,
+    action_on_enter: Option<Action>,
+    // ---
 }
 
 #[derive(Deserialize)]

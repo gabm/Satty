@@ -31,7 +31,7 @@ type RenderedImage = Img<Vec<RGBA<u8>>>;
 pub enum SketchBoardInput {
     InputEvent(InputEvent),
     ToolbarEvent(ToolbarEvent),
-    RenderResult(RenderedImage, Action),
+    RenderResult(RenderedImage, Vec<Action>),
 }
 
 #[derive(Debug, Clone)]
@@ -123,19 +123,12 @@ impl From<u32> for MouseButton {
 }
 
 impl InputEvent {
-    fn handle_event_mouse_input(
-        &mut self,
-        renderer: &FemtoVGArea,
-        sender: &ComponentSender<SketchBoard>,
-    ) -> Option<ToolUpdateResult> {
+    fn handle_event_mouse_input(&mut self, renderer: &FemtoVGArea) -> Option<ToolUpdateResult> {
         if let InputEvent::Mouse(me) = self {
             match me.type_ {
                 MouseEventType::Click => {
-                    if me.button == MouseButton::Secondary && APP_CONFIG.read().right_click_copy() {
-                        sender
-                            .input_sender()
-                            .send(SketchBoardInput::ToolbarEvent(ToolbarEvent::CopyClipboard))
-                            .unwrap();
+                    if me.button == MouseButton::Secondary {
+                        renderer.request_render(&APP_CONFIG.read().actions_on_right_click());
                         None
                     } else {
                         me.pos = renderer.abs_canvas_to_image_coordinates(me.pos);
@@ -183,23 +176,36 @@ impl SketchBoard {
         )
     }
 
-    fn handle_render_result(&self, image: RenderedImage, action: Action) {
-        match action {
-            Action::SaveToClipboard | Action::SaveToClipboardAndExit => {
-                self.handle_copy_clipboard(Self::image_to_pixbuf(image))
-            }
-            Action::SaveToFile | Action::SaveToFileAndExit => {
-                self.handle_save(Self::image_to_pixbuf(image))
-            }
-            _ => (),
+    fn handle_render_result(&self, image: RenderedImage, actions: Vec<Action>) {
+        let needs_pixbuf = actions
+            .iter()
+            .any(|action| matches!(action, Action::SaveToClipboard | Action::SaveToFile));
+
+        let pix_buf = if needs_pixbuf {
+            Some(Self::image_to_pixbuf(image))
+        } else {
+            None
         };
-        if APP_CONFIG.read().early_exit()
-            || matches!(
-                action,
-                Action::Exit | Action::SaveToFileAndExit | Action::SaveToClipboardAndExit
-            )
-        {
-            self.handle_exit();
+
+        for action in actions {
+            match action {
+                Action::SaveToClipboard => {
+                    if let Some(ref pix_buf) = pix_buf {
+                        self.handle_copy_clipboard(pix_buf);
+                    }
+                }
+                Action::SaveToFile => {
+                    if let Some(ref pix_buf) = pix_buf {
+                        self.handle_save(pix_buf);
+                    }
+                }
+                _ => (),
+            }
+
+            if APP_CONFIG.read().early_exit() || action == Action::Exit {
+                self.handle_exit();
+                return;
+            }
         }
     }
 
@@ -207,7 +213,7 @@ impl SketchBoard {
         relm4::main_application().quit();
     }
 
-    fn handle_save(&self, image: Pixbuf) {
+    fn handle_save(&self, image: &Pixbuf) {
         let mut output_filename = match APP_CONFIG.read().output_filename() {
             None => {
                 println!("No Output filename specified!");
@@ -300,8 +306,8 @@ impl SketchBoard {
         Ok(())
     }
 
-    fn handle_copy_clipboard(&self, image: Pixbuf) {
-        let texture = Texture::for_pixbuf(&image);
+    fn handle_copy_clipboard(&self, image: &Pixbuf) {
+        let texture = Texture::for_pixbuf(image);
 
         let result = if let Some(command) = APP_CONFIG.read().copy_command() {
             self.save_to_external_process(&texture, command)
@@ -414,11 +420,11 @@ impl SketchBoard {
                     .handle_event(ToolEvent::StyleChanged(self.style))
             }
             ToolbarEvent::SaveFile => {
-                self.renderer.request_render(Action::SaveToFile);
+                self.renderer.request_render(&[Action::SaveToFile]);
                 ToolUpdateResult::Unmodified
             }
             ToolbarEvent::CopyClipboard => {
-                self.renderer.request_render(Action::SaveToClipboard);
+                self.renderer.request_render(&[Action::SaveToClipboard]);
                 ToolUpdateResult::Unmodified
             }
             ToolbarEvent::Undo => self.handle_undo(),
@@ -515,12 +521,12 @@ impl Component for SketchBoard {
                     } else if ke.is_one_of(Key::s, KeyMappingId::UsS)
                         && ke.modifier == ModifierType::CONTROL_MASK
                     {
-                        self.renderer.request_render(Action::SaveToFile);
+                        self.renderer.request_render(&[Action::SaveToFile]);
                         ToolUpdateResult::Unmodified
                     } else if ke.is_one_of(Key::c, KeyMappingId::UsC)
                         && ke.modifier == ModifierType::CONTROL_MASK
                     {
-                        self.renderer.request_render(Action::SaveToClipboard);
+                        self.renderer.request_render(&[Action::SaveToClipboard]);
                         ToolUpdateResult::Unmodified
                     } else if ke.key == Key::Escape
                         || ke.key == Key::Return
@@ -532,11 +538,12 @@ impl Component for SketchBoard {
                             .active_tool
                             .borrow_mut()
                             .handle_event(ToolEvent::Input(ie));
-                        self.renderer.request_render(if ke.key == Key::Escape {
-                            APP_CONFIG.read().action_on_escape()
+                        let actions = if ke.key == Key::Escape {
+                            APP_CONFIG.read().actions_on_escape()
                         } else {
-                            APP_CONFIG.read().action_on_enter()
-                        });
+                            APP_CONFIG.read().actions_on_enter()
+                        };
+                        self.renderer.request_render(&actions);
                         result
                     } else {
                         self.active_tool
@@ -544,7 +551,7 @@ impl Component for SketchBoard {
                             .handle_event(ToolEvent::Input(ie))
                     }
                 } else {
-                    ie.handle_event_mouse_input(&self.renderer, &sender);
+                    ie.handle_event_mouse_input(&self.renderer);
                     self.active_tool
                         .borrow_mut()
                         .handle_event(ToolEvent::Input(ie))
