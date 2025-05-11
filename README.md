@@ -60,13 +60,22 @@ All configuration is done either at the config file in `XDG_CONFIG_DIR/.config/s
 
 ### Shortcuts
 
-- `Enter`: as configured (see below)
-- `Esc`: Exit application
+- `Enter`: as configured (see below), default: copy-to-clipboard
+- `Esc`: as configured (see below), default: exit
 - `Ctrl+C`: Save to clipboard
 - `Ctrl+S`: Save to specified output file
 - `Ctrl+T`: Toggle toolbars
 - `Ctrl+Y`: Redo
 - `Ctrl+Z`: Undo
+
+### Tool Modifiers
+
+- Arrow: Hold `Shift` to make arrow snap to 15° steps
+- Ellipse: Hold `Alt` to center the ellipse around origin, hold `Shift` for a circle
+- Highlight: Hold `Ctrl` to switch between block and freehand mode (default configurable, see below), hold Shift for a square
+- Line: Hold `Shift` to make line snap to 15° steps
+- Rectangle: Hold `Alt` to center the rectangle around origin, hold `Shift` for a square
+- Text: Press `Shift+Enter` to insert line break, combine `Ctrl` with `Left` or `Right` for word jump or `Ctrl` with `Backspace` or `Delete` for word delete
 
 ### Configuration File
 
@@ -86,7 +95,6 @@ copy-command = "wl-copy"
 annotation-size-factor = 2
 # Filename to use for saving action. Omit to disable saving to file. Might contain format specifiers: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
 output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
-
 # After copying the screenshot, save it to a file as well
 save-after-copy = false
 # Hide toolbars by default
@@ -104,13 +112,16 @@ actions-on-enter = ["save-to-clipboard"]
 # Actions to trigger on Escape key (order is important)
 # [possible values: save-to-clipboard, save-to-file, exit]
 actions-on-escape = ["exit"]
-
 # Action to perform when the Enter key is pressed [possible values: save-to-clipboard, save-to-file]
 # Deprecated: use actions-on-enter instead
 action-on-enter = "save-to-clipboard"
 # Right click to copy
 # Deprecated: use actions-on-right-click instead
 right-click-copy = false
+# request no window decoration. Please note that the compositor has the final say in this. At this point. requires xdg-decoration-unstable-v1.
+no-window-decoration = true
+# experimental feature: adjust history size for brush input smooting (0: disabled, default: 0, try e.g. 5 or 10)
+brush-smooth-history-size = 10
 
 # Font to use for text annotations
 [font]
@@ -194,6 +205,10 @@ Options:
           Right click to copy. Preferably use the `action_on_right_click` option instead
       --action-on-enter <ACTION_ON_ENTER>
           Action to perform when pressing Enter. Preferably use the `actions_on_enter` option instead [possible values: save-to-clipboard, save-to-file, exit]
+      --no-window-decoration
+          Request no window decoration. Please note that the compositor has the final say in this. At this point. requires xdg-decoration-unstable-v1.
+      --brush-smooth-history-size <SIZE>
+          Experimental feature: Adjust history size for brush input smooting (0: disabled, default: 0, try e.g. 5 or 10)
   -h, --help
           Print help
   -V, --version
@@ -213,6 +228,19 @@ Hyprland users must escape the `#` with another `#`:
 ```
 grim -g "$(slurp -o -r -c '##ff0000ff')" -t ppm - | satty --filename - --fullscreen --output-filename ~/Pictures/Screenshots/satty-$(date '+%Y%m%d-%H:%M:%S').png
 ```
+
+Please note we're using ppm in both examples. Compared to png, ppm is uncompressed and this can save time.
+
+### Other examples
+
+#### Image Resize
+
+Satty does not provide a resize mechanism other than cropping. But you can pipe the result to other tools such as ImageMagick:
+
+```
+grim -g "0,0 3840x2160" -t ppm - | satty --filename - --output-filename - | convert -resize 50% - out.png
+```
+
 ## Build from source
 
 You first need to install the native dependencies of Satty (see below) and then run:
