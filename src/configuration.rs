@@ -50,6 +50,7 @@ pub struct Configuration {
     primary_highlighter: Highlighters,
     disable_notifications: bool,
     profile_startup: bool,
+    no_window_decoration: bool,
 }
 
 #[derive(Default)]
@@ -193,6 +194,9 @@ impl Configuration {
         if let Some(v) = general.disable_notifications {
             self.disable_notifications = v;
         }
+        if let Some(v) = general.no_window_decoration {
+            self.no_window_decoration = v;
+        }
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
         // input_filename is required and needs to be overwritten
@@ -254,7 +258,6 @@ impl Configuration {
         if let Some(v) = command_line.font_style {
             self.font.style = Some(v);
         }
-
         if let Some(v) = command_line.primary_highlighter {
             self.primary_highlighter = v.into();
         }
@@ -263,6 +266,9 @@ impl Configuration {
         }
         if command_line.profile_startup {
             self.profile_startup = command_line.profile_startup;
+        }
+        if command_line.no_window_decoration {
+            self.no_window_decoration = command_line.no_window_decoration;
         }
     }
 
@@ -333,6 +339,10 @@ impl Configuration {
         self.profile_startup
     }
 
+    pub fn no_window_decoration(&self) -> bool {
+        self.no_window_decoration
+    }
+
     pub fn font(&self) -> &FontConfiguration {
         &self.font
     }
@@ -359,6 +369,7 @@ impl Default for Configuration {
             primary_highlighter: Highlighters::Block,
             disable_notifications: false,
             profile_startup: false,
+            no_window_decoration: false,
         }
     }
 }
@@ -410,6 +421,7 @@ struct ConfigurationFileGeneral {
     default_hide_toolbars: Option<bool>,
     primary_highlighter: Option<Highlighters>,
     disable_notifications: Option<bool>,
+    no_window_decoration: Option<bool>,
 }
 
 #[derive(Deserialize)]

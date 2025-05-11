@@ -69,7 +69,7 @@ pub struct CommandLine {
     #[arg(long)]
     pub font_style: Option<String>,
 
-    /// The primary highlighter to use, secondary is accessible with CTRL.
+    /// The primary highlighter to use, secondary is accessible with CTRL
     #[arg(long)]
     pub primary_highlighter: Option<Highlighters>,
 
@@ -77,9 +77,13 @@ pub struct CommandLine {
     #[arg(long)]
     pub disable_notifications: bool,
 
-    /// print profiling
+    /// Print profiling
     #[arg(long)]
     pub profile_startup: bool,
+
+    /// Disable the window decoration (title bar, borders, etc.)
+    #[arg(long)]
+    pub no_window_decoration: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
