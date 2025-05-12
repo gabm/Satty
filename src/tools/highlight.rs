@@ -4,7 +4,7 @@ use anyhow::Result;
 use femtovg::{Paint, Path};
 
 use relm4::gtk::gdk::{Key, ModifierType};
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 
 use crate::{
     command_line,
@@ -19,7 +19,7 @@ use super::{Drawable, Tool, ToolUpdateResult};
 
 const HIGHLIGHT_OPACITY: f64 = 0.4;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Deserialize)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Highlighters {
     Block = 0,
