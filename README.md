@@ -226,7 +226,7 @@ Satty is based on GTK-4 and Adwaita.
 
 ## Maintainers and Contributors
 
-Satty wouldn't exist without the help of our contributors and maintainers. Current maintainers are @RobertMueller2 (maintainer) and @gabm (maintainer, original author). Our contributors are:
+Satty wouldn't exist without the help of our contributors and maintainers. Current maintainers are @RobertMueller2 (maintainer), @fabienjuif (maintainer) and @gabm (maintainer, original author). Our contributors are:
 
 <a href="https://github.com/gabm/satty/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=gabm/satty" />
