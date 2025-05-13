@@ -7,7 +7,7 @@ use std::{
 use clap::Parser;
 use hex_color::HexColor;
 use relm4::SharedState;
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 use thiserror::Error;
 use xdg::{BaseDirectories, BaseDirectoriesError};
 
@@ -29,6 +29,9 @@ enum ConfigurationFileError {
 
     #[error("Decoding toml failed: {0}")]
     TomlDecoding(#[from] toml::de::Error),
+
+    #[error("Serializing toml failed: {0}")]
+    TomlEncoding(#[from] toml::ser::Error),
 }
 
 pub struct Configuration {
@@ -100,7 +103,7 @@ impl ColorPalette {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum Action {
     SaveToClipboard,
@@ -149,6 +152,9 @@ impl Configuration {
             }
         };
 
+        if file.is_none() {
+            ConfigurationFile::create().expect("Failed to create config file");
+        }
         APP_CONFIG.write().merge(file, command_line);
     }
     fn merge_general(&mut self, general: ConfigurationFileGeneral) {
@@ -389,7 +395,7 @@ impl Default for ColorPalette {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct ConfigurationFile {
     general: Option<ConfigurationFileGeneral>,
@@ -397,14 +403,24 @@ struct ConfigurationFile {
     font: Option<FontFile>,
 }
 
-#[derive(Deserialize)]
+impl Default for ConfigurationFile {
+    fn default() -> Self {
+        Self {
+            general: Some(ConfigurationFileGeneral::default()),
+            color_palette: Default::default(),
+            font: Default::default(),
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Default, Debug)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct FontFile {
     family: Option<String>,
     style: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct ConfigurationFileGeneral {
     fullscreen: Option<bool>,
@@ -424,7 +440,29 @@ struct ConfigurationFileGeneral {
     no_window_decoration: Option<bool>,
 }
 
-#[derive(Deserialize)]
+impl Default for ConfigurationFileGeneral {
+    fn default() -> Self {
+        Self {
+            fullscreen: Some(false),
+            early_exit: Some(false),
+            corner_roundness: Some(2.),
+            initial_tool: Some(Tools::Pointer),
+            copy_command: None,
+            annotation_size_factor: Some(1.0),
+            save_after_copy: None,
+            output_filename: None,
+            default_hide_toolbars: Some(false),
+            primary_highlighter: None,
+            disable_notifications: Some(false),
+            no_window_decoration: Some(false),
+            right_click_copy: None,
+            action_on_enter: None,
+            action_on_escape: None,
+        }
+    }
+}
+
+#[derive(Deserialize, Serialize, Default, Debug)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct ColorPaletteFile {
     palette: Option<Vec<HexColor>>,
@@ -454,5 +492,14 @@ impl ConfigurationFile {
     ) -> Result<Option<ConfigurationFile>, ConfigurationFileError> {
         let content = fs::read_to_string(path)?;
         Ok(Some(toml::from_str::<ConfigurationFile>(&content)?))
+    }
+
+    fn create() -> Result<(), ConfigurationFileError> {
+        let def = ConfigurationFile::default();
+        println!("{:?}", def);
+        let str = toml::to_string(&def)?;
+        println!("Creating default config file:\n{}", str);
+
+        Ok(())
     }
 }

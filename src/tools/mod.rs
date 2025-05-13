@@ -8,7 +8,7 @@ use gdk_pixbuf::{
 };
 
 use glib::variant::FromVariant;
-use serde_derive::Deserialize;
+use serde_derive::{Deserialize, Serialize};
 
 use crate::{
     command_line,
@@ -143,7 +143,7 @@ pub use text::TextTool;
 
 use self::{brush::BrushTool, marker::MarkerTool, pointer::PointerTool};
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Deserialize)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum Tools {
     Pointer = 0,
