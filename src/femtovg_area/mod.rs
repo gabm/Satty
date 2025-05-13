@@ -57,8 +57,8 @@ impl FemtoVGArea {
             .expect("Did you call init before using FemtoVgArea?")
             .redo()
     }
-    pub fn request_render(&self, action: Action) {
-        self.imp().request_render(action);
+    pub fn request_render(&self, actions: &[Action]) {
+        self.imp().request_render(actions);
     }
     pub fn reset(&mut self) -> bool {
         self.imp()

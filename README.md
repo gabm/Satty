@@ -86,17 +86,31 @@ copy-command = "wl-copy"
 annotation-size-factor = 2
 # Filename to use for saving action. Omit to disable saving to file. Might contain format specifiers: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
 output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
-# Action to perform when the Enter key is pressed [possible values: save-to-clipboard, save-to-file]
-action-on-enter = "save-to-clipboard"
+
 # After copying the screenshot, save it to a file as well
 save-after-copy = false
-# Right click to copy
-right-click-copy = false
 # Hide toolbars by default
 default-hide-toolbars = false
 # The primary highlighter to use, the other is accessible by holding CTRL at the start of a highlight [possible values: block, freehand]
 primary-highlighter = "block"
+# Disable notifications
 disable-notifications = false
+# Actions to trigger on right click (order is important)
+# [possible values: save-to-clipboard, save-to-file, exit]
+actions-on-right-click = []
+# Actions to trigger on Enter key (order is important)
+# [possible values: save-to-clipboard, save-to-file, exit]
+actions-on-enter = ["save-to-clipboard"]
+# Actions to trigger on Escape key (order is important)
+# [possible values: save-to-clipboard, save-to-file, exit]
+actions-on-escape = ["exit"]
+
+# Action to perform when the Enter key is pressed [possible values: save-to-clipboard, save-to-file]
+# Deprecated: use actions-on-enter instead
+action-on-enter = "save-to-clipboard"
+# Right click to copy
+# Deprecated: use actions-on-right-click instead
+right-click-copy = false
 
 # Font to use for text annotations
 [font]
@@ -143,33 +157,43 @@ Options:
       --fullscreen
           Start Satty in fullscreen mode
   -o, --output-filename <OUTPUT_FILENAME>
-          Filename to use for saving action. Omit to disable saving to file. Might contain format specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
+          Filename to use for saving action or '-' to print to stdout. Omit to disable saving to file. Might contain format specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
       --early-exit
           Exit directly after copy/save action
-      --corner-roundness <ROUNDNESS_FACTOR>
-          Draw corners of rectangles round if the value is greater than 0 (0 disables rounded corners)
+      --corner-roundness <CORNER_ROUNDNESS>
+          Draw corners of rectangles round if the value is greater than 0 (Defaults to 12) (0 disables rounded corners)
       --initial-tool <TOOL>
-          Select the tool on startup [aliases: init-tool] [possible values: pointer, crop, line, arrow, rectangle, text, marker, blur, brush]
+          Select the tool on startup [aliases: init-tool] [possible values: pointer, crop, line, arrow, rectangle, ellipse, text, marker, blur, highlight, brush]
       --copy-command <COPY_COMMAND>
           Configure the command to be called on copy, for example `wl-copy`
       --annotation-size-factor <ANNOTATION_SIZE_FACTOR>
           Increase or decrease the size of the annotations
-      --action-on-enter <ACTION_ON_ENTER>
-          Action to perform when pressing Enter [possible values: save-to-clipboard, save-to-file]
       --save-after-copy
-          After copying the screenshot, save it to a file as well
-      --right-click-copy
-          Right click to copy
+          After copying the screenshot, save it to a file as well Preferably use the `action_on_copy` option instead
+      --actions-on-enter <ACTIONS_ON_ENTER>
+          Actions to perform when pressing Enter [possible values: save-to-clipboard, save-to-file, exit]
+      --actions-on-escape <ACTIONS_ON_ESCAPE>
+          Actions to perform when pressing Escape [possible values: save-to-clipboard, save-to-file, exit]
+      --actions-on-right-click <ACTIONS_ON_RIGHT_CLICK>
+          Actions to perform when hitting the copy Button [possible values: save-to-clipboard, save-to-file, exit]
   -d, --default-hide-toolbars
           Hide toolbars by default
-      --primary-highlighter <PRIMARY_HIGHLIGHTER>
-          The primary highlighter to use, secondary is accessible with CTRL [possible values: block, freehand]
-      --disable-notifications
-          Disable notifications
       --font-family <FONT_FAMILY>
           Font family to use for text annotations
       --font-style <FONT_STYLE>
           Font style to use for text annotations
+      --primary-highlighter <PRIMARY_HIGHLIGHTER>
+          The primary highlighter to use, secondary is accessible with CTRL [possible values: block, freehand]
+      --disable-notifications
+          Disable notifications
+      --profile-startup
+          Print profiling
+      --no-window-decoration
+          Disable the window decoration (title bar, borders, etc.)
+      --right-click-copy
+          Right click to copy. Preferably use the `action_on_right_click` option instead
+      --action-on-enter <ACTION_ON_ENTER>
+          Action to perform when pressing Enter. Preferably use the `actions_on_enter` option instead [possible values: save-to-clipboard, save-to-file, exit]
   -h, --help
           Print help
   -V, --version
