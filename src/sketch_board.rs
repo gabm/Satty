@@ -430,12 +430,6 @@ impl SketchBoard {
                     .borrow_mut()
                     .handle_event(ToolEvent::StyleChanged(self.style))
             }
-            ToolbarEvent::AnnotationSizeChanged(value) => {
-                self.style.annotation_size_factor = value;
-                self.active_tool
-                    .borrow_mut()
-                    .handle_event(ToolEvent::StyleChanged(self.style))
-            }
         }
     }
 }
