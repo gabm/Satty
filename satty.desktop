@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Satty
-GenericName=A Screenshot Annotation Tool inspired by Swappy and Flameshot.
+GenericName=Modern Screenshot Annotation.
 TryExec=satty
 Exec=satty -f %f
 Terminal=false
