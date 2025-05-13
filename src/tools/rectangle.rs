@@ -13,9 +13,12 @@ use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Rectangle {
+    origin: Vec2D,
     top_left: Vec2D,
     size: Option<Vec2D>,
     style: Style,
+    centered: bool,
+    finishing: bool,
 }
 
 impl Drawable for Rectangle {
@@ -40,6 +43,15 @@ impl Drawable for Rectangle {
             APP_CONFIG.read().corner_roundness(),
         );
 
+        if !self.finishing && self.centered {
+            let mut helpers = Path::new();
+            helpers.circle(self.origin.x, self.origin.y, 2.0);
+            canvas.stroke_path(
+                &helpers,
+                &femtovg::Paint::color(femtovg::Color::rgba(128, 128, 128, 255)),
+            );
+        }
+
         if self.style.fill {
             canvas.fill_path(&path, &self.style.into());
         } else {
@@ -51,6 +63,40 @@ impl Drawable for Rectangle {
     }
 }
 
+impl Rectangle {
+    fn calculate_shape(&mut self, event: &MouseEventMsg) {
+        self.centered = event.modifier & ModifierType::ALT_MASK == ModifierType::ALT_MASK;
+        match event.modifier & (ModifierType::ALT_MASK | ModifierType::SHIFT_MASK) {
+            v if v == ModifierType::ALT_MASK | ModifierType::SHIFT_MASK => {
+                let max_size = event.pos.x.abs().max(event.pos.y.abs());
+                self.top_left.x = self.origin.x - max_size * event.pos.x.signum() / 2.0;
+                self.top_left.y = self.origin.y - max_size * event.pos.y.signum() / 2.0;
+                self.size = Some(Vec2D {
+                    x: max_size * event.pos.x.signum(),
+                    y: max_size * event.pos.y.signum(),
+                });
+            }
+            ModifierType::ALT_MASK => {
+                self.top_left.x = self.origin.x - event.pos.x / 2.0;
+                self.top_left.y = self.origin.y - event.pos.y / 2.0;
+                self.size = Some(event.pos);
+            }
+            ModifierType::SHIFT_MASK => {
+                self.top_left = self.origin;
+                let max_size = event.pos.x.abs().max(event.pos.y.abs());
+                self.size = Some(Vec2D {
+                    x: max_size * event.pos.x.signum(),
+                    y: max_size * event.pos.y.signum(),
+                });
+            }
+            _ => {
+                self.top_left = self.origin;
+                self.size = Some(event.pos);
+            }
+        }
+    }
+}
+
 #[derive(Default)]
 pub struct RectangleTool {
     rectangle: Option<Rectangle>,
@@ -59,37 +105,31 @@ pub struct RectangleTool {
 
 impl Tool for RectangleTool {
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
-        let shift_pressed = event.modifier.intersects(ModifierType::SHIFT_MASK);
         match event.type_ {
             MouseEventType::BeginDrag => {
                 // start new
                 self.rectangle = Some(Rectangle {
+                    origin: event.pos,
                     top_left: event.pos,
                     size: None,
                     style: self.style,
+                    centered: false,
+                    finishing: false,
                 });
 
                 ToolUpdateResult::Redraw
             }
             MouseEventType::EndDrag => {
                 if let Some(rectangle) = &mut self.rectangle {
+                    rectangle.finishing = true;
                     if event.pos == Vec2D::zero() {
                         self.rectangle = None;
 
                         ToolUpdateResult::Redraw
                     } else {
-                        if shift_pressed {
-                            let max_size = event.pos.x.abs().max(event.pos.y.abs());
-                            rectangle.size = Some(Vec2D {
-                                x: max_size * event.pos.x.signum(),
-                                y: max_size * event.pos.y.signum(),
-                            });
-                        } else {
-                            rectangle.size = Some(event.pos);
-                        }
+                        rectangle.calculate_shape(&event);
                         let result = rectangle.clone_box();
                         self.rectangle = None;
-
                         ToolUpdateResult::Commit(result)
                     }
                 } else {
@@ -101,16 +141,7 @@ impl Tool for RectangleTool {
                     if event.pos == Vec2D::zero() {
                         return ToolUpdateResult::Unmodified;
                     }
-                    if shift_pressed {
-                        let max_size = event.pos.x.abs().max(event.pos.y.abs());
-                        rectangle.size = Some(Vec2D {
-                            x: max_size * event.pos.x.signum(),
-                            y: max_size * event.pos.y.signum(),
-                        });
-                    } else {
-                        rectangle.size = Some(event.pos);
-                    }
-
+                    rectangle.calculate_shape(&event);
                     ToolUpdateResult::Redraw
                 } else {
                     ToolUpdateResult::Unmodified
