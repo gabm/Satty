@@ -51,6 +51,7 @@ pub struct Configuration {
     disable_notifications: bool,
     profile_startup: bool,
     no_window_decoration: bool,
+    brush_smooth_history_size: usize,
 }
 
 #[derive(Default)]
@@ -197,6 +198,9 @@ impl Configuration {
         if let Some(v) = general.no_window_decoration {
             self.no_window_decoration = v;
         }
+        if let Some(v) = general.brush_smooth_history_size {
+            self.brush_smooth_history_size = v;
+        }
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
         // input_filename is required and needs to be overwritten
@@ -270,6 +274,9 @@ impl Configuration {
         if command_line.no_window_decoration {
             self.no_window_decoration = command_line.no_window_decoration;
         }
+        if let Some(v) = command_line.brush_smooth_history_size {
+            self.brush_smooth_history_size = v;
+        }
     }
 
     pub fn early_exit(&self) -> bool {
@@ -331,6 +338,7 @@ impl Configuration {
     pub fn primary_highlighter(&self) -> Highlighters {
         self.primary_highlighter
     }
+
     pub fn disable_notifications(&self) -> bool {
         self.disable_notifications
     }
@@ -345,6 +353,10 @@ impl Configuration {
 
     pub fn font(&self) -> &FontConfiguration {
         &self.font
+    }
+
+    pub fn brush_smooth_history_size(&self) -> usize {
+        self.brush_smooth_history_size
     }
 }
 
@@ -370,6 +382,7 @@ impl Default for Configuration {
             disable_notifications: false,
             profile_startup: false,
             no_window_decoration: false,
+            brush_smooth_history_size: 0, // default to 0, no history
         }
     }
 }
@@ -422,6 +435,7 @@ struct ConfigurationFileGeneral {
     primary_highlighter: Option<Highlighters>,
     disable_notifications: Option<bool>,
     no_window_decoration: Option<bool>,
+    brush_smooth_history_size: Option<usize>,
 }
 
 #[derive(Deserialize)]
