@@ -145,7 +145,7 @@ custom = [
 
 ```sh
 » satty --help
-Modern Screenshot Annotation. A Screenshot Annotation Tool inspired by Swappy and Flameshot.
+Modern Screenshot Annotation.
 
 Usage: satty [OPTIONS] --filename <FILENAME>
 
