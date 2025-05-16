@@ -48,6 +48,11 @@ Satty is available in [Alpine Community](https://pkgs.alpinelinux.org/packages?n
 apk add satty
 ```
 
+### Void Linux
+
+A template PR can be found in [the official void-packages repository](https://github.com/void-linux/void-packages/pull/55276).
+
+
 ### Prebuilt Sources
 
 You can download a prebuilt binary for x86-64 on the [Satty Releases](https://github.com/gabm/satty/releases) page.
