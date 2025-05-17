@@ -486,7 +486,7 @@ impl ConfigurationFile {
     }
 
     fn try_read_xdg() -> Result<Option<ConfigurationFile>, ConfigurationFileError> {
-        let dirs = BaseDirectories::with_prefix("satty");
+        let dirs = BaseDirectories::with_prefix(env!("CARGO_PKG_NAME"));
         match dirs.get_config_file("config.toml") {
             Some(path) => Self::try_read_path(path),
             None => Ok(None),
