@@ -1,6 +1,6 @@
 use std::io::Read;
-use std::ptr;
 use std::sync::LazyLock;
+use std::{fs, ptr};
 use std::{io, time::Duration};
 
 use configuration::{Configuration, APP_CONFIG};
@@ -19,6 +19,7 @@ use anyhow::{anyhow, Context, Result};
 
 use sketch_board::SketchBoardOutput;
 use ui::toolbars::{StyleToolbar, StyleToolbarInput, ToolsToolbar, ToolsToolbarInput};
+use xdg::BaseDirectories;
 
 mod command_line;
 mod configuration;
@@ -135,6 +136,10 @@ impl App {
         let css_provider = CssProvider::new();
         css_provider.load_from_data(
             "
+            .root {
+                min-width: 50rem;
+                min-height: 10rem;
+            }
             .toolbar {color: #f9f9f9 ; background: #00000099;}
             .toast {
                 color: #f9f9f9;
@@ -146,6 +151,9 @@ impl App {
             .toolbar-top {border-radius: 0px 0px 6px 6px;}
             ",
         );
+        if let Some(overrides) = read_css_overrides() {
+            css_provider.load_from_data(&overrides);
+        }
         match DisplayManager::get().default_display() {
             Some(display) => {
                 gtk::style_context_add_provider_for_display(&display, &css_provider, 1)
@@ -166,6 +174,7 @@ impl Component for App {
         main_window = gtk::Window {
             set_decorated: !APP_CONFIG.read().no_window_decoration(),
             set_default_size: (500, 500),
+            add_css_class: "root",
 
             connect_show[sender] => move |_| {
                 generate_profile_output!("gui show event");
@@ -290,6 +299,17 @@ impl Component for App {
 
         ComponentParts { model, widgets }
     }
+}
+
+fn read_css_overrides() -> Option<String> {
+    let dirs = BaseDirectories::with_prefix(env!("CARGO_PKG_NAME"));
+    let path = dirs.get_config_file("overrides.css")?;
+    let Ok(content) = fs::read_to_string(&path) else {
+        eprintln!("failed to read CSS overrides from {}", &path.display());
+        return None;
+    };
+
+    Some(content)
 }
 
 fn load_gl() -> Result<()> {
