@@ -19,39 +19,11 @@ Thanks to our package maintainers, Satty is available for many distributions on 
 
 [![Packaging status](https://repology.org/badge/vertical-allrepos/satty.svg)](https://repology.org/project/satty/versions)
 
-
-### Arch Linux
-
-You can get the official Arch Linux package from the AUR:
-
-```
-pacman -S satty
-```
-
-### Gentoo
-
-You can get the Gentoo package from the Guru overlay:
-
-```
-eselect repository enable guru
-emerge --sync guru
-emerge -av satty
-```
-
-Pending PR for Gentoo overlay: https://github.com/gentoo/gentoo/pull/33908
-
-### Alpine Linux
-
-Satty is available in [Alpine Community](https://pkgs.alpinelinux.org/packages?name=satty&branch=edge&repo=&arch=&maintainer=). You can install it by uncommenting the community repo in `/etc/apk/repositories` and then run:
-
-```
-apk add satty
-```
-
-### Void Linux
-
-A template PR can be found in [the official void-packages repository](https://github.com/void-linux/void-packages/pull/55276).
-
+### Specifics
+| Distribution | Command | Note |
+| --- | --- | --- |
+| Gentoo | `emerge -av satty` | You need guru overlay (see [wiki](https://github.com/gabm/Satty/wiki/Gentoo-Guru)). Pending [PR](https://github.com/gentoo/gentoo/pull/33908) |
+| Alpine Linux | `apk add satty` | Available in [Alpine Community](https://pkgs.alpinelinux.org/packages?name=satty&branch=edge&repo=&arch=&maintainer=) |
 
 ### Prebuilt Sources
 
@@ -264,20 +236,11 @@ PREFIX=/usr/local make uninstall
 ## Dependencies
 
 Satty is based on GTK-4 and Adwaita.
-
-### Ubuntu
-
-- libgtk-4-1
-- libadwaita-1-0
-- libepoxy
-- fontconfig
-
-### Arch Linux & Gentoo
-
+Dependencies, depending of each distributions are:
 - glib2
-- libadwaita
-- gtk4
+- gtk4 (libgtk-4-x)
 - gdk-pixbuf2
+- libadwaita
 - libepoxy
 - fontconfig
 
