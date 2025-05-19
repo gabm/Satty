@@ -39,8 +39,8 @@ impl Blur {
             .sub_image(
                 transformed_pos.0 as usize,
                 transformed_pos.1 as usize,
-                transformed_size.x as usize,
-                transformed_size.y as usize,
+                (transformed_size.x as usize).max(1),
+                (transformed_size.y as usize).max(1),
             )
             .to_contiguous_buf();
         let sub = Img::new(buf.into_owned(), width, height);
