@@ -528,9 +528,10 @@ impl Component for SketchBoard {
                     {
                         self.renderer.request_render(&[Action::SaveToClipboard]);
                         ToolUpdateResult::Unmodified
-                    } else if ke.key == Key::Escape
-                        || ke.key == Key::Return
-                        || ke.key == Key::KP_Enter
+                    } else if ke.modifier.is_empty()
+                        && (ke.key == Key::Escape
+                            || ke.key == Key::Return
+                            || ke.key == Key::KP_Enter)
                     {
                         // First, let the tool handle the event. If the tool does nothing, we can do our thing (otherwise require a second keyboard press)
                         // Relying on ToolUpdateResult::Unmodified is probably not a good idea, but it's the only way at the moment. See discussion in #144
@@ -538,12 +539,14 @@ impl Component for SketchBoard {
                             .active_tool
                             .borrow_mut()
                             .handle_event(ToolEvent::Input(ie));
-                        let actions = if ke.key == Key::Escape {
-                            APP_CONFIG.read().actions_on_escape()
-                        } else {
-                            APP_CONFIG.read().actions_on_enter()
+                        if let ToolUpdateResult::Unmodified = result {
+                            let actions = if ke.key == Key::Escape {
+                                APP_CONFIG.read().actions_on_escape()
+                            } else {
+                                APP_CONFIG.read().actions_on_enter()
+                            };
+                            self.renderer.request_render(&actions);
                         };
-                        self.renderer.request_render(&actions);
                         result
                     } else {
                         self.active_tool
