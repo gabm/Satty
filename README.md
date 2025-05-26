@@ -45,14 +45,14 @@ All configuration is done either at the config file in `XDG_CONFIG_DIR/.config/s
 - `Ctrl+Y`: Redo
 - `Ctrl+Z`: Undo
 
-### Tool Modifiers
+### Tool Modifiers and Keys
 
 - Arrow: Hold `Shift` to make arrow snap to 15° steps
 - Ellipse: Hold `Alt` to center the ellipse around origin, hold `Shift` for a circle
 - Highlight: Hold `Ctrl` to switch between block and freehand mode (default configurable, see below), hold Shift for a square (if the default mode is block) or a straight line (if the default mode is freehand)
 - Line: Hold `Shift` to make line snap to 15° steps
 - Rectangle: Hold `Alt` to center the rectangle around origin, hold `Shift` for a square
-- Text: Press `Shift+Enter` to insert line break, combine `Ctrl` with `Left` or `Right` for word jump or `Ctrl` with `Backspace` or `Delete` for word delete
+- Text: Press `Shift+Enter` to insert line break, combine `Ctrl` with `Left` or `Right` for word jump or `Ctrl` with `Backspace` or `Delete` for word delete. Press `Enter` or switch to another tool to accept input, press `Escape` to discard entered text.
 
 ### Configuration File
 
