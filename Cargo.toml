@@ -19,6 +19,7 @@ include = [
 
 [dependencies]
 relm4 = { version = "0.9.1", features = ["macros", "libadwaita", "gnome_42"] }
+tokio = { version = "1.45.0", features = ["time"] }
 gdk-pixbuf = "0.20.9"
 
 # error handling

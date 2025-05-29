@@ -125,7 +125,7 @@ impl App {
         sender.command(|out, shutdown| {
             shutdown
                 .register(async move {
-                    std::thread::sleep(Duration::from_millis(1));
+                    tokio::time::sleep(Duration::from_millis(1)).await;
                     out.emit(AppCommandOutput::ResetResizable);
                 })
                 .drop_on_shutdown()

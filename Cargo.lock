@@ -1378,6 +1378,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "thiserror",
+ "tokio",
  "toml",
  "xdg",
 ]
