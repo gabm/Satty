@@ -352,13 +352,20 @@ impl SketchBoard {
     }
 
     fn handle_reset(&mut self) -> ToolUpdateResult {
+        let mut rv = ToolUpdateResult::Unmodified;
         if self.active_tool.borrow().active() {
-            self.active_tool.borrow_mut().handle_undo()
-        } else if self.renderer.reset() {
-            ToolUpdateResult::Redraw
-        } else {
-            ToolUpdateResult::Unmodified
+            if let ToolUpdateResult::Commit(result) =
+                self.active_tool.borrow_mut().handle_deactivated()
+            {
+                self.renderer.commit(result);
+                rv = ToolUpdateResult::Redraw;
+            }
         }
+
+        if self.renderer.reset() {
+            rv = ToolUpdateResult::Redraw;
+        }
+        rv
     }
 
     // Toolbars = Tools Toolbar + Style Toolbar
