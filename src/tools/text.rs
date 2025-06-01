@@ -65,13 +65,13 @@ impl Drawable for Text {
 
         let lines = canvas.break_text_vec(width, text, &paint)?;
 
+        let font_metrics = canvas.measure_font(&paint)?;
         for line_range in lines {
             if let Ok(text_metrics) = canvas.fill_text(self.pos.x, y, &text[line_range], &paint) {
-                y += text_metrics.height() * 1.2;
+                y += font_metrics.height() / canva_scale;
                 metrics.push(text_metrics);
             }
         }
-        let font_metrics = canvas.measure_font(&paint)?;
         if self.editing {
             // GTK is working with UTF-8 and character positions, pango is working with UTF-8 but byte positions.
             // here we transform one into the other!
