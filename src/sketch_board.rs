@@ -268,6 +268,22 @@ impl SketchBoard {
             return;
         }
 
+        if let Some(tilde_stripped) =
+            output_filename.strip_prefix(&format!("~{}", std::path::MAIN_SEPARATOR_STR))
+        {
+            if let Some(h) = dirs::home_dir() {
+                let mut p = h;
+                p.push(tilde_stripped);
+                output_filename = p.to_string_lossy().into_owned();
+            } else {
+                log_result(
+                    "~ found but could not determine homedir",
+                    !APP_CONFIG.read().disable_notifications(),
+                );
+                return;
+            }
+        }
+
         let data = match image.save_to_bufferv("png", &Vec::new()) {
             Ok(d) => d,
             Err(e) => {
