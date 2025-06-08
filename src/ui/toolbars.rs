@@ -51,6 +51,7 @@ pub enum ToolbarEvent {
 
 #[derive(Debug, Copy, Clone)]
 pub enum ToolsToolbarInput {
+    SetVisibility(bool),
     ToggleVisibility,
 }
 
@@ -59,6 +60,7 @@ pub enum StyleToolbarInput {
     ColorButtonSelected(ColorButtons),
     ShowColorDialog,
     ColorDialogFinished(Option<Color>),
+    SetVisibility(bool),
     ToggleVisibility,
     ShowAnnotationDialog,
     AnnotationDialogFinished(Option<f32>),
@@ -245,6 +247,7 @@ impl SimpleComponent for ToolsToolbar {
 
     fn update(&mut self, message: Self::Input, _sender: ComponentSender<Self>) {
         match message {
+            ToolsToolbarInput::SetVisibility(visible) => self.visible = visible,
             ToolsToolbarInput::ToggleVisibility => {
                 self.visible = !self.visible;
             }
@@ -515,6 +518,7 @@ impl Component for StyleToolbar {
                 }
             }
 
+            StyleToolbarInput::SetVisibility(visible) => self.visible = visible,
             StyleToolbarInput::ToggleVisibility => {
                 self.visible = !self.visible;
             }
