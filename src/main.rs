@@ -59,6 +59,7 @@ struct App {
 #[derive(Debug)]
 enum AppInput {
     Realized,
+    SetToolbarsDisplay(bool),
     ToggleToolbarsDisplay,
 }
 
@@ -231,6 +232,14 @@ impl Component for App {
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             AppInput::Realized => self.resize_window_initial(root, sender),
+            AppInput::SetToolbarsDisplay(visible) => {
+                self.tools_toolbar
+                    .sender()
+                    .emit(ToolsToolbarInput::SetVisibility(visible));
+                self.style_toolbar
+                    .sender()
+                    .emit(StyleToolbarInput::SetVisibility(visible));
+            }
             AppInput::ToggleToolbarsDisplay => {
                 self.tools_toolbar
                     .sender()
@@ -290,6 +299,20 @@ impl Component for App {
         };
 
         let widgets = view_output!();
+
+        if APP_CONFIG.read().focus_toggles_toolbars() {
+            let motion_controller = gtk::EventControllerMotion::builder().build();
+            let sender_clone = sender.clone();
+
+            motion_controller.connect_enter(move |_, _, _| {
+                sender.input(AppInput::SetToolbarsDisplay(true));
+            });
+            motion_controller.connect_leave(move |_| {
+                sender_clone.input(AppInput::SetToolbarsDisplay(false));
+            });
+
+            root.add_controller(motion_controller);
+        }
 
         generate_profile_output!("app init end");
 

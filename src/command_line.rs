@@ -62,6 +62,10 @@ pub struct CommandLine {
     #[arg(short, long)]
     pub default_hide_toolbars: bool,
 
+    /// Experimental: Whether to toggle toolbars based on focus. Doesn't affect initial state.
+    #[arg(long)]
+    pub focus_toggles_toolbars: bool,
+
     /// Font family to use for text annotations
     #[arg(long)]
     pub font_family: Option<String>,

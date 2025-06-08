@@ -76,6 +76,8 @@ output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
 save-after-copy = false
 # Hide toolbars by default
 default-hide-toolbars = false
+# Experimental: whether window focus shows/hides toolbars. This does not affect initial state of toolbars, see default-hide-toolbars.
+focus-toggles-toolbars = false
 # The primary highlighter to use, the other is accessible by holding CTRL at the start of a highlight [possible values: block, freehand]
 primary-highlighter = "block"
 # Disable notifications
@@ -166,6 +168,8 @@ Options:
           Actions to perform when hitting the copy Button [possible values: save-to-clipboard, save-to-file, exit]
   -d, --default-hide-toolbars
           Hide toolbars by default
+      --focus-toggles-toolbars
+          Experimental: Whether to toggle toolbars based on focus. Doesn't affect initial state
       --font-family <FONT_FAMILY>
           Font family to use for text annotations
       --font-style <FONT_STYLE>
