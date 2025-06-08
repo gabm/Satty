@@ -176,6 +176,28 @@ impl SketchBoard {
         )
     }
 
+    fn deactivate_active_tool(&mut self) -> bool {
+        if self.active_tool.borrow().active() {
+            if let ToolUpdateResult::Commit(result) =
+                self.active_tool.borrow_mut().handle_deactivated()
+            {
+                self.renderer.commit(result);
+                return true;
+            }
+        }
+        false
+    }
+
+    fn handle_action(&mut self, actions: &[Action]) -> ToolUpdateResult {
+        let rv = if self.deactivate_active_tool() {
+            ToolUpdateResult::Redraw
+        } else {
+            ToolUpdateResult::Unmodified
+        };
+        self.renderer.request_render(actions);
+        rv
+    }
+
     fn handle_render_result(&self, image: RenderedImage, actions: Vec<Action>) {
         let needs_pixbuf = actions
             .iter()
@@ -352,20 +374,12 @@ impl SketchBoard {
     }
 
     fn handle_reset(&mut self) -> ToolUpdateResult {
-        let mut rv = ToolUpdateResult::Unmodified;
-        if self.active_tool.borrow().active() {
-            if let ToolUpdateResult::Commit(result) =
-                self.active_tool.borrow_mut().handle_deactivated()
-            {
-                self.renderer.commit(result);
-                rv = ToolUpdateResult::Redraw;
-            }
+        // can't use lazy || here
+        if self.deactivate_active_tool() | self.renderer.reset() {
+            ToolUpdateResult::Redraw
+        } else {
+            ToolUpdateResult::Unmodified
         }
-
-        if self.renderer.reset() {
-            rv = ToolUpdateResult::Redraw;
-        }
-        rv
     }
 
     // Toolbars = Tools Toolbar + Style Toolbar
@@ -426,14 +440,8 @@ impl SketchBoard {
                     .borrow_mut()
                     .handle_event(ToolEvent::StyleChanged(self.style))
             }
-            ToolbarEvent::SaveFile => {
-                self.renderer.request_render(&[Action::SaveToFile]);
-                ToolUpdateResult::Unmodified
-            }
-            ToolbarEvent::CopyClipboard => {
-                self.renderer.request_render(&[Action::SaveToClipboard]);
-                ToolUpdateResult::Unmodified
-            }
+            ToolbarEvent::SaveFile => self.handle_action(&[Action::SaveToFile]),
+            ToolbarEvent::CopyClipboard => self.handle_action(&[Action::SaveToClipboard]),
             ToolbarEvent::Undo => self.handle_undo(),
             ToolbarEvent::Redo => self.handle_redo(),
             ToolbarEvent::Reset => self.handle_reset(),
