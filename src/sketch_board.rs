@@ -271,7 +271,7 @@ impl SketchBoard {
         if let Some(tilde_stripped) =
             output_filename.strip_prefix(&format!("~{}", std::path::MAIN_SEPARATOR_STR))
         {
-            if let Some(h) = dirs::home_dir() {
+            if let Some(h) = std::env::home_dir() {
                 let mut p = h;
                 p.push(tilde_stripped);
                 output_filename = p.to_string_lossy().into_owned();
