@@ -46,6 +46,7 @@ pub struct Configuration {
     actions_on_right_click: Vec<Action>,
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
+    focus_toggles_toolbars: bool,
     font: FontConfiguration,
     primary_highlighter: Highlighters,
     disable_notifications: bool,
@@ -185,6 +186,9 @@ impl Configuration {
         if let Some(v) = general.default_hide_toolbars {
             self.default_hide_toolbars = v;
         }
+        if let Some(v) = general.focus_toggles_toolbars {
+            self.focus_toggles_toolbars = v;
+        }
         if let Some(v) = general.primary_highlighter {
             self.primary_highlighter = v;
         }
@@ -242,6 +246,9 @@ impl Configuration {
         }
         if command_line.default_hide_toolbars {
             self.default_hide_toolbars = command_line.default_hide_toolbars;
+        }
+        if command_line.focus_toggles_toolbars {
+            self.focus_toggles_toolbars = command_line.focus_toggles_toolbars
         }
         if let Some(v) = command_line.initial_tool {
             self.initial_tool = v.into();
@@ -360,6 +367,10 @@ impl Configuration {
         self.default_hide_toolbars
     }
 
+    pub fn focus_toggles_toolbars(&self) -> bool {
+        self.focus_toggles_toolbars
+    }
+
     pub fn primary_highlighter(&self) -> Highlighters {
         self.primary_highlighter
     }
@@ -402,6 +413,7 @@ impl Default for Configuration {
             actions_on_right_click: vec![],
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
+            focus_toggles_toolbars: false,
             font: FontConfiguration::default(),
             primary_highlighter: Highlighters::Block,
             disable_notifications: false,
@@ -457,6 +469,7 @@ struct ConfigurationFileGeneral {
     actions_on_escape: Option<Vec<Action>>,
     actions_on_right_click: Option<Vec<Action>>,
     default_hide_toolbars: Option<bool>,
+    focus_toggles_toolbars: Option<bool>,
     primary_highlighter: Option<Highlighters>,
     disable_notifications: Option<bool>,
     no_window_decoration: Option<bool>,
