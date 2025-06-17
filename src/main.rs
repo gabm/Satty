@@ -327,12 +327,26 @@ impl Component for App {
 fn read_css_overrides() -> Option<String> {
     let dirs = BaseDirectories::with_prefix(env!("CARGO_PKG_NAME"));
     let path = dirs.get_config_file("overrides.css")?;
-    let Ok(content) = fs::read_to_string(&path) else {
-        eprintln!("failed to read CSS overrides from {}", &path.display());
-        return None;
-    };
 
-    Some(content)
+    if !path.exists() {
+        eprintln!(
+            "CSS overrides file {} does not exist, using builtin CSS only.",
+            &path.display()
+        );
+        return None;
+    }
+
+    match fs::read_to_string(&path) {
+        Ok(content) => Some(content),
+        Err(e) => {
+            eprintln!(
+                "failed to read CSS overrides from {} with error: {}",
+                &path.display(),
+                e
+            );
+            None
+        }
+    }
 }
 
 fn load_gl() -> Result<()> {
