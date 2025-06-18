@@ -33,6 +33,7 @@ enum ConfigurationFileError {
 
 pub struct Configuration {
     input_filename: String,
+    output_use_filepicker: bool,
     output_filename: Option<String>,
     fullscreen: bool,
     early_exit: bool,
@@ -165,6 +166,9 @@ impl Configuration {
         if let Some(v) = general.copy_command {
             self.copy_command = Some(v);
         }
+        if let Some(v) = general.output_use_filepicker {
+            self.output_use_filepicker = v
+        }
         if let Some(v) = general.output_filename {
             self.output_filename = Some(v);
         }
@@ -256,6 +260,9 @@ impl Configuration {
         if let Some(v) = command_line.copy_command {
             self.copy_command = Some(v);
         }
+        if command_line.output_use_filepicker {
+            self.output_use_filepicker = command_line.output_use_filepicker;
+        }
         if let Some(v) = command_line.output_filename {
             self.output_filename = Some(v);
         }
@@ -331,6 +338,10 @@ impl Configuration {
         self.fullscreen
     }
 
+    pub fn output_use_filepicker(&self) -> bool {
+        self.output_use_filepicker
+    }
+
     pub fn output_filename(&self) -> Option<&String> {
         self.output_filename.as_ref()
     }
@@ -400,6 +411,7 @@ impl Default for Configuration {
     fn default() -> Self {
         Self {
             input_filename: String::new(),
+            output_use_filepicker: false,
             output_filename: None,
             fullscreen: false,
             early_exit: false,
@@ -464,6 +476,7 @@ struct ConfigurationFileGeneral {
     copy_command: Option<String>,
     annotation_size_factor: Option<f32>,
     save_after_copy: Option<bool>,
+    output_use_filepicker: Option<bool>,
     output_filename: Option<String>,
     actions_on_enter: Option<Vec<Action>>,
     actions_on_escape: Option<Vec<Action>>,
