@@ -268,6 +268,26 @@ impl SketchBoard {
             return;
         }
 
+        // Expand environment variables (like $HOME, $USER, etc.)
+        if output_filename.contains("$") {
+            // Use a simple approach to expand common environment variables
+            let expanded = std::env::var("HOME")
+                .map(|home| output_filename.replace("$HOME", &home))
+                .unwrap_or_else(|_| {
+                    // If HOME is not available, try other common variables
+                    let mut result = output_filename.clone();
+                    for (key, value) in std::env::vars() {
+                        let var_pattern = format!("${}", key);
+                        if result.contains(&var_pattern) {
+                            result = result.replace(&var_pattern, &value);
+                        }
+                    }
+                    result
+                });
+            output_filename = expanded;
+        }
+
+        // Handle tilde expansion (~)
         if let Some(tilde_stripped) =
             output_filename.strip_prefix(&format!("~{}", std::path::MAIN_SEPARATOR_STR))
         {
@@ -275,6 +295,17 @@ impl SketchBoard {
                 let mut p = h;
                 p.push(tilde_stripped);
                 output_filename = p.to_string_lossy().into_owned();
+            } else {
+                log_result(
+                    "~ found but could not determine homedir",
+                    !APP_CONFIG.read().disable_notifications(),
+                );
+                return;
+            }
+        } else if output_filename == "~" {
+            // Handle bare tilde
+            if let Some(h) = std::env::home_dir() {
+                output_filename = h.to_string_lossy().into_owned();
             } else {
                 log_result(
                     "~ found but could not determine homedir",
