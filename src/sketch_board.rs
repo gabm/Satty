@@ -252,11 +252,10 @@ impl SketchBoard {
 
         if result.is_err() {
             println!(
-                "Warning: Could not format filename {} due to chrono format error, falling back to literal filename.",
-                output_filename
+                "Warning: Could not format filename {output_filename} due to chrono format error, falling back to literal filename."
             );
         } else {
-            output_filename = format!("{}", delayed_format);
+            output_filename = format!("{delayed_format}");
         }
 
         // TODO: we could support more data types
