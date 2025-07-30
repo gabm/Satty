@@ -78,6 +78,8 @@ save-after-copy = false
 default-hide-toolbars = false
 # Experimental: whether window focus shows/hides toolbars. This does not affect initial state of toolbars, see default-hide-toolbars.
 focus-toggles-toolbars = false
+# Fill shapes by default
+default-fill-shapes = false
 # The primary highlighter to use, the other is accessible by holding CTRL at the start of a highlight [possible values: block, freehand]
 primary-highlighter = "block"
 # Disable notifications
@@ -153,7 +155,7 @@ Options:
       --corner-roundness <CORNER_ROUNDNESS>
           Draw corners of rectangles round if the value is greater than 0 (Defaults to 12) (0 disables rounded corners)
       --initial-tool <TOOL>
-          Select the tool on startup [aliases: init-tool] [possible values: pointer, crop, line, arrow, rectangle, ellipse, text, marker, blur, highlight, brush]
+          Select the tool on startup [aliases: --init-tool] [possible values: pointer, crop, line, arrow, rectangle, ellipse, text, marker, blur, highlight, brush]
       --copy-command <COPY_COMMAND>
           Configure the command to be called on copy, for example `wl-copy`
       --annotation-size-factor <ANNOTATION_SIZE_FACTOR>
@@ -170,6 +172,8 @@ Options:
           Hide toolbars by default
       --focus-toggles-toolbars
           Experimental: Whether to toggle toolbars based on focus. Doesn't affect initial state
+      --default-fill-shapes
+          Fill shapes by default
       --font-family <FONT_FAMILY>
           Font family to use for text annotations
       --font-style <FONT_STYLE>
@@ -182,14 +186,12 @@ Options:
           Print profiling
       --no-window-decoration
           Disable the window decoration (title bar, borders, etc.)
+      --brush-smooth-history-size <BRUSH_SMOOTH_HISTORY_SIZE>
+          How much points to use for the brush smoothing algorithm 0 disables smoothing. The default value is 0 (disabled)
       --right-click-copy
           Right click to copy. Preferably use the `action_on_right_click` option instead
       --action-on-enter <ACTION_ON_ENTER>
           Action to perform when pressing Enter. Preferably use the `actions_on_enter` option instead [possible values: save-to-clipboard, save-to-file, exit]
-      --no-window-decoration
-          Request no window decoration. Please note that the compositor has the final say in this. At this point. requires xdg-decoration-unstable-v1.
-      --brush-smooth-history-size <SIZE>
-          Experimental feature: Adjust history size for brush input smooting (0: disabled, default: 0, try e.g. 5 or 10)
   -h, --help
           Print help
   -V, --version

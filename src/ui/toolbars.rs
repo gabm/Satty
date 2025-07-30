@@ -461,7 +461,11 @@ impl Component for StyleToolbar {
                 set_focusable: false,
                 set_hexpand: false,
 
-                set_icon_name: "paint-bucket-regular",
+                set_icon_name: if APP_CONFIG.read().default_fill_shapes() {
+                    "paint-bucket-filled"
+                } else {
+                    "paint-bucket-regular"
+                },
                 set_tooltip: "Fill shape",
                 connect_clicked[sender] => move |button| {
                     sender.output_sender().emit(ToolbarEvent::ToggleFill);
