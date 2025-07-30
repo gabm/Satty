@@ -78,6 +78,8 @@ save-after-copy = false
 default-hide-toolbars = false
 # Experimental: whether window focus shows/hides toolbars. This does not affect initial state of toolbars, see default-hide-toolbars.
 focus-toggles-toolbars = false
+# Fill shapes by default
+default-fill-shapes = false
 # The primary highlighter to use, the other is accessible by holding CTRL at the start of a highlight [possible values: block, freehand]
 primary-highlighter = "block"
 # Disable notifications
@@ -170,6 +172,8 @@ Options:
           Hide toolbars by default
       --focus-toggles-toolbars
           Experimental: Whether to toggle toolbars based on focus. Doesn't affect initial state
+      --default-fill-shapes
+          Fill shapes by default
       --font-family <FONT_FAMILY>
           Font family to use for text annotations
       --font-style <FONT_STYLE>

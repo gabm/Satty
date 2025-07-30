@@ -66,6 +66,10 @@ pub struct CommandLine {
     #[arg(long)]
     pub focus_toggles_toolbars: bool,
 
+    /// Fill shapes by default
+    #[arg(long)]
+    pub default_fill_shapes: bool,
+
     /// Font family to use for text annotations
     #[arg(long)]
     pub font_family: Option<String>,

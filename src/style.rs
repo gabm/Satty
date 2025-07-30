@@ -40,7 +40,7 @@ impl Default for Style {
         Self {
             color: Color::default(),
             size: Size::default(),
-            fill: bool::default(),
+            fill: APP_CONFIG.read().default_fill_shapes(),
             annotation_size_factor: APP_CONFIG.read().annotation_size_factor(),
         }
     }

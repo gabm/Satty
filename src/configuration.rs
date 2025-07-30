@@ -47,6 +47,7 @@ pub struct Configuration {
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
     focus_toggles_toolbars: bool,
+    default_fill_shapes: bool,
     font: FontConfiguration,
     primary_highlighter: Highlighters,
     disable_notifications: bool,
@@ -189,6 +190,9 @@ impl Configuration {
         if let Some(v) = general.focus_toggles_toolbars {
             self.focus_toggles_toolbars = v;
         }
+        if let Some(v) = general.default_fill_shapes {
+            self.default_fill_shapes = v;
+        }
         if let Some(v) = general.primary_highlighter {
             self.primary_highlighter = v;
         }
@@ -249,6 +253,9 @@ impl Configuration {
         }
         if command_line.focus_toggles_toolbars {
             self.focus_toggles_toolbars = command_line.focus_toggles_toolbars
+        }
+        if command_line.default_fill_shapes {
+            self.default_fill_shapes = command_line.default_fill_shapes;
         }
         if let Some(v) = command_line.initial_tool {
             self.initial_tool = v.into();
@@ -371,6 +378,10 @@ impl Configuration {
         self.focus_toggles_toolbars
     }
 
+    pub fn default_fill_shapes(&self) -> bool {
+        self.default_fill_shapes
+    }
+
     pub fn primary_highlighter(&self) -> Highlighters {
         self.primary_highlighter
     }
@@ -414,6 +425,7 @@ impl Default for Configuration {
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
             focus_toggles_toolbars: false,
+            default_fill_shapes: false,
             font: FontConfiguration::default(),
             primary_highlighter: Highlighters::Block,
             disable_notifications: false,
@@ -470,6 +482,7 @@ struct ConfigurationFileGeneral {
     actions_on_right_click: Option<Vec<Action>>,
     default_hide_toolbars: Option<bool>,
     focus_toggles_toolbars: Option<bool>,
+    default_fill_shapes: Option<bool>,
     primary_highlighter: Option<Highlighters>,
     disable_notifications: Option<bool>,
     no_window_decoration: Option<bool>,
