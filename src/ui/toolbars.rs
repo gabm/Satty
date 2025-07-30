@@ -514,7 +514,7 @@ impl Component for StyleToolbar {
             StyleToolbarInput::AnnotationDialogFinished(value) => {
                 if let Some(value) = value {
                     self.annotation_size = value;
-                    self.annotation_size_formatted = format!("{0:.2}", value);
+                    self.annotation_size_formatted = format!("{value:.2}");
 
                     sender
                         .output_sender()
@@ -789,7 +789,7 @@ impl Component for AnnotationSizeDialog {
                 if let Err(e) = sender.output(AnnotationSizeDialogOutput::AnnotationSizeSubmitted(
                     self.annotation_size,
                 )) {
-                    eprintln!("Error submitting annotation size factor: {:?}", e);
+                    eprintln!("Error submitting annotation size factor: {e:?}");
                 }
                 root.hide();
             }
