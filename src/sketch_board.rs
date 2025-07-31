@@ -236,12 +236,22 @@ impl SketchBoard {
     }
 
     fn handle_save(&self, image: &Pixbuf) {
-        let mut output_filename = match APP_CONFIG.read().output_filename() {
-            None => {
-                println!("No Output filename specified!");
-                return;
+        let mut output_filename = if APP_CONFIG.read().output_use_filepicker() {
+            match rfd::FileDialog::new().save_file() {
+                None => {
+                    println!("No Output file chosen!");
+                    return;
+                }
+                Some(path) => path.to_string_lossy().into_owned(),
             }
-            Some(o) => o.clone(),
+        } else {
+            match APP_CONFIG.read().output_filename() {
+                None => {
+                    println!("No Output filename specified!");
+                    return;
+                }
+                Some(o) => o.clone(),
+            }
         };
 
         // run the output filename by "chrono date format"
