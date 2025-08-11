@@ -66,7 +66,7 @@ pub struct CommandLine {
     #[arg(long)]
     pub focus_toggles_toolbars: bool,
 
-    /// Fill shapes by default
+    /// Experimental feature: Fill shapes by default
     #[arg(long)]
     pub default_fill_shapes: bool,
 
@@ -91,10 +91,13 @@ pub struct CommandLine {
     pub profile_startup: bool,
 
     /// Disable the window decoration (title bar, borders, etc.)
+    /// Please note that the compositor has the final say in this.
+    /// Requires xdg-decoration-unstable-v1
     #[arg(long)]
     pub no_window_decoration: bool,
 
-    /// How much points to use for the brush smoothing algorithm
+    /// Experimental feature: How many points to use for the brush smoothing
+    /// algorithm.
     /// 0 disables smoothing.
     /// The default value is 0 (disabled).
     #[arg(long)]
