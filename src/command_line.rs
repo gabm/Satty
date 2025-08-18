@@ -15,6 +15,10 @@ pub struct CommandLine {
     #[arg(long)]
     pub fullscreen: bool,
 
+    /// Use rfd::FileDialog instead of a set filename
+    #[arg(long)]
+    pub output_use_filepicker: bool,
+
     /// Filename to use for saving action or '-' to print to stdout. Omit to disable saving to file. Might contain format
     /// specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>.
     #[arg(short, long)]
