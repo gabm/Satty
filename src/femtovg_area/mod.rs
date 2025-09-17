@@ -1,6 +1,6 @@
 mod imp;
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, rc::Rc, sync::OnceLock};
 
 use gdk_pixbuf::{glib::subclass::types::ObjectSubclassIsExt, Pixbuf};
 use gtk::glib;
@@ -15,6 +15,18 @@ use crate::{
     sketch_board::SketchBoardInput,
     tools::{CropTool, Drawable, Tool},
 };
+
+use femtovg::FontId;
+
+static FONT_STACK: OnceLock<Vec<FontId>> = OnceLock::new();
+
+pub fn set_font_stack(fonts: Vec<FontId>) {
+    let _ = FONT_STACK.set(fonts);
+}
+
+pub fn font_stack() -> &'static [FontId] {
+    FONT_STACK.get().map(Vec::as_slice).unwrap_or(&[])
+}
 
 glib::wrapper! {
     pub struct FemtoVGArea(ObjectSubclass<imp::FemtoVGArea>)
@@ -82,6 +94,26 @@ impl FemtoVGArea {
             .as_mut()
             .expect("Did you call init before using FemtoVgArea?")
             .rel_canvas_to_image_coordinates(input, self.scale_factor() as f32)
+    }
+
+    pub fn image_to_widget_coordinates(&self, input: Vec2D) -> Vec2D {
+        let mut inner = self.imp().inner();
+        let inner = inner
+            .as_mut()
+            .expect("Did you call init before using FemtoVgArea?");
+        let canvas = inner.image_to_canvas_coordinates(input);
+        Vec2D::new(
+            canvas.x / self.scale_factor() as f32,
+            canvas.y / self.scale_factor() as f32,
+        )
+    }
+
+    pub fn image_length_to_widget(&self, value: f32) -> f32 {
+        let mut inner = self.imp().inner();
+        let inner = inner
+            .as_mut()
+            .expect("Did you call init before using FemtoVgArea?");
+        inner.image_length_to_canvas(value) / self.scale_factor() as f32
     }
     pub fn init(
         &mut self,

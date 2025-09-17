@@ -1,3 +1,5 @@
+use std::cell::Cell;
+
 use anyhow::Result;
 use femtovg::{FontId, Paint, Path, TextMetrics};
 use relm4::gtk::{
@@ -8,6 +10,7 @@ use relm4::gtk::{
 use relm4::gtk::prelude::*;
 
 use crate::{
+    femtovg_area,
     math::Vec2D,
     sketch_board::{KeyEventMsg, MouseButton, MouseEventMsg, MouseEventType, TextEventMsg},
     style::Style,
@@ -21,6 +24,11 @@ pub struct Text {
     editing: bool,
     text_buffer: TextBuffer,
     style: Style,
+    font_ids: Vec<FontId>,
+    preedit_text: String,
+    preedit_start_offset: Option<i32>,
+    preedit_in_progress: bool,
+    cursor_rect: Cell<Option<(f32, f32, f32)>>,
 }
 
 impl Text {
@@ -33,7 +41,98 @@ impl Text {
             text_buffer,
             editing: true,
             style,
+            font_ids: femtovg_area::font_stack().to_vec(),
+            preedit_text: String::new(),
+            preedit_start_offset: None,
+            preedit_in_progress: false,
+            cursor_rect: Cell::new(None),
         }
+    }
+
+    fn begin_preedit(&mut self) {
+        if !self.preedit_in_progress {
+            self.preedit_start_offset = Some(self.text_buffer.cursor_position());
+            self.text_buffer.begin_user_action();
+            self.preedit_in_progress = true;
+        }
+        self.preedit_text.clear();
+    }
+
+    fn update_preedit(&mut self, text: &str, cursor_pos: i32) {
+        if self.preedit_start_offset.is_none() {
+            self.begin_preedit();
+        }
+
+        if let Some(offset) = self.preedit_start_offset {
+            let existing_len = self.preedit_text.chars().count() as i32;
+            if existing_len > 0 {
+                let mut start_iter = self.text_buffer.iter_at_offset(offset);
+                let mut end_iter = self.text_buffer.iter_at_offset(offset + existing_len);
+                let _ = self
+                    .text_buffer
+                    .delete_interactive(&mut start_iter, &mut end_iter, true);
+            }
+
+            if text.is_empty() {
+                self.preedit_text.clear();
+                let cursor_iter = self.text_buffer.iter_at_offset(offset);
+                self.text_buffer.place_cursor(&cursor_iter);
+                return;
+            }
+
+            let mut insert_iter = self.text_buffer.iter_at_offset(offset);
+            self.text_buffer.insert(&mut insert_iter, text);
+            self.preedit_text.clear();
+            self.preedit_text.push_str(text);
+
+            let preedit_len = self.preedit_text.chars().count() as i32;
+            let target_cursor = if cursor_pos < 0 {
+                preedit_len
+            } else {
+                cursor_pos.clamp(0, preedit_len)
+            };
+
+            let cursor_iter = self.text_buffer.iter_at_offset(offset + target_cursor);
+            self.text_buffer.place_cursor(&cursor_iter);
+        }
+    }
+
+    fn end_preedit(&mut self) {
+        if let Some(offset) = self.preedit_start_offset {
+            let existing_len = self.preedit_text.chars().count() as i32;
+            if existing_len > 0 {
+                let mut start_iter = self.text_buffer.iter_at_offset(offset);
+                let mut end_iter = self.text_buffer.iter_at_offset(offset + existing_len);
+                if self
+                    .text_buffer
+                    .delete_interactive(&mut start_iter, &mut end_iter, true)
+                {
+                    self.text_buffer.place_cursor(&start_iter);
+                }
+            } else {
+                let cursor_iter = self.text_buffer.iter_at_offset(offset);
+                self.text_buffer.place_cursor(&cursor_iter);
+            }
+        }
+
+        if self.preedit_in_progress {
+            self.text_buffer.end_user_action();
+            self.preedit_in_progress = false;
+        }
+
+        self.preedit_text.clear();
+        self.preedit_start_offset = None;
+    }
+
+    fn commit_preedit(&mut self, text: &str) {
+        self.end_preedit();
+        if !text.is_empty() {
+            self.text_buffer.insert_at_cursor(text);
+        }
+    }
+
+    fn ime_cursor_rect(&self) -> Option<(f32, f32, f32)> {
+        self.cursor_rect.get()
     }
 }
 
@@ -52,7 +151,11 @@ impl Drawable for Text {
         let text = gtext.as_str();
 
         let mut paint: Paint = self.style.into();
-        paint.set_font(&[font]);
+        if self.font_ids.is_empty() {
+            paint.set_font(&[font]);
+        } else {
+            paint.set_font(&self.font_ids);
+        }
 
         // get some metrics
         let canva_scale = canvas.transform().average_scale();
@@ -60,12 +163,29 @@ impl Drawable for Text {
         let canvas_width = canvas.width() as f32;
 
         let width = canvas_width / canva_scale - self.pos.x - canvas_offset_x;
-        let mut y = self.pos.y;
         let mut metrics = Vec::<TextMetrics>::new();
 
         let lines = canvas.break_text_vec(width, text, &paint)?;
 
         let font_metrics = canvas.measure_font(&paint)?;
+        let measured_cursor = canvas
+            .measure_text(self.pos.x, self.pos.y, "|", &paint)
+            .ok();
+        let mut line_height = measured_cursor
+            .as_ref()
+            .map(|metrics| metrics.height())
+            .unwrap_or(0.0);
+        if line_height <= 0.0 {
+            line_height = (font_metrics.ascender() + font_metrics.descender()).abs() / canva_scale;
+        }
+        if line_height <= 0.0 {
+            line_height = font_metrics.height() / canva_scale;
+        }
+        let inferred_cursor_top = measured_cursor
+            .as_ref()
+            .map(|metrics| metrics.y)
+            .unwrap_or_else(|| self.pos.y - font_metrics.ascender() / canva_scale);
+        let mut y = self.pos.y;
         for line_range in lines {
             if let Ok(text_metrics) = canvas.fill_text(self.pos.x, y, &text[line_range], &paint) {
                 y += font_metrics.height() / canva_scale;
@@ -73,6 +193,7 @@ impl Drawable for Text {
             }
         }
         if self.editing {
+            self.cursor_rect.set(None);
             // GTK is working with UTF-8 and character positions, pango is working with UTF-8 but byte positions.
             // here we transform one into the other!
             let (mut cursor_byte_pos, _) = text
@@ -85,14 +206,17 @@ impl Drawable for Text {
             cursor_byte_pos -= no_manual_line_wraps;
 
             // function to draw a cursor
-            let mut draw_cursor = |x, y: f32, height| {
-                // 20% extra height for cursor w.r.t. font height
+            let mut draw_cursor = |x: f32, baseline: f32, height: f32| {
                 let extra_height = height * 0.1;
 
                 let mut path = Path::new();
-                path.move_to(x, y - extra_height);
-                path.line_to(x, y + height + 2.0 * extra_height);
+                path.move_to(x, baseline - extra_height);
+                path.line_to(x, baseline + height + 2.0 * extra_height);
                 canvas.fill_path(&path, &paint);
+
+                let top = baseline - extra_height;
+                let bottom = baseline + height + 2.0 * extra_height;
+                (top, bottom)
             };
 
             // find cursor pos in broken text
@@ -103,15 +227,12 @@ impl Drawable for Text {
                 for g in &m.glyphs {
                     if acc_byte_index + g.byte_index == cursor_byte_pos {
                         if g.c == '\n' {
-                            // if its a newline -> draw cursor on next line
-                            draw_cursor(
-                                self.pos.x,
-                                y,
-                                -(font_metrics.ascender() + font_metrics.descender()),
-                            );
+                            let (top, bottom) = draw_cursor(self.pos.x, y, line_height);
+                            self.cursor_rect.set(Some((self.pos.x, top, bottom - top)));
                         } else {
-                            // cursor is before this glyph, draw here!
-                            draw_cursor(g.x - g.bearing_x, m.y, m.height());
+                            let x = g.x - g.bearing_x;
+                            let (top, bottom) = draw_cursor(x, m.y, m.height());
+                            self.cursor_rect.set(Some((x, top, bottom - top)));
                         }
                         cursor_drawn = true;
                         break;
@@ -135,17 +256,18 @@ impl Drawable for Text {
                 if let Some(m) = metrics.last() {
                     if let Some(g) = m.glyphs.last() {
                         // on the same line as last glyph
-                        draw_cursor(g.x + g.bearing_x + g.width, m.y, m.height());
+                        let x = g.x + g.bearing_x + g.width;
+                        let (top, bottom) = draw_cursor(x, m.y, m.height());
+                        self.cursor_rect.set(Some((x, top, bottom - top)));
                     }
                 } else {
                     // no text rendered so far
-                    draw_cursor(
-                        self.pos.x,
-                        self.pos.y,
-                        -(font_metrics.ascender() + font_metrics.descender()),
-                    );
+                    let (top, bottom) = draw_cursor(self.pos.x, inferred_cursor_top, line_height);
+                    self.cursor_rect.set(Some((self.pos.x, top, bottom - top)));
                 }
             }
+        } else {
+            self.cursor_rect.set(None);
         }
 
         Ok(())
@@ -180,7 +302,19 @@ impl Tool for TextTool {
         if let Some(t) = &mut self.text {
             match event {
                 TextEventMsg::Commit(text) => {
-                    t.text_buffer.insert_at_cursor(&text);
+                    t.commit_preedit(&text);
+                    ToolUpdateResult::Redraw
+                }
+                TextEventMsg::PreeditStart => {
+                    t.begin_preedit();
+                    ToolUpdateResult::Unmodified
+                }
+                TextEventMsg::PreeditChanged { text, cursor_pos } => {
+                    t.update_preedit(&text, cursor_pos);
+                    ToolUpdateResult::Redraw
+                }
+                TextEventMsg::PreeditEnd => {
+                    t.end_preedit();
                     ToolUpdateResult::Redraw
                 }
             }
@@ -196,12 +330,14 @@ impl Tool for TextTool {
                     t.text_buffer.insert_at_cursor("\n");
                     return ToolUpdateResult::Redraw;
                 } else {
+                    t.end_preedit();
                     t.editing = false;
                     let result = t.clone_box();
                     self.text = None;
                     return ToolUpdateResult::Commit(result);
                 }
             } else if event.key == Key::Escape {
+                t.end_preedit();
                 self.text = None;
                 return ToolUpdateResult::Redraw;
             } else if event.key == Key::BackSpace {
@@ -282,6 +418,7 @@ impl Tool for TextTool {
                     // create commit message if necessary
                     let return_value = match &mut self.text {
                         Some(l) => {
+                            l.end_preedit();
                             l.editing = false;
                             ToolUpdateResult::Commit(l.clone_box())
                         }
@@ -302,6 +439,7 @@ impl Tool for TextTool {
 
     fn handle_deactivated(&mut self) -> ToolUpdateResult {
         if let Some(t) = &mut self.text {
+            t.end_preedit();
             t.editing = false;
             let result = t.clone_box();
             self.text = None;
@@ -313,6 +451,10 @@ impl Tool for TextTool {
 
     fn active(&self) -> bool {
         self.text.is_some()
+    }
+
+    fn ime_cursor_rect(&self) -> Option<(f32, f32, f32)> {
+        self.text.as_ref().and_then(Text::ime_cursor_rect)
     }
 
     fn handle_undo(&mut self) -> ToolUpdateResult {

@@ -101,6 +101,10 @@ pub trait Tool {
     }
 
     fn get_drawable(&self) -> Option<&dyn Drawable>;
+
+    fn ime_cursor_rect(&self) -> Option<(f32, f32, f32)> {
+        None
+    }
 }
 
 // the clone method below has been adapted from: https://stackoverflow.com/questions/30353462/how-to-clone-a-struct-storing-a-boxed-trait-object

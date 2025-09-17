@@ -1,8 +1,10 @@
-use anyhow::{anyhow, Error, Result};
+use anyhow::Result;
 use glow::HasContext;
 use std::{
     cell::{RefCell, RefMut},
+    collections::HashSet,
     num::NonZeroU32,
+    path::PathBuf,
     rc::Rc,
 };
 
@@ -26,6 +28,20 @@ use crate::{
     APP_CONFIG,
 };
 
+use super::set_font_stack;
+
+const CJK_FALLBACK_FONTS: &[&str] = &[
+    "Noto Sans CJK JP",
+    "Noto Sans CJK SC",
+    "Noto Sans CJK TC",
+    "Noto Sans CJK KR",
+    "Noto Serif CJK JP",
+    "Noto Serif JP",
+    "IPAGothic",
+    "IPAexGothic",
+    "Source Han Sans",
+];
+
 #[derive(Default)]
 pub struct FemtoVGArea {
     canvas: RefCell<Option<femtovg::Canvas<femtovg::renderer::OpenGl>>>,
@@ -33,6 +49,7 @@ pub struct FemtoVGArea {
     inner: RefCell<Option<FemtoVgAreaMut>>,
     request_render: RefCell<Option<Vec<Action>>>,
     sender: RefCell<Option<Sender<SketchBoardInput>>>,
+    last_ime_cursor: RefCell<Option<(f32, f32, f32)>>,
 }
 
 pub struct FemtoVgAreaMut {
@@ -126,13 +143,28 @@ impl GLAreaImpl for FemtoVGArea {
             // reset request
             *actions = None;
         }
-        if let Err(e) = self
-            .inner()
-            .as_mut()
-            .expect("Did you call init before using FemtoVgArea?")
-            .render_framebuffer(canvas, font)
-        {
-            println!("Error rendering to framebuffer: {e}");
+        let ime_cursor = {
+            let mut inner_ref = self.inner();
+            let inner = inner_ref
+                .as_mut()
+                .expect("Did you call init before using FemtoVgArea?");
+
+            let render_result = inner.render_framebuffer(canvas, font);
+            let cursor = inner.active_tool.borrow().ime_cursor_rect();
+
+            if let Err(e) = render_result {
+                println!("Error rendering to framebuffer: {e}");
+            }
+
+            cursor
+        };
+
+        let mut last_cursor = self.last_ime_cursor.borrow_mut();
+        if *last_cursor != ime_cursor {
+            *last_cursor = ime_cursor;
+            if let Some(sender) = self.sender.borrow().as_ref() {
+                sender.emit(SketchBoardInput::ImeCursorRect(ime_cursor));
+            }
         }
         glib::Propagation::Stop
     }
@@ -165,39 +197,57 @@ impl FemtoVGArea {
             self.canvas.borrow_mut().replace(c);
         }
 
+        let mut canvas_ref = self.canvas.borrow_mut();
+        let canvas = canvas_ref.as_mut().unwrap();
+
+        let mut loaded_fonts = Vec::new();
+        let mut loaded_paths = HashSet::<PathBuf>::new();
+
         let app_config = APP_CONFIG.read();
-        let font = app_config
-            .font()
-            .family()
-            .map(|font| {
-                let font = Fontconfig::new()
-                    .ok_or_else(|| anyhow!("Error while initializing fontconfig"))?
-                    .find(font, app_config.font().style())
-                    .ok_or_else(|| anyhow!("Can not find font"))?;
-                let font_id = self
-                    .canvas
-                    .borrow_mut()
-                    .as_mut()
-                    .unwrap() // this unwrap is safe because it gets placed above
-                    .add_font(font.path)?;
-                Ok(font_id)
-            })
-            .transpose()
-            .unwrap_or_else(|e: Error| {
-                println!("Error while loading font. Using default font: {e}");
-                None
-            });
-        if let Some(font) = font {
-            self.font.borrow_mut().replace(font);
-        } else {
-            self.font.borrow_mut().replace(
-                self.canvas
-                    .borrow_mut()
-                    .as_mut()
-                    .unwrap() // this unwrap is safe because it gets placed above
-                    .add_font_mem(&resource!("src/assets/Roboto-Regular.ttf"))
-                    .expect("Cannot add font"),
-            );
+        let fontconfig = Fontconfig::new();
+
+        let configured_font = app_config.font().family().and_then(|family| {
+            fontconfig
+                .as_ref()
+                .and_then(|fc| fc.find(family, app_config.font().style()))
+        });
+
+        if let Some(font) = configured_font.as_ref() {
+            match canvas.add_font(font.path.clone()) {
+                Ok(id) => {
+                    loaded_paths.insert(font.path.clone());
+                    self.font.borrow_mut().replace(id);
+                    loaded_fonts.push(id);
+                }
+                Err(e) => {
+                    println!("Error while loading font. Using default font: {e}");
+                }
+            }
+        }
+
+        if loaded_fonts.is_empty() {
+            let fallback = canvas
+                .add_font_mem(&resource!("src/assets/Roboto-Regular.ttf"))
+                .expect("Cannot add font");
+            self.font.borrow_mut().replace(fallback);
+            loaded_fonts.push(fallback);
+        }
+
+        if let Some(fc) = fontconfig.as_ref() {
+            for family in CJK_FALLBACK_FONTS {
+                if let Some(font) = fc.find(family, None) {
+                    if loaded_paths.insert(font.path.clone()) {
+                        if let Ok(id) = canvas.add_font(font.path.clone()) {
+                            loaded_fonts.push(id);
+                        }
+                    }
+                }
+            }
+        }
+
+        set_font_stack(loaded_fonts.clone());
+        if let Some(first) = loaded_fonts.first() {
+            self.font.borrow_mut().replace(*first);
         }
     }
 
@@ -550,5 +600,16 @@ impl FemtoVgAreaMut {
             input.x * dpi_scale_factor / self.scale_factor,
             input.y * dpi_scale_factor / self.scale_factor,
         )
+    }
+
+    pub fn image_to_canvas_coordinates(&self, input: Vec2D) -> Vec2D {
+        Vec2D::new(
+            input.x * self.scale_factor + self.offset.x,
+            input.y * self.scale_factor + self.offset.y,
+        )
+    }
+
+    pub fn image_length_to_canvas(&self, value: f32) -> f32 {
+        value * self.scale_factor
     }
 }

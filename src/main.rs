@@ -54,6 +54,7 @@ struct App {
     sketch_board: Controller<SketchBoard>,
     tools_toolbar: Controller<ToolsToolbar>,
     style_toolbar: Controller<StyleToolbar>,
+    im_context: gtk::IMMulticontext,
 }
 
 #[derive(Debug)]
@@ -61,6 +62,7 @@ enum AppInput {
     Realized,
     SetToolbarsDisplay(bool),
     ToggleToolbarsDisplay,
+    UpdateImeCursor(Rectangle),
 }
 
 #[derive(Debug)]
@@ -182,43 +184,6 @@ impl Component for App {
                 sender.input(AppInput::Realized);
             },
 
-            // this should be inside Sketchboard, but doesn't seem so work there. We hook it here
-            // and send the messages there
-            add_controller = gtk::EventControllerKey {
-                connect_key_pressed[sketch_board_sender] => move |controller, key, code, modifier | {
-                    if let Some(im_context) = controller.im_context() {
-                        im_context.focus_in();
-                        if !im_context.filter_keypress(controller.current_event().unwrap()) {
-                            sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
-                        }
-                    } else {
-                        sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
-                    }
-                    glib::Propagation::Stop
-                },
-
-                connect_key_released[sketch_board_sender] => move |controller, key, code, modifier | {
-                    if let Some(im_context) = controller.im_context() {
-                        im_context.focus_in();
-                        if !im_context.filter_keypress(controller.current_event().unwrap()) {
-                            sketch_board_sender.emit(SketchBoardInput::new_key_release_event(KeyEventMsg::new(key, code, modifier)));
-                        }
-                    } else {
-                        sketch_board_sender.emit(SketchBoardInput::new_key_release_event(KeyEventMsg::new(key, code, modifier)));
-                    }
-                },
-
-                #[wrap(Some)]
-                set_im_context = &gtk::IMMulticontext {
-                    connect_commit[sketch_board_sender] => move |_cx, txt| {
-                        sketch_board_sender.emit(SketchBoardInput::new_text_event(
-                            TextEventMsg::Commit(txt.to_string()),
-                        ))
-                    }
-                },
-
-            },
-
             gtk::Overlay {
                 add_overlay = model.tools_toolbar.widget(),
 
@@ -248,6 +213,9 @@ impl Component for App {
                     .sender()
                     .emit(StyleToolbarInput::ToggleVisibility);
             }
+            AppInput::UpdateImeCursor(rect) => {
+                self.im_context.set_cursor_location(&rect);
+            }
         }
     }
 
@@ -272,11 +240,15 @@ impl Component for App {
         let image_dimensions = (image.width(), image.height());
 
         // SketchBoard
+        let im_context = gtk::IMMulticontext::new();
+        let im_context_view = im_context.clone();
+
         let sketch_board =
             SketchBoard::builder()
                 .launch(image)
                 .forward(sender.input_sender(), |t| match t {
                     SketchBoardOutput::ToggleToolbarsDisplay => AppInput::ToggleToolbarsDisplay,
+                    SketchBoardOutput::UpdateImeCursor(rect) => AppInput::UpdateImeCursor(rect),
                 });
 
         let sketch_board_sender = sketch_board.sender().clone();
@@ -296,9 +268,74 @@ impl Component for App {
             tools_toolbar,
             style_toolbar,
             image_dimensions,
+            im_context,
         };
 
         let widgets = view_output!();
+
+        let key_controller = gtk::EventControllerKey::new();
+        let pressed_sender = sketch_board_sender.clone();
+        key_controller.connect_key_pressed(move |controller, key, code, modifier| {
+            if let Some(im_context) = controller.im_context() {
+                im_context.focus_in();
+                if !im_context.filter_keypress(controller.current_event().unwrap()) {
+                    pressed_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(
+                        key, code, modifier,
+                    )));
+                }
+            } else {
+                pressed_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(
+                    key, code, modifier,
+                )));
+            }
+            gtk::glib::Propagation::Stop
+        });
+
+        let released_sender = sketch_board_sender.clone();
+        key_controller.connect_key_released(move |controller, key, code, modifier| {
+            if let Some(im_context) = controller.im_context() {
+                im_context.focus_in();
+                if !im_context.filter_keypress(controller.current_event().unwrap()) {
+                    released_sender.emit(SketchBoardInput::new_key_release_event(
+                        KeyEventMsg::new(key, code, modifier),
+                    ));
+                }
+            } else {
+                released_sender.emit(SketchBoardInput::new_key_release_event(KeyEventMsg::new(
+                    key, code, modifier,
+                )));
+            }
+        });
+
+        key_controller.set_im_context(Some(&im_context_view));
+        widgets.main_window.add_controller(key_controller);
+
+        let preedit_start_sender = sketch_board_sender.clone();
+        im_context_view.connect_preedit_start(move |_cx| {
+            preedit_start_sender.emit(SketchBoardInput::new_text_event(TextEventMsg::PreeditStart));
+        });
+
+        let preedit_changed_sender = sketch_board_sender.clone();
+        im_context_view.connect_preedit_changed(move |cx| {
+            let (text, _attrs, cursor_pos) = cx.preedit_string();
+            preedit_changed_sender.emit(SketchBoardInput::new_text_event(
+                TextEventMsg::PreeditChanged {
+                    text: text.to_string(),
+                    cursor_pos,
+                },
+            ));
+        });
+
+        let preedit_end_sender = sketch_board_sender.clone();
+        im_context_view.connect_preedit_end(move |_cx| {
+            preedit_end_sender.emit(SketchBoardInput::new_text_event(TextEventMsg::PreeditEnd));
+        });
+
+        im_context_view.connect_commit(move |_cx, txt| {
+            sketch_board_sender.emit(SketchBoardInput::new_text_event(TextEventMsg::Commit(
+                txt.to_string(),
+            )));
+        });
 
         if APP_CONFIG.read().focus_toggles_toolbars() {
             let motion_controller = gtk::EventControllerMotion::builder().build();

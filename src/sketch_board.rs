@@ -14,7 +14,7 @@ use std::{fs, io};
 
 use gtk::prelude::*;
 
-use relm4::gtk::gdk::{DisplayManager, Key, ModifierType, Texture};
+use relm4::gtk::gdk::{DisplayManager, Key, ModifierType, Rectangle, Texture};
 use relm4::{gtk, Component, ComponentParts, ComponentSender};
 
 use crate::configuration::{Action, APP_CONFIG};
@@ -32,11 +32,13 @@ pub enum SketchBoardInput {
     InputEvent(InputEvent),
     ToolbarEvent(ToolbarEvent),
     RenderResult(RenderedImage, Vec<Action>),
+    ImeCursorRect(Option<(f32, f32, f32)>),
 }
 
 #[derive(Debug, Clone)]
 pub enum SketchBoardOutput {
     ToggleToolbarsDisplay,
+    UpdateImeCursor(Rectangle),
 }
 
 #[derive(Debug, Clone)]
@@ -65,6 +67,9 @@ pub struct KeyEventMsg {
 #[derive(Debug, Clone)]
 pub enum TextEventMsg {
     Commit(String),
+    PreeditStart,
+    PreeditChanged { text: String, cursor_pos: i32 },
+    PreeditEnd,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -397,6 +402,38 @@ impl SketchBoard {
         }
     }
 
+    fn ime_rectangle(&self, cursor: (f32, f32, f32)) -> Option<Rectangle> {
+        let position = self
+            .renderer
+            .image_to_widget_coordinates(Vec2D::new(cursor.0, cursor.1));
+        let height = self.renderer.image_length_to_widget(cursor.2).max(1.0);
+
+        let widget = self.renderer.upcast_ref::<gtk::Widget>();
+        let root = widget.root()?;
+        let window = root.downcast::<gtk::Window>().ok()?;
+        let bounds = widget.compute_bounds(&window)?;
+
+        let x = bounds.x() + position.x;
+        let y = bounds.y() + position.y;
+
+        Some(Rectangle::new(
+            x.round() as i32,
+            y.round() as i32,
+            2,
+            height.ceil() as i32,
+        ))
+    }
+
+    fn emit_ime_cursor(&self, sender: &ComponentSender<Self>, cursor: Option<(f32, f32, f32)>) {
+        if let Some(cursor) = cursor {
+            if let Some(rect) = self.ime_rectangle(cursor) {
+                sender
+                    .output_sender()
+                    .emit(SketchBoardOutput::UpdateImeCursor(rect));
+            }
+        }
+    }
+
     // Toolbars = Tools Toolbar + Style Toolbar
     fn handle_toggle_toolbars_display(
         &mut self,
@@ -547,7 +584,7 @@ impl Component for SketchBoard {
                     } else if ke.is_one_of(Key::t, KeyMappingId::UsT)
                         && ke.modifier == ModifierType::CONTROL_MASK
                     {
-                        self.handle_toggle_toolbars_display(sender)
+                        self.handle_toggle_toolbars_display(sender.clone())
                     } else if ke.is_one_of(Key::s, KeyMappingId::UsS)
                         && ke.modifier == ModifierType::CONTROL_MASK
                     {
@@ -595,6 +632,10 @@ impl Component for SketchBoard {
             }
             SketchBoardInput::RenderResult(img, action) => {
                 self.handle_render_result(img, action);
+                ToolUpdateResult::Unmodified
+            }
+            SketchBoardInput::ImeCursorRect(cursor) => {
+                self.emit_ime_cursor(&sender, cursor);
                 ToolUpdateResult::Unmodified
             }
         };
