@@ -45,7 +45,7 @@ glow = "0.16.0"
 glib-macros = "0.20.12"
 glib = "0.20.12"
 resource = "0.6.0"  # font emedding
-fontconfig = "0.9.0"  # font loading
+fontconfig = "0.10.0"  # font loading
 keycode = "1.0.0"
 
 [dependencies.relm4-icons]
