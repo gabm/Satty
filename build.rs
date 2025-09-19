@@ -23,5 +23,35 @@ fn main() -> Result<(), io::Error> {
     generate_to(Nushell, cmd, bin, out)?;
     generate_to(Fig, cmd, bin, out)?;
 
+    relm4_icons_build::bundle_icons(
+        "icon_names.rs",
+        Some("com.gabm.satty"),
+        None,
+        None::<&str>,
+        [
+            "pen-regular",
+            "color-regular",
+            "cursor-regular",
+            "number-circle-1-regular",
+            "drop-regular",
+            "highlight-regular",
+            "arrow-redo-filled",
+            "arrow-undo-filled",
+            "recycling-bin",
+            "save-regular",
+            "copy-regular",
+            "text-case-title-regular",
+            "text-font-regular",
+            "minus-large",
+            "checkbox-unchecked-regular",
+            "circle-regular",
+            "crop-filled",
+            "arrow-up-right-filled",
+            "rectangle-landscape-regular",
+            "paint-bucket-filled",
+            "paint-bucket-regular",
+        ],
+    );
+
     Ok(())
 }

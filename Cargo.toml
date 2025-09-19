@@ -18,9 +18,9 @@ include = [
 
 
 [dependencies]
-relm4 = { version = "0.9.1", features = ["macros", "libadwaita", "gnome_42"] }
+relm4 = { version = "0.10.0", features = ["macros", "libadwaita", "gnome_42"] }
 tokio = { version = "1.47.1", features = ["time"] }
-gdk-pixbuf = "0.20.10"
+gdk-pixbuf = "0.21.2"
 
 # error handling
 anyhow = "1.0"
@@ -42,14 +42,14 @@ femtovg = "0.17"
 libloading = "0.8"
 epoxy = "0.1.0"
 glow = "0.16.0"
-glib-macros = "0.20.12"
-glib = "0.20.12"
+glib-macros = "0.21.2"
+glib = "0.21.2"
 resource = "0.6.0"  # font emedding
 fontconfig = "0.10.0"  # font loading
 keycode = "1.0.0"
 
 [dependencies.relm4-icons]
-version = "0.9.0"
+version = "0.10.0"
 
 
 [build-dependencies]
@@ -57,3 +57,4 @@ clap = { version = "4.5.47", features = ["derive"] }
 clap_complete = "4.5.58"
 clap_complete_nushell = "4.5.8"
 clap_complete_fig = "4.5.2"
+relm4-icons-build = "0.10"
