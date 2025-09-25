@@ -145,7 +145,7 @@ impl Default for MarkerTool {
         Self {
             style: Default::default(),
             next_number: Rc::new(RefCell::new(1)),
-            input_enabled: true
+            input_enabled: true,
         }
     }
 }
