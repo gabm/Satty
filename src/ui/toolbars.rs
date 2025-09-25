@@ -22,6 +22,7 @@ pub struct ToolsToolbar {
     visible: bool,
     active_button: Option<ToggleButton>,
     tool_buttons: HashMap<Tools, ToggleButton>,
+    tool_action: SimpleAction,
 }
 
 pub struct StyleToolbar {
@@ -267,12 +268,10 @@ impl SimpleComponent for ToolsToolbar {
                 self.visible = !self.visible;
             }
             ToolsToolbarInput::SwitchSelectedTool(tool) => {
-                if let Some(previous_button) = &self.active_button {
-                    previous_button.set_active(false);
-                }
+                // Change state of action, let GTK update the UI
+                self.tool_action.change_state(&tool.to_variant());
 
                 if let Some(selected_tool_button) = self.tool_buttons.get(&tool) {
-                    selected_tool_button.set_active(true);
                     self.active_button = Some(selected_tool_button.clone());
                 }
             }
@@ -284,10 +283,23 @@ impl SimpleComponent for ToolsToolbar {
         root: Self::Root,
         sender: ComponentSender<Self>,
     ) -> ComponentParts<Self> {
+        let sender_tmp: ComponentSender<ToolsToolbar> = sender.clone();
+        let tool_action: RelmAction<ToolsAction> = RelmAction::new_stateful_with_target_value(
+            &APP_CONFIG.read().initial_tool(),
+            move |_, state, value| {
+                *state = value;
+                // notify parent of change
+                sender_tmp
+                    .output_sender()
+                    .emit(ToolbarEvent::ToolSelected(*state));
+            },
+        );
+
         let mut model = ToolsToolbar {
             visible: !APP_CONFIG.read().default_hide_toolbars(),
             active_button: None,
             tool_buttons: HashMap::new(),
+            tool_action: tool_action.clone().into(),
         };
         let widgets = view_output!();
 
@@ -305,7 +317,7 @@ impl SimpleComponent for ToolsToolbar {
             (Tools::Highlight, widgets.highlight_button.clone()),
         ]);
 
-        // reverse shortcuts
+        // reverse shortcuts mapping
         let config = APP_CONFIG.read();
         let tool_to_key_map: HashMap<&Tools, &String> = config
             .keybinds()
@@ -331,32 +343,18 @@ impl SimpleComponent for ToolsToolbar {
             };
 
             let tooltip = if let Some(key) = tool_to_key_map.get(tool) {
-                format!("{} ({})", tool_name, key)
+                format!("{} ({})", tool_name, key.to_uppercase())
             } else {
                 tool_name.to_string()
             };
-
-            button.set_tooltip(&tooltip);
+            button.set_tooltip_text(Some(&tooltip));
         }
 
-        model.active_button = Some(widgets.pointer_button.clone());
-
-        // Tools Action for selecting tools
-        let sender_tmp: ComponentSender<ToolsToolbar> = sender.clone();
-        let tool_action: RelmAction<ToolsAction> = RelmAction::new_stateful_with_target_value(
-            &APP_CONFIG.read().initial_tool(),
-            move |_, state, value| {
-                *state = value;
-                sender_tmp
-                    .output_sender()
-                    .emit(ToolbarEvent::ToolSelected(*state));
-                sender_tmp
-                    .input_sender()
-                    // Updates the active_button from the toolbar UI with the newly selected tool whenever a mouse
-                    // click occurs, so that selection by mouse and by keyboard don't coexist in the UI
-                    .emit(ToolsToolbarInput::SwitchSelectedTool(*state));
-            },
-        );
+        // Set initial active button correctly
+        let initial_tool = APP_CONFIG.read().initial_tool();
+        if let Some(button) = model.tool_buttons.get(&initial_tool) {
+            model.active_button = Some(button.clone());
+        }
 
         let mut group = RelmActionGroup::<ToolsToolbarActionGroup>::new();
         group.add_action(tool_action);
