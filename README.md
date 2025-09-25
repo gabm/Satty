@@ -55,7 +55,7 @@ Default single-key shortcuts:
 - `r`: Rectangle tool
 - `e`: Ellipse tool
 - `t`: Text tool
-- `m`: Marker tool
+- `m`: Numbered Marker tool
 - `u`: Blur tool
 - `g`: Highlight tool
 
