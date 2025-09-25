@@ -93,7 +93,7 @@ impl Keybinds {
         }
     }
 
-    /// Merge [keybindings] with default
+    /// Merge keybindings with default
     /// Only replaces defaults if they are set (doesn't )
     fn merge(&mut self, file_keybinds: KeybindsFile) {
         self.update_keybind(file_keybinds.pointer, Tools::Pointer);
