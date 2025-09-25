@@ -6,7 +6,6 @@ use gdk_pixbuf::glib::Bytes;
 use gdk_pixbuf::Pixbuf;
 use keycode::{KeyMap, KeyMappingId};
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::io::Write;
 use std::panic;
 use std::process::{Command, Stdio};
@@ -487,19 +486,6 @@ impl SketchBoard {
         event: TextEventMsg,
         sender: ComponentSender<Self>,
     ) -> ToolUpdateResult {
-        let tool_shortcuts = HashMap::from([
-            (("p", ""), Tools::Pointer),
-            (("c", "1"), Tools::Crop),
-            (("b", "2"), Tools::Brush),
-            (("l", "3"), Tools::Line),
-            (("a", "4"), Tools::Arrow),
-            (("r", "5"), Tools::Rectangle),
-            (("e", "6"), Tools::Ellipse),
-            (("t", "7"), Tools::Text),
-            (("m", "8"), Tools::Marker),
-            (("u", "9"), Tools::Blur),
-            (("h", "0"), Tools::Highlight),
-        ]);
         match event {
             TextEventMsg::Commit(txt) => {
                 // NOTE:
@@ -519,17 +505,14 @@ impl SketchBoard {
                     ToolUpdateResult::Unmodified
                 } else {
                     let key = txt.as_str();
-                    if let Some(tool) = tool_shortcuts
-                        .iter()
-                        .find(|item| item.0.0 == key || item.0.1 == key)
-                        .map(|(_, tool)| tool)
+                    if let Some(tool) = APP_CONFIG.read().keybinds().get_tool(key)
                     {
                         sender.input(SketchBoardInput::ToolbarEvent(ToolbarEvent::ToolSelected(
-                            *tool,
+                            tool,
                         )));
                         sender
                             .output_sender()
-                            .emit(SketchBoardOutput::ToolSwitchShortcut(*tool));
+                            .emit(SketchBoardOutput::ToolSwitchShortcut(tool));
 
                         ToolUpdateResult::Unmodified
                     } else {

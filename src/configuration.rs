@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs,
     io::{self, Write},
     path::Path,
@@ -54,6 +55,89 @@ pub struct Configuration {
     profile_startup: bool,
     no_window_decoration: bool,
     brush_smooth_history_size: usize,
+    keybinds: Keybinds,
+}
+
+pub struct Keybinds {
+    shortcuts: HashMap<String, Tools>,
+}
+
+impl Keybinds {
+    pub fn get_tool(&self, key: &str) -> Option<Tools> {
+        self.shortcuts.get(key).copied()
+    }
+
+    pub fn shortcuts(&self) -> &HashMap<String, Tools> {
+        &self.shortcuts
+    }
+
+    /// Merge [keybindings] with default
+    /// Only replaces defaults if they are set (doesn't )
+    fn merge(&mut self, file_keybinds: KeybindsFile) {
+        if let Some(pointer) = file_keybinds.pointer {
+            self.shortcuts.retain(|_, v| *v != Tools::Pointer);
+            self.shortcuts.insert(pointer, Tools::Pointer);
+        }
+        if let Some(crop) = file_keybinds.crop {
+            self.shortcuts.retain(|_, v| *v != Tools::Crop);
+            self.shortcuts.insert(crop, Tools::Crop);
+        }
+        if let Some(brush) = file_keybinds.brush {
+            self.shortcuts.retain(|_, v| *v != Tools::Brush);
+            self.shortcuts.insert(brush, Tools::Brush);
+        }
+        if let Some(line) = file_keybinds.line {
+            self.shortcuts.retain(|_, v| *v != Tools::Line);
+            self.shortcuts.insert(line, Tools::Line);
+        }
+        if let Some(arrow) = file_keybinds.arrow {
+            self.shortcuts.retain(|_, v| *v != Tools::Arrow);
+            self.shortcuts.insert(arrow, Tools::Arrow);
+        }
+        if let Some(rectangle) = file_keybinds.rectangle {
+            self.shortcuts.retain(|_, v| *v != Tools::Rectangle);
+            self.shortcuts.insert(rectangle, Tools::Rectangle);
+        }
+        if let Some(ellipse) = file_keybinds.ellipse {
+            self.shortcuts.retain(|_, v| *v != Tools::Ellipse);
+            self.shortcuts.insert(ellipse, Tools::Ellipse);
+        }
+        if let Some(text) = file_keybinds.text {
+            self.shortcuts.retain(|_, v| *v != Tools::Text);
+            self.shortcuts.insert(text, Tools::Text);
+        }
+        if let Some(marker) = file_keybinds.marker {
+            self.shortcuts.retain(|_, v| *v != Tools::Marker);
+            self.shortcuts.insert(marker, Tools::Marker);
+        }
+        if let Some(blur) = file_keybinds.blur {
+            self.shortcuts.retain(|_, v| *v != Tools::Blur);
+            self.shortcuts.insert(blur, Tools::Blur);
+        }
+        if let Some(highlight) = file_keybinds.highlight {
+            self.shortcuts.retain(|_, v| *v != Tools::Highlight);
+            self.shortcuts.insert(highlight, Tools::Highlight);
+        }
+    }
+}
+
+impl Default for Keybinds {
+    fn default() -> Self {
+        let mut shortcuts = HashMap::new();
+        shortcuts.insert("p".to_string(), Tools::Pointer);
+        shortcuts.insert("c".to_string(), Tools::Crop);
+        shortcuts.insert("b".to_string(), Tools::Brush);
+        shortcuts.insert("i".to_string(), Tools::Line);
+        shortcuts.insert("z".to_string(), Tools::Arrow);
+        shortcuts.insert("r".to_string(), Tools::Rectangle);
+        shortcuts.insert("e".to_string(), Tools::Ellipse);
+        shortcuts.insert("t".to_string(), Tools::Text);
+        shortcuts.insert("m".to_string(), Tools::Marker);
+        shortcuts.insert("u".to_string(), Tools::Blur);
+        shortcuts.insert("g".to_string(), Tools::Highlight);
+
+        Self { shortcuts }
+    }
 }
 
 #[derive(Default)]
@@ -236,6 +320,9 @@ impl Configuration {
             if let Some(v) = file.font {
                 self.font.merge(v);
             }
+            if let Some(v) = file.keybinds {
+                self.keybinds.merge(v);
+            }
         }
 
         // overwrite with all specified values from command line
@@ -405,6 +492,10 @@ impl Configuration {
     pub fn brush_smooth_history_size(&self) -> usize {
         self.brush_smooth_history_size
     }
+
+    pub fn keybinds(&self) -> &Keybinds {
+        &self.keybinds
+    }
 }
 
 impl Default for Configuration {
@@ -432,6 +523,7 @@ impl Default for Configuration {
             profile_startup: false,
             no_window_decoration: false,
             brush_smooth_history_size: 0, // default to 0, no history
+            keybinds: Keybinds::default(),
         }
     }
 }
@@ -457,6 +549,23 @@ struct ConfigurationFile {
     general: Option<ConfigurationFileGeneral>,
     color_palette: Option<ColorPaletteFile>,
     font: Option<FontFile>,
+    keybinds: Option<KeybindsFile>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "kebab-case", deny_unknown_fields)]
+struct KeybindsFile {
+    pointer: Option<String>,
+    crop: Option<String>,
+    brush: Option<String>,
+    line: Option<String>,
+    arrow: Option<String>,
+    rectangle: Option<String>,
+    ellipse: Option<String>,
+    text: Option<String>,
+    marker: Option<String>,
+    blur: Option<String>,
+    highlight: Option<String>,
 }
 
 #[derive(Deserialize)]

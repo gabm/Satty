@@ -45,6 +45,20 @@ All configuration is done either at the config file in `XDG_CONFIG_DIR/.config/s
 - `Ctrl+Y`: Redo
 - `Ctrl+Z`: Undo
 
+#### Tool Selection Shortcuts (configurable)
+Default single-key shortcuts:
+- `P`: Pointer tool
+- `C`: Crop tool
+- `B`: Brush tool
+- `I`: Line tool
+- `Z`: Arrow tool
+- `R`: Rectangle tool
+- `E`: Ellipse tool
+- `T`: Text tool
+- `M`: Marker tool
+- `U`: Blur tool
+- `G`: Highlight tool
+
 ### Tool Modifiers and Keys
 
 - Arrow: Hold `Shift` to make arrow snap to 15° steps
@@ -103,6 +117,20 @@ right-click-copy = false
 no-window-decoration = true
 # experimental feature: adjust history size for brush input smooting (0: disabled, default: 0, try e.g. 5 or 10)
 brush-smooth-history-size = 10
+
+# Tool selection keyboard shortcuts
+[keybinds]
+pointer = "p"
+crop = "c"
+brush = "b"
+line = "i"
+arrow = "z"
+rectangle = "r"
+ellipse = "e"
+text = "t"
+marker = "m"
+blur = "u"
+highlight = "g"
 
 # Font to use for text annotations
 [font]

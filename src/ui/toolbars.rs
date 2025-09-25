@@ -144,7 +144,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "cursor-regular",
-                set_tooltip: "Pointer (P)",
+                // tooltip set programatically
                 ActionablePlus::set_action::<ToolsAction>: Tools::Pointer,
             },
             #[name(crop_button)]
@@ -153,7 +153,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "crop-filled",
-                set_tooltip: "Crop (C)",
+                // tooltip set programatically
                 ActionablePlus::set_action::<ToolsAction>: Tools::Crop,
             },
             #[name(brush_button)]
@@ -162,7 +162,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "pen-regular",
-                set_tooltip: "Brush tool (B)",
+                // tooltip set programatically
                 ActionablePlus::set_action::<ToolsAction>: Tools::Brush,
             },
             #[name(line_button)]
@@ -171,7 +171,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "minus-large",
-                set_tooltip: "Line tool (L)",
+                // tooltip set programatically
                 ActionablePlus::set_action::<ToolsAction>: Tools::Line,
             },
             #[name(arrow_button)]
@@ -180,7 +180,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "arrow-up-right-filled",
-                set_tooltip: "Arrow tool (A)",
+                // tooltip set programatically
                 ActionablePlus::set_action::<ToolsAction>: Tools::Arrow,
             },
             #[name(rectangle_button)]
@@ -189,7 +189,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "checkbox-unchecked-regular",
-                set_tooltip: "Rectangle tool (R)",
+                // tooltip set programatically
                 ActionablePlus::set_action::<ToolsAction>: Tools::Rectangle,
             },
             #[name(ellipse_button)]
@@ -198,7 +198,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "circle-regular",
-                set_tooltip: "Ellipse tool (E)",
+                // tooltip set programatically
                 ActionablePlus::set_action::<ToolsAction>: Tools::Ellipse,
             },
             #[name(text_button)]
@@ -207,7 +207,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "text-case-title-regular",
-                set_tooltip: "Text tool (T)",
+                // tooltip set programatically
                 ActionablePlus::set_action::<ToolsAction>: Tools::Text,
             },
             #[name(marker_button)]
@@ -216,7 +216,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "number-circle-1-regular",
-                set_tooltip: "Numbered Marker (M)",
+                // tooltip set programatically
                 ActionablePlus::set_action::<ToolsAction>: Tools::Marker,
             },
             #[name(blur_button)]
@@ -225,7 +225,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "drop-regular",
-                set_tooltip: "Blur (U)",
+                // tooltip set programatically
                 ActionablePlus::set_action::<ToolsAction>: Tools::Blur,
             },
             #[name(highlight_button)]
@@ -234,7 +234,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_hexpand: false,
 
                 set_icon_name: "highlight-regular",
-                set_tooltip: "Highlight (H)",
+                // tooltip set programatically
                 ActionablePlus::set_action::<ToolsAction>: Tools::Highlight,
             },
             gtk::Separator {},
@@ -304,6 +304,40 @@ impl SimpleComponent for ToolsToolbar {
             (Tools::Blur, widgets.blur_button.clone()),
             (Tools::Highlight, widgets.highlight_button.clone()),
         ]);
+
+        // reverse shortcuts
+        let config = APP_CONFIG.read();
+        let tool_to_key_map: HashMap<&Tools, &String> = config
+            .keybinds()
+            .shortcuts()
+            .iter()
+            .map(|(k, v)| (v, k))
+            .collect();
+
+        // Update tooltips based on configured keybinds
+        for (tool, button) in &model.tool_buttons {
+            let tool_name = match tool {
+                Tools::Pointer => "Pointer",
+                Tools::Crop => "Crop",
+                Tools::Brush => "Brush tool",
+                Tools::Line => "Line tool",
+                Tools::Arrow => "Arrow tool",
+                Tools::Rectangle => "Rectangle tool",
+                Tools::Ellipse => "Ellipse tool",
+                Tools::Text => "Text tool",
+                Tools::Marker => "Numbered Marker",
+                Tools::Blur => "Blur",
+                Tools::Highlight => "Highlight",
+            };
+
+            let tooltip = if let Some(key) = tool_to_key_map.get(tool) {
+                format!("{} ({})", tool_name, key)
+            } else {
+                tool_name.to_string()
+            };
+
+            button.set_tooltip(&tooltip);
+        }
 
         model.active_button = Some(widgets.pointer_button.clone());
 

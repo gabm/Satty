@@ -24,6 +24,20 @@ primary-highlighter = "block"
 # Disable notifications
 disable-notifications = false
 
+# Tool selection keyboard shortcuts (optional, defaults shown)
+#[keybinds]
+#pointer = "p"
+#crop = "c"
+#brush = "b"
+#line = "i"     
+#arrow = "z"    
+#rectangle = "r"
+#ellipse = "e"
+#text = "t"
+#marker = "m"
+#blur = "u"
+#highlight = "g" 
+
 # Font to use for text annotations
 [font]
 family = "Roboto"
