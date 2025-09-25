@@ -12,6 +12,7 @@ use serde_derive::Deserialize;
 
 use crate::{
     command_line,
+    math::Vec2D,
     sketch_board::{InputEvent, KeyEventMsg, MouseEventMsg, TextEventMsg},
     style::Style,
 };
@@ -124,7 +125,8 @@ where
 }
 
 pub trait Drawable: DrawableClone + Debug {
-    fn draw(&self, canvas: &mut Canvas<OpenGl>, font: FontId) -> Result<()>;
+    fn draw(&self, canvas: &mut Canvas<OpenGl>, font: FontId, bounds: (Vec2D, Vec2D))
+        -> Result<()>;
     fn handle_undo(&mut self) {}
     fn handle_redo(&mut self) {}
 }

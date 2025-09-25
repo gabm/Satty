@@ -9,7 +9,7 @@ use crate::{
     configuration::APP_CONFIG,
     math::{self, Vec2D},
     sketch_board::{MouseEventMsg, MouseEventType},
-    style::{Size, Style},
+    style::Style,
 };
 
 use super::{Drawable, DrawableClone, Tool, ToolUpdateResult, Tools};
@@ -39,8 +39,8 @@ impl Blur {
             .sub_image(
                 transformed_pos.0 as usize,
                 transformed_pos.1 as usize,
-                transformed_size.x as usize,
-                transformed_size.y as usize,
+                (transformed_size.x as usize).max(1),
+                (transformed_size.y as usize).max(1),
             )
             .to_contiguous_buf();
         let sub = Img::new(buf.into_owned(), width, height);
@@ -69,29 +69,41 @@ impl Drawable for Blur {
         &self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         _font: femtovg::FontId,
+        bounds: (Vec2D, Vec2D),
     ) -> Result<()> {
         let size = match self.size {
             Some(s) => s,
             None => return Ok(()), // early exit if none
         };
+        let (pos, size) = math::rect_ensure_in_bounds(
+            math::rect_ensure_positive_size(self.top_left, size),
+            bounds,
+        );
         if self.editing {
             // set style
-            let paint = Paint::color(Color::black()).with_line_width(Size::Medium.to_line_width());
+            let mut color = Color::black();
+            color.set_alphaf(0.6);
+            let paint = Paint::color(color);
 
             // make rect
             let mut path = Path::new();
             path.rounded_rect(
-                self.top_left.x,
-                self.top_left.y,
+                pos.x,
+                pos.y,
                 size.x,
                 size.y,
                 APP_CONFIG.read().corner_roundness(),
             );
 
             // draw
-            canvas.stroke_path(&path, &paint);
+            canvas.fill_path(&path, &paint);
         } else {
-            let (pos, size) = math::rect_ensure_positive_size(self.top_left, size);
+            if size.x <= 0.0 || size.y <= 0.0 {
+                return Ok(());
+            }
+
+            canvas.save();
+            canvas.flush();
 
             // create new cached image
             if self.cached_image.borrow().is_none() {
@@ -99,7 +111,9 @@ impl Drawable for Blur {
                     canvas,
                     pos,
                     size,
-                    self.style.size.to_blur_factor(),
+                    self.style
+                        .size
+                        .to_blur_factor(self.style.annotation_size_factor),
                 )?);
             }
 
@@ -124,6 +138,7 @@ impl Drawable for Blur {
                     1f32,
                 ),
             );
+            canvas.restore();
         }
         Ok(())
     }

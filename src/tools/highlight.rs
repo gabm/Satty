@@ -79,7 +79,11 @@ impl Highlight for Highlighter<FreehandHighlight> {
             self.style.color.b,
             (255.0 * HIGHLIGHT_OPACITY) as u8,
         ));
-        paint.set_line_width(self.style.size.to_highlight_width());
+        paint.set_line_width(
+            self.style
+                .size
+                .to_highlight_width(self.style.annotation_size_factor),
+        );
         paint.set_line_join(femtovg::LineJoin::Round);
         paint.set_line_cap(femtovg::LineCap::Square);
 
@@ -137,6 +141,7 @@ impl Drawable for HighlightKind {
         &self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         _font: femtovg::FontId,
+        _bounds: (Vec2D, Vec2D),
     ) -> Result<()> {
         match self {
             HighlightKind::Block(highlighter) => highlighter.highlight(canvas),

@@ -108,6 +108,12 @@ impl Vec2D {
     pub fn is_zero(&self) -> bool {
         self.x.abs() < f32::EPSILON && self.y.abs() < f32::EPSILON
     }
+
+    pub fn distance_to(&self, other: &Vec2D) -> f32 {
+        let dx = self.x - other.x;
+        let dy = self.y - other.y;
+        (dx * dx + dy * dy).sqrt()
+    }
 }
 
 impl Add for Vec2D {

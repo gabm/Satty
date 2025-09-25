@@ -117,6 +117,7 @@ impl Drawable for Arrow {
         &self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         _font: FontId,
+        _bounds: (Vec2D, Vec2D),
     ) -> Result<()> {
         let end = match self.end {
             Some(e) => e,
@@ -165,9 +166,15 @@ impl Drawable for Arrow {
         canvas.rotate(arrow_direction.angle().radians);
 
         // The width of the tail (double distance from start to head side)
-        let tail_width = self.style.size.to_arrow_tail_width();
+        let tail_width = self
+            .style
+            .size
+            .to_arrow_tail_width(self.style.annotation_size_factor);
         // The length of the (sloped) side of the arrow head (distance from end to head side).
-        let head_side_length = self.style.size.to_arrow_head_length();
+        let head_side_length = self
+            .style
+            .size
+            .to_arrow_head_length(self.style.annotation_size_factor);
         // The offset of the midpoint is the distance the midpoint moves toward the end of the arrow.
         // A offset of 0 will place the midpoint right below the head side.
         // A negative value will result in a diamond head.

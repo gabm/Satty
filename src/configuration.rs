@@ -40,13 +40,20 @@ pub struct Configuration {
     initial_tool: Tools,
     copy_command: Option<String>,
     annotation_size_factor: f32,
-    action_on_enter: Action,
     save_after_copy: bool,
+    actions_on_enter: Vec<Action>,
+    actions_on_escape: Vec<Action>,
+    actions_on_right_click: Vec<Action>,
     color_palette: ColorPalette,
     default_hide_toolbars: bool,
+    focus_toggles_toolbars: bool,
+    default_fill_shapes: bool,
     font: FontConfiguration,
     primary_highlighter: Highlighters,
     disable_notifications: bool,
+    profile_startup: bool,
+    no_window_decoration: bool,
+    brush_smooth_history_size: usize,
 }
 
 #[derive(Default)]
@@ -96,11 +103,12 @@ impl ColorPalette {
     }
 }
 
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq)]
 #[serde(rename_all = "kebab-case")]
 pub enum Action {
     SaveToClipboard,
     SaveToFile,
+    Exit,
 }
 
 impl From<CommandLineAction> for Action {
@@ -108,6 +116,7 @@ impl From<CommandLineAction> for Action {
         match action {
             CommandLineAction::SaveToClipboard => Self::SaveToClipboard,
             CommandLineAction::SaveToFile => Self::SaveToFile,
+            CommandLineAction::Exit => Self::Exit,
         }
     }
 }
@@ -123,6 +132,10 @@ impl Configuration {
         // read configuration file and exit on error
         let file = match ConfigurationFile::try_read(&command_line.config) {
             Ok(c) => c,
+            Err(ConfigurationFileError::ReadFile(e)) if e.kind() == io::ErrorKind::NotFound => {
+                eprintln!("config file not found");
+                None
+            }
             Err(e) => {
                 eprintln!("Error reading config file: {e}");
 
@@ -159,14 +172,26 @@ impl Configuration {
         if let Some(v) = general.annotation_size_factor {
             self.annotation_size_factor = v;
         }
-        if let Some(v) = general.action_on_enter {
-            self.action_on_enter = v;
-        }
         if let Some(v) = general.save_after_copy {
             self.save_after_copy = v;
         }
+        if let Some(v) = general.actions_on_enter {
+            self.actions_on_enter = v;
+        }
+        if let Some(v) = general.actions_on_escape {
+            self.actions_on_escape = v;
+        }
+        if let Some(v) = general.actions_on_right_click {
+            self.actions_on_right_click = v;
+        }
         if let Some(v) = general.default_hide_toolbars {
             self.default_hide_toolbars = v;
+        }
+        if let Some(v) = general.focus_toggles_toolbars {
+            self.focus_toggles_toolbars = v;
+        }
+        if let Some(v) = general.default_fill_shapes {
+            self.default_fill_shapes = v;
         }
         if let Some(v) = general.primary_highlighter {
             self.primary_highlighter = v;
@@ -174,6 +199,27 @@ impl Configuration {
         if let Some(v) = general.disable_notifications {
             self.disable_notifications = v;
         }
+        if let Some(v) = general.no_window_decoration {
+            self.no_window_decoration = v;
+        }
+        if let Some(v) = general.brush_smooth_history_size {
+            self.brush_smooth_history_size = v;
+        }
+
+        // --- deprecated options ---
+        if let Some(v) = general.right_click_copy {
+            if v && !self
+                .actions_on_right_click
+                .contains(&Action::SaveToClipboard)
+            {
+                self.actions_on_right_click
+                    .insert(0, Action::SaveToClipboard);
+            }
+        }
+        if let Some(v) = general.action_on_enter {
+            self.actions_on_enter.insert(0, v);
+        }
+        // ---
     }
     fn merge(&mut self, file: Option<ConfigurationFile>, command_line: CommandLine) {
         // input_filename is required and needs to be overwritten
@@ -205,6 +251,12 @@ impl Configuration {
         if command_line.default_hide_toolbars {
             self.default_hide_toolbars = command_line.default_hide_toolbars;
         }
+        if command_line.focus_toggles_toolbars {
+            self.focus_toggles_toolbars = command_line.focus_toggles_toolbars
+        }
+        if command_line.default_fill_shapes {
+            self.default_fill_shapes = command_line.default_fill_shapes;
+        }
         if let Some(v) = command_line.initial_tool {
             self.initial_tool = v.into();
         }
@@ -217,11 +269,17 @@ impl Configuration {
         if let Some(v) = command_line.annotation_size_factor {
             self.annotation_size_factor = v;
         }
-        if let Some(v) = command_line.action_on_enter {
-            self.action_on_enter = v.into();
-        }
         if command_line.save_after_copy {
             self.save_after_copy = command_line.save_after_copy;
+        }
+        if let Some(v) = command_line.actions_on_enter {
+            self.actions_on_enter = v.iter().cloned().map(Into::into).collect();
+        }
+        if let Some(v) = command_line.actions_on_escape {
+            self.actions_on_escape = v.iter().cloned().map(Into::into).collect();
+        }
+        if let Some(v) = command_line.actions_on_right_click {
+            self.actions_on_right_click = v.iter().cloned().map(Into::into).collect();
         }
         if let Some(v) = command_line.font_family {
             self.font.family = Some(v);
@@ -229,13 +287,35 @@ impl Configuration {
         if let Some(v) = command_line.font_style {
             self.font.style = Some(v);
         }
-
         if let Some(v) = command_line.primary_highlighter {
             self.primary_highlighter = v.into();
         }
         if command_line.disable_notifications {
             self.disable_notifications = command_line.disable_notifications;
         }
+        if command_line.profile_startup {
+            self.profile_startup = command_line.profile_startup;
+        }
+        if command_line.no_window_decoration {
+            self.no_window_decoration = command_line.no_window_decoration;
+        }
+        if let Some(v) = command_line.brush_smooth_history_size {
+            self.brush_smooth_history_size = v;
+        }
+
+        // --- deprecated options ---
+        if command_line.right_click_copy
+            && !self
+                .actions_on_right_click
+                .contains(&Action::SaveToClipboard)
+        {
+            self.actions_on_right_click
+                .insert(0, Action::SaveToClipboard);
+        }
+        if let Some(v) = command_line.action_on_enter {
+            self.actions_on_enter.insert(0, v.into());
+        }
+        // ---
     }
 
     pub fn early_exit(&self) -> bool {
@@ -270,12 +350,20 @@ impl Configuration {
         self.annotation_size_factor
     }
 
-    pub fn action_on_enter(&self) -> Action {
-        self.action_on_enter
-    }
-
     pub fn save_after_copy(&self) -> bool {
         self.save_after_copy
+    }
+
+    pub fn actions_on_enter(&self) -> Vec<Action> {
+        self.actions_on_enter.clone()
+    }
+
+    pub fn actions_on_escape(&self) -> Vec<Action> {
+        self.actions_on_escape.clone()
+    }
+
+    pub fn actions_on_right_click(&self) -> Vec<Action> {
+        self.actions_on_right_click.clone()
     }
 
     pub fn color_palette(&self) -> &ColorPalette {
@@ -286,14 +374,36 @@ impl Configuration {
         self.default_hide_toolbars
     }
 
+    pub fn focus_toggles_toolbars(&self) -> bool {
+        self.focus_toggles_toolbars
+    }
+
+    pub fn default_fill_shapes(&self) -> bool {
+        self.default_fill_shapes
+    }
+
     pub fn primary_highlighter(&self) -> Highlighters {
         self.primary_highlighter
     }
+
     pub fn disable_notifications(&self) -> bool {
         self.disable_notifications
     }
+
+    pub fn profile_startup(&self) -> bool {
+        self.profile_startup
+    }
+
+    pub fn no_window_decoration(&self) -> bool {
+        self.no_window_decoration
+    }
+
     pub fn font(&self) -> &FontConfiguration {
         &self.font
+    }
+
+    pub fn brush_smooth_history_size(&self) -> usize {
+        self.brush_smooth_history_size
     }
 }
 
@@ -308,13 +418,20 @@ impl Default for Configuration {
             initial_tool: Tools::Pointer,
             copy_command: None,
             annotation_size_factor: 1.0,
-            action_on_enter: Action::SaveToClipboard,
             save_after_copy: false,
+            actions_on_enter: vec![],
+            actions_on_escape: vec![Action::Exit],
+            actions_on_right_click: vec![],
             color_palette: ColorPalette::default(),
             default_hide_toolbars: false,
+            focus_toggles_toolbars: false,
+            default_fill_shapes: false,
             font: FontConfiguration::default(),
             primary_highlighter: Highlighters::Block,
             disable_notifications: false,
+            profile_startup: false,
+            no_window_decoration: false,
+            brush_smooth_history_size: 0, // default to 0, no history
         }
     }
 }
@@ -358,12 +475,23 @@ struct ConfigurationFileGeneral {
     initial_tool: Option<Tools>,
     copy_command: Option<String>,
     annotation_size_factor: Option<f32>,
-    output_filename: Option<String>,
-    action_on_enter: Option<Action>,
     save_after_copy: Option<bool>,
+    output_filename: Option<String>,
+    actions_on_enter: Option<Vec<Action>>,
+    actions_on_escape: Option<Vec<Action>>,
+    actions_on_right_click: Option<Vec<Action>>,
     default_hide_toolbars: Option<bool>,
+    focus_toggles_toolbars: Option<bool>,
+    default_fill_shapes: Option<bool>,
     primary_highlighter: Option<Highlighters>,
     disable_notifications: Option<bool>,
+    no_window_decoration: Option<bool>,
+    brush_smooth_history_size: Option<usize>,
+
+    // --- deprecated options ---
+    right_click_copy: Option<bool>,
+    action_on_enter: Option<Action>,
+    // ---
 }
 
 #[derive(Deserialize)]
@@ -384,13 +512,11 @@ impl ConfigurationFile {
     }
 
     fn try_read_xdg() -> Result<Option<ConfigurationFile>, ConfigurationFileError> {
-        let dirs = BaseDirectories::with_prefix("satty")?;
-        let config_file_path = dirs.get_config_file("config.toml");
-        if !config_file_path.exists() {
-            return Ok(None);
+        let dirs = BaseDirectories::with_prefix(env!("CARGO_PKG_NAME"));
+        match dirs.get_config_file("config.toml") {
+            Some(path) => Self::try_read_path(path),
+            None => Ok(None),
         }
-
-        Self::try_read_path(config_file_path)
     }
 
     fn try_read_path<P: AsRef<Path>>(

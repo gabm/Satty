@@ -11,11 +11,12 @@ use relm4::gtk::gdk::RGBA;
 
 use crate::configuration::APP_CONFIG;
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug)]
 pub struct Style {
     pub color: Color,
     pub size: Size,
     pub fill: bool,
+    pub annotation_size_factor: f32,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
@@ -32,6 +33,17 @@ pub enum Size {
     #[default]
     Medium = 1,
     Large = 2,
+}
+
+impl Default for Style {
+    fn default() -> Self {
+        Self {
+            color: Color::default(),
+            size: Size::default(),
+            fill: APP_CONFIG.read().default_fill_shapes(),
+            annotation_size_factor: APP_CONFIG.read().annotation_size_factor(),
+        }
+    }
 }
 
 impl Default for Color {
@@ -153,9 +165,9 @@ impl From<Style> for Paint {
     fn from(value: Style) -> Self {
         Paint::default()
             .with_anti_alias(true)
-            .with_font_size(value.size.to_text_size() as f32)
+            .with_font_size(value.size.to_text_size(value.annotation_size_factor) as f32)
             .with_color(value.color.into())
-            .with_line_width(value.size.to_line_width())
+            .with_line_width(value.size.to_line_width(value.annotation_size_factor))
     }
 }
 
@@ -183,9 +195,7 @@ impl FromVariant for Size {
 }
 
 impl Size {
-    pub fn to_text_size(self) -> i32 {
-        let size_factor = APP_CONFIG.read().annotation_size_factor();
-
+    pub fn to_text_size(self, size_factor: f32) -> i32 {
         match self {
             Size::Small => (36.0 * size_factor) as i32,
             Size::Medium => (54.0 * size_factor) as i32,
@@ -193,9 +203,7 @@ impl Size {
         }
     }
 
-    pub fn to_line_width(self) -> f32 {
-        let size_factor = APP_CONFIG.read().annotation_size_factor();
-
+    pub fn to_line_width(self, size_factor: f32) -> f32 {
         match self {
             Size::Small => 3.0 * size_factor,
             Size::Medium => 5.0 * size_factor,
@@ -203,8 +211,7 @@ impl Size {
         }
     }
 
-    pub fn to_arrow_tail_width(self) -> f32 {
-        let size_factor = APP_CONFIG.read().annotation_size_factor();
+    pub fn to_arrow_tail_width(self, size_factor: f32) -> f32 {
         match self {
             Size::Small => 3.0 * size_factor,
             Size::Medium => 10.0 * size_factor,
@@ -212,8 +219,7 @@ impl Size {
         }
     }
 
-    pub fn to_arrow_head_length(self) -> f32 {
-        let size_factor = APP_CONFIG.read().annotation_size_factor();
+    pub fn to_arrow_head_length(self, size_factor: f32) -> f32 {
         match self {
             Size::Small => 15.0 * size_factor,
             Size::Medium => 30.0 * size_factor,
@@ -221,8 +227,7 @@ impl Size {
         }
     }
 
-    pub fn to_blur_factor(self) -> f32 {
-        let size_factor = APP_CONFIG.read().annotation_size_factor();
+    pub fn to_blur_factor(self, size_factor: f32) -> f32 {
         match self {
             Size::Small => 10.0 * size_factor,
             Size::Medium => 20.0 * size_factor,
@@ -230,8 +235,7 @@ impl Size {
         }
     }
 
-    pub fn to_highlight_width(self) -> f32 {
-        let size_factor = APP_CONFIG.read().annotation_size_factor();
+    pub fn to_highlight_width(self, size_factor: f32) -> f32 {
         match self {
             Size::Small => 15.0 * size_factor,
             Size::Medium => 30.0 * size_factor,

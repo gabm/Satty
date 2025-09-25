@@ -15,7 +15,7 @@ pub struct CommandLine {
     #[arg(long)]
     pub fullscreen: bool,
 
-    /// Filename to use for saving action. Omit to disable saving to file. Might contain format
+    /// Filename to use for saving action or '-' to print to stdout. Omit to disable saving to file. Might contain format
     /// specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>.
     #[arg(short, long)]
     pub output_filename: Option<String>,
@@ -41,17 +41,34 @@ pub struct CommandLine {
     #[arg(long)]
     pub annotation_size_factor: Option<f32>,
 
-    /// Action to perform when pressing Enter
-    #[arg(long)]
-    pub action_on_enter: Option<Action>,
-
     /// After copying the screenshot, save it to a file as well
+    /// Preferably use the `action_on_copy` option instead.
     #[arg(long)]
     pub save_after_copy: bool,
+
+    /// Actions to perform when pressing Enter
+    #[arg(long, value_delimiter = ',')]
+    pub actions_on_enter: Option<Vec<Action>>,
+
+    /// Actions to perform when pressing Escape
+    #[arg(long, value_delimiter = ',')]
+    pub actions_on_escape: Option<Vec<Action>>,
+
+    /// Actions to perform when hitting the copy Button.
+    #[arg(long, value_delimiter = ',')]
+    pub actions_on_right_click: Option<Vec<Action>>,
 
     /// Hide toolbars by default
     #[arg(short, long)]
     pub default_hide_toolbars: bool,
+
+    /// Experimental: Whether to toggle toolbars based on focus. Doesn't affect initial state.
+    #[arg(long)]
+    pub focus_toggles_toolbars: bool,
+
+    /// Experimental feature: Fill shapes by default
+    #[arg(long)]
+    pub default_fill_shapes: bool,
 
     /// Font family to use for text annotations
     #[arg(long)]
@@ -61,13 +78,41 @@ pub struct CommandLine {
     #[arg(long)]
     pub font_style: Option<String>,
 
-    /// The primary highlighter to use, secondary is accessible with CTRL.
+    /// The primary highlighter to use, secondary is accessible with CTRL
     #[arg(long)]
     pub primary_highlighter: Option<Highlighters>,
 
     /// Disable notifications
     #[arg(long)]
     pub disable_notifications: bool,
+
+    /// Print profiling
+    #[arg(long)]
+    pub profile_startup: bool,
+
+    /// Disable the window decoration (title bar, borders, etc.)
+    /// Please note that the compositor has the final say in this.
+    /// Requires xdg-decoration-unstable-v1
+    #[arg(long)]
+    pub no_window_decoration: bool,
+
+    /// Experimental feature: How many points to use for the brush smoothing
+    /// algorithm.
+    /// 0 disables smoothing.
+    /// The default value is 0 (disabled).
+    #[arg(long)]
+    pub brush_smooth_history_size: Option<usize>,
+
+    // --- deprecated options ---
+    /// Right click to copy.
+    /// Preferably use the `action_on_right_click` option instead.
+    #[arg(long)]
+    pub right_click_copy: bool,
+    /// Action to perform when pressing Enter.
+    /// Preferably use the `actions_on_enter` option instead.
+    #[arg(long, value_delimiter = ',')]
+    pub action_on_enter: Option<Action>,
+    // ---
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
@@ -86,11 +131,11 @@ pub enum Tools {
     Brush,
 }
 
-#[derive(Debug, Clone, Copy, Default, ValueEnum)]
+#[derive(Debug, Clone, Copy, ValueEnum)]
 pub enum Action {
-    #[default]
     SaveToClipboard,
     SaveToFile,
+    Exit,
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]

@@ -1,5 +1,6 @@
 use std::io::Read;
-use std::ptr;
+use std::sync::LazyLock;
+use std::{fs, ptr};
 use std::{io, time::Duration};
 
 use configuration::{Configuration, APP_CONFIG};
@@ -18,10 +19,12 @@ use anyhow::{anyhow, Context, Result};
 
 use sketch_board::SketchBoardOutput;
 use ui::toolbars::{StyleToolbar, StyleToolbarInput, ToolsToolbar, ToolsToolbarInput};
+use xdg::BaseDirectories;
 
 mod command_line;
 mod configuration;
 mod femtovg_area;
+mod icons;
 mod math;
 mod notification;
 mod sketch_board;
@@ -31,6 +34,21 @@ mod ui;
 
 use crate::sketch_board::{SketchBoard, SketchBoardInput};
 use crate::tools::Tools;
+
+pub static START_TIME: LazyLock<chrono::DateTime<chrono::Local>> =
+    LazyLock::new(chrono::Local::now);
+
+macro_rules! generate_profile_output {
+    ($e: expr) => {
+        if (APP_CONFIG.read().profile_startup()) {
+            eprintln!(
+                "{:5} ms time elapsed: {}",
+                (chrono::Local::now() - *START_TIME).num_milliseconds(),
+                $e
+            );
+        }
+    };
+}
 
 struct App {
     image_dimensions: (i32, i32),
@@ -42,6 +60,7 @@ struct App {
 #[derive(Debug)]
 enum AppInput {
     Realized,
+    SetToolbarsDisplay(bool),
     ToggleToolbarsDisplay,
     ToolSwitchShortcut(Tools),
 }
@@ -120,6 +139,10 @@ impl App {
         let css_provider = CssProvider::new();
         css_provider.load_from_data(
             "
+            .root {
+                min-width: 50rem;
+                min-height: 10rem;
+            }
             .toolbar {color: #f9f9f9 ; background: #00000099;}
             .toast {
                 color: #f9f9f9;
@@ -131,6 +154,9 @@ impl App {
             .toolbar-top {border-radius: 0px 0px 6px 6px;}
             ",
         );
+        if let Some(overrides) = read_css_overrides() {
+            css_provider.load_from_data(&overrides);
+        }
         match DisplayManager::get().default_display() {
             Some(display) => {
                 gtk::style_context_add_provider_for_display(&display, &css_provider, 1)
@@ -149,9 +175,12 @@ impl Component for App {
 
     view! {
         main_window = gtk::Window {
+            set_decorated: !APP_CONFIG.read().no_window_decoration(),
             set_default_size: (500, 500),
+            add_css_class: "root",
 
             connect_show[sender] => move |_| {
+                generate_profile_output!("gui show event");
                 sender.input(AppInput::Realized);
             },
 
@@ -168,6 +197,14 @@ impl Component for App {
     fn update(&mut self, message: Self::Input, sender: ComponentSender<Self>, root: &Self::Root) {
         match message {
             AppInput::Realized => self.resize_window_initial(root, sender),
+            AppInput::SetToolbarsDisplay(visible) => {
+                self.tools_toolbar
+                    .sender()
+                    .emit(ToolsToolbarInput::SetVisibility(visible));
+                self.style_toolbar
+                    .sender()
+                    .emit(StyleToolbarInput::SetVisibility(visible));
+            }
             AppInput::ToggleToolbarsDisplay => {
                 self.tools_toolbar
                     .sender()
@@ -234,7 +271,52 @@ impl Component for App {
 
         let widgets = view_output!();
 
+        if APP_CONFIG.read().focus_toggles_toolbars() {
+            let motion_controller = gtk::EventControllerMotion::builder().build();
+            let sender_clone = sender.clone();
+
+            motion_controller.connect_enter(move |_, _, _| {
+                sender.input(AppInput::SetToolbarsDisplay(true));
+            });
+            motion_controller.connect_leave(move |_| {
+                sender_clone.input(AppInput::SetToolbarsDisplay(false));
+            });
+
+            root.add_controller(motion_controller);
+        }
+
+        generate_profile_output!("app init end");
+
+        glib::idle_add_local_once(move || {
+            generate_profile_output!("main loop idle");
+        });
+
         ComponentParts { model, widgets }
+    }
+}
+
+fn read_css_overrides() -> Option<String> {
+    let dirs = BaseDirectories::with_prefix(env!("CARGO_PKG_NAME"));
+    let path = dirs.get_config_file("overrides.css")?;
+
+    if !path.exists() {
+        eprintln!(
+            "CSS overrides file {} does not exist, using builtin CSS only.",
+            &path.display()
+        );
+        return None;
+    }
+
+    match fs::read_to_string(&path) {
+        Ok(content) => Some(content),
+        Err(e) => {
+            eprintln!(
+                "failed to read CSS overrides from {} with error: {}",
+                &path.display(),
+                e
+            );
+            None
+        }
     }
 }
 
@@ -260,10 +342,12 @@ fn load_gl() -> Result<()> {
 fn run_satty() -> Result<()> {
     // load OpenGL
     load_gl()?;
+    generate_profile_output!("loaded gl");
 
     // load app config
     let config = APP_CONFIG.read();
 
+    generate_profile_output!("loading image");
     // load input image
     let image = if config.input_filename() == "-" {
         let mut buf = Vec::<u8>::new();
@@ -278,23 +362,34 @@ fn run_satty() -> Result<()> {
         Pixbuf::from_file(config.input_filename()).context("couldn't load image")?
     };
 
+    generate_profile_output!("image loaded, starting gui");
     // start GUI
     let app = relm4::main_application();
     app.set_application_id(Some("com.gabm.satty"));
     // set flag to allow to run multiple instances
     app.set_flags(ApplicationFlags::NON_UNIQUE);
-
     // create relm app and run
     let app = RelmApp::from_app(app).with_args(vec![]);
-    relm4_icons::initialize_icons();
+    relm4_icons::initialize_icons(
+        icons::icon_names::GRESOURCE_BYTES,
+        icons::icon_names::RESOURCE_PREFIX,
+    );
     app.run::<App>(image);
     Ok(())
 }
 
 fn main() -> Result<()> {
+    let _ = *START_TIME;
     // populate the APP_CONFIG from commandline and
     // config file. this might exit, if an error occurred.
     Configuration::load();
+    if APP_CONFIG.read().profile_startup() {
+        eprintln!(
+            "startup timestamp was {}",
+            START_TIME.format("%s.%f %Y-%m-%d %H:%M:%S")
+        );
+    }
+    generate_profile_output!("configuration loaded");
 
     // run the application
     match run_satty() {

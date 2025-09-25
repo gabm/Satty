@@ -29,12 +29,18 @@ impl Drawable for Marker {
         &self,
         canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
         font: femtovg::FontId,
+        _bounds: (Vec2D, Vec2D),
     ) -> anyhow::Result<()> {
         let text = format!("{}", self.number);
 
         let mut paint = Paint::color(Color::white());
         paint.set_font(&[font]);
-        paint.set_font_size((self.style.size.to_text_size()) as f32);
+        paint.set_font_size(
+            (self
+                .style
+                .size
+                .to_text_size(self.style.annotation_size_factor)) as f32,
+        );
         paint.set_text_align(femtovg::Align::Center);
         paint.set_text_baseline(femtovg::Baseline::Middle);
 
@@ -64,8 +70,12 @@ impl Drawable for Marker {
             femtovg::Solidity::Solid,
         );
 
-        let circle_paint = Paint::color(self.style.color.into())
-            .with_line_width(self.style.size.to_line_width() * 2.0);
+        let circle_paint = Paint::color(self.style.color.into()).with_line_width(
+            self.style
+                .size
+                .to_line_width(self.style.annotation_size_factor)
+                * 2.0,
+        );
 
         canvas.save();
         canvas.fill_path(&inner_circle_path, &circle_paint);

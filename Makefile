@@ -58,3 +58,24 @@ package: clean build-release
 	
 	# clean up
 	rm -rf $(TMP)
+
+fix:
+	cargo fmt --all
+	cargo clippy --fix --allow-dirty --all-targets --all-features -- -D warnings
+
+STARTPATTERN:=» satty --help
+ENDPATTERN=```
+
+# sed command adds command line help to README.md
+# within startpattern and endpattern: 
+#   when startpattern is found, print it and read stdin
+#   when endpattern is found, print it
+#   everything else, delete
+#
+# The double -e is needed because r command cannot be terminated with semicolon.
+# -i is tricky to use for both BSD/busybox sed AND GNU sed at the same time, so use mv instead.
+update-readme: target/release/satty
+	target/release/satty --help 2>&1 | sed -e '/${STARTPATTERN}/,/${ENDPATTERN}/{ /${STARTPATTERN}/p;r /dev/stdin' -e '/${ENDPATTERN}/p; d; }' README.md > README.md.new
+	mv README.md.new README.md
+
+

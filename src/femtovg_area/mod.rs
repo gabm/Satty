@@ -18,7 +18,8 @@ use crate::{
 
 glib::wrapper! {
     pub struct FemtoVGArea(ObjectSubclass<imp::FemtoVGArea>)
-        @extends gtk::Widget, gtk::GLArea;
+        @extends gtk::Widget, gtk::GLArea,
+        @implements gtk::Accessible, gtk::Buildable, gtk::ConstraintTarget;
 }
 
 impl Default for FemtoVGArea {
@@ -57,8 +58,15 @@ impl FemtoVGArea {
             .expect("Did you call init before using FemtoVgArea?")
             .redo()
     }
-    pub fn request_render(&self, action: Action) {
-        self.imp().request_render(action);
+    pub fn request_render(&self, actions: &[Action]) {
+        self.imp().request_render(actions);
+    }
+    pub fn reset(&mut self) -> bool {
+        self.imp()
+            .inner()
+            .as_mut()
+            .expect("Did you call init before using FemtoVgArea?")
+            .reset()
     }
 
     pub fn abs_canvas_to_image_coordinates(&self, input: Vec2D) -> Vec2D {

@@ -7,10 +7,11 @@ use gdk_pixbuf::Pixbuf;
 use keycode::{KeyMap, KeyMappingId};
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::fs;
 use std::io::Write;
+use std::panic;
 use std::process::{Command, Stdio};
 use std::rc::Rc;
+use std::{fs, io};
 
 use gtk::prelude::*;
 
@@ -31,7 +32,7 @@ type RenderedImage = Img<Vec<RGBA<u8>>>;
 pub enum SketchBoardInput {
     InputEvent(InputEvent),
     ToolbarEvent(ToolbarEvent),
-    RenderResult(RenderedImage, Action),
+    RenderResult(RenderedImage, Vec<Action>),
     CommitEvent(TextEventMsg),
 }
 
@@ -129,17 +130,30 @@ impl From<u32> for MouseButton {
 }
 
 impl InputEvent {
-    fn remap_event_coordinates(&mut self, renderer: &FemtoVGArea) {
+    fn handle_event_mouse_input(&mut self, renderer: &FemtoVGArea) -> Option<ToolUpdateResult> {
         if let InputEvent::Mouse(me) = self {
             match me.type_ {
-                MouseEventType::BeginDrag | MouseEventType::Click => {
-                    me.pos = renderer.abs_canvas_to_image_coordinates(me.pos)
+                MouseEventType::Click => {
+                    if me.button == MouseButton::Secondary {
+                        renderer.request_render(&APP_CONFIG.read().actions_on_right_click());
+                        None
+                    } else {
+                        me.pos = renderer.abs_canvas_to_image_coordinates(me.pos);
+                        None
+                    }
+                }
+                MouseEventType::BeginDrag => {
+                    me.pos = renderer.abs_canvas_to_image_coordinates(me.pos);
+                    None
                 }
                 MouseEventType::EndDrag | MouseEventType::UpdateDrag => {
-                    me.pos = renderer.rel_canvas_to_image_coordinates(me.pos)
+                    me.pos = renderer.rel_canvas_to_image_coordinates(me.pos);
+                    None
                 }
             }
-        };
+        } else {
+            None
+        }
     }
 }
 
@@ -169,18 +183,67 @@ impl SketchBoard {
         )
     }
 
-    fn handle_render_result(&self, image: RenderedImage, action: Action) {
-        match action {
-            Action::SaveToClipboard => self.handle_copy_clipboard(Self::image_to_pixbuf(image)),
-            Action::SaveToFile => self.handle_save(Self::image_to_pixbuf(image)),
+    fn deactivate_active_tool(&mut self) -> bool {
+        if self.active_tool.borrow().active() {
+            if let ToolUpdateResult::Commit(result) =
+                self.active_tool.borrow_mut().handle_deactivated()
+            {
+                self.renderer.commit(result);
+                return true;
+            }
+        }
+        false
+    }
+
+    fn handle_action(&mut self, actions: &[Action]) -> ToolUpdateResult {
+        let rv = if self.deactivate_active_tool() {
+            ToolUpdateResult::Redraw
+        } else {
+            ToolUpdateResult::Unmodified
         };
-        if APP_CONFIG.read().early_exit() {
-            relm4::main_application().quit();
+        self.renderer.request_render(actions);
+        rv
+    }
+
+    fn handle_render_result(&self, image: RenderedImage, actions: Vec<Action>) {
+        let needs_pixbuf = actions
+            .iter()
+            .any(|action| matches!(action, Action::SaveToClipboard | Action::SaveToFile));
+
+        let pix_buf = if needs_pixbuf {
+            Some(Self::image_to_pixbuf(image))
+        } else {
+            None
+        };
+
+        for action in actions {
+            match action {
+                Action::SaveToClipboard => {
+                    if let Some(ref pix_buf) = pix_buf {
+                        self.handle_copy_clipboard(pix_buf);
+                    }
+                }
+                Action::SaveToFile => {
+                    if let Some(ref pix_buf) = pix_buf {
+                        self.handle_save(pix_buf);
+                    }
+                }
+                _ => (),
+            }
+
+            if APP_CONFIG.read().early_exit() || action == Action::Exit {
+                self.handle_exit();
+                return;
+            }
         }
     }
 
-    fn handle_save(&self, image: Pixbuf) {
-        let output_filename = match APP_CONFIG.read().output_filename() {
+    fn handle_exit(&self) {
+        relm4::main_application().quit();
+    }
+
+    fn handle_save(&self, image: &Pixbuf) {
+        let mut output_filename = match APP_CONFIG.read().output_filename() {
             None => {
                 println!("No Output filename specified!");
                 return;
@@ -189,15 +252,42 @@ impl SketchBoard {
         };
 
         // run the output filename by "chrono date format"
-        let output_filename = format!("{}", chrono::Local::now().format(&output_filename));
+        let delayed_format = chrono::Local::now().format(&output_filename);
+        let result = panic::catch_unwind(|| {
+            delayed_format.to_string();
+        });
+
+        if result.is_err() {
+            println!(
+                "Warning: Could not format filename {output_filename} due to chrono format error, falling back to literal filename."
+            );
+        } else {
+            output_filename = format!("{delayed_format}");
+        }
 
         // TODO: we could support more data types
-        if !output_filename.ends_with(".png") {
+        if output_filename != "-" && !output_filename.ends_with(".png") {
             log_result(
                 "The only supported format is png, but the filename does not end in png",
                 !APP_CONFIG.read().disable_notifications(),
             );
             return;
+        }
+
+        if let Some(tilde_stripped) =
+            output_filename.strip_prefix(&format!("~{}", std::path::MAIN_SEPARATOR_STR))
+        {
+            if let Some(h) = std::env::home_dir() {
+                let mut p = h;
+                p.push(tilde_stripped);
+                output_filename = p.to_string_lossy().into_owned();
+            } else {
+                log_result(
+                    "~ found but could not determine homedir",
+                    !APP_CONFIG.read().disable_notifications(),
+                );
+                return;
+            }
         }
 
         let data = match image.save_to_bufferv("png", &Vec::new()) {
@@ -208,6 +298,15 @@ impl SketchBoard {
             }
         };
 
+        if output_filename == "-" {
+            // "-" means stdout
+            let stdout = io::stdout();
+            let mut handle = stdout.lock();
+            if let Err(e) = handle.write_all(&data) {
+                eprintln!("Error writing image to stdout: {e}");
+            }
+            return;
+        }
         match fs::write(&output_filename, data) {
             Err(e) => log_result(
                 &format!("Error while saving file: {e}"),
@@ -251,8 +350,8 @@ impl SketchBoard {
         Ok(())
     }
 
-    fn handle_copy_clipboard(&self, image: Pixbuf) {
-        let texture = Texture::for_pixbuf(&image);
+    fn handle_copy_clipboard(&self, image: &Pixbuf) {
+        let texture = Texture::for_pixbuf(image);
 
         let result = if let Some(command) = APP_CONFIG.read().copy_command() {
             self.save_to_external_process(&texture, command)
@@ -290,6 +389,15 @@ impl SketchBoard {
         if self.active_tool.borrow().active() {
             self.active_tool.borrow_mut().handle_redo()
         } else if self.renderer.redo() {
+            ToolUpdateResult::Redraw
+        } else {
+            ToolUpdateResult::Unmodified
+        }
+    }
+
+    fn handle_reset(&mut self) -> ToolUpdateResult {
+        // can't use lazy || here
+        if self.deactivate_active_tool() | self.renderer.reset() {
             ToolUpdateResult::Redraw
         } else {
             ToolUpdateResult::Unmodified
@@ -354,18 +462,19 @@ impl SketchBoard {
                     .borrow_mut()
                     .handle_event(ToolEvent::StyleChanged(self.style))
             }
-            ToolbarEvent::SaveFile => {
-                self.renderer.request_render(Action::SaveToFile);
-                ToolUpdateResult::Unmodified
-            }
-            ToolbarEvent::CopyClipboard => {
-                self.renderer.request_render(Action::SaveToClipboard);
-                ToolUpdateResult::Unmodified
-            }
+            ToolbarEvent::SaveFile => self.handle_action(&[Action::SaveToFile]),
+            ToolbarEvent::CopyClipboard => self.handle_action(&[Action::SaveToClipboard]),
             ToolbarEvent::Undo => self.handle_undo(),
             ToolbarEvent::Redo => self.handle_redo(),
+            ToolbarEvent::Reset => self.handle_reset(),
             ToolbarEvent::ToggleFill => {
                 self.style.fill = !self.style.fill;
+                self.active_tool
+                    .borrow_mut()
+                    .handle_event(ToolEvent::StyleChanged(self.style))
+            }
+            ToolbarEvent::AnnotationSizeChanged(value) => {
+                self.style.annotation_size_factor = value;
                 self.active_tool
                     .borrow_mut()
                     .handle_event(ToolEvent::StyleChanged(self.style))
@@ -530,64 +639,55 @@ impl Component for SketchBoard {
         let result = match msg {
             SketchBoardInput::InputEvent(mut ie) => {
                 if let InputEvent::Key(ke) = ie {
-                    match (true, ke.modifier) {
-                        (z, ModifierType::CONTROL_MASK)
-                            if z == ke.is_one_of(Key::z, KeyMappingId::UsZ) =>
-                        {
-                            self.handle_undo()
-                        }
-                        (y, ModifierType::CONTROL_MASK)
-                            if y == ke.is_one_of(Key::y, KeyMappingId::UsY) =>
-                        {
-                            self.handle_redo()
-                        }
-                        (t, ModifierType::CONTROL_MASK)
-                            if t == ke.is_one_of(Key::t, KeyMappingId::UsT) =>
-                        {
-                            self.handle_toggle_toolbars_display(sender)
-                        }
-                        (s, ModifierType::CONTROL_MASK)
-                            if s == ke.is_one_of(Key::s, KeyMappingId::UsS) =>
-                        {
-                            self.renderer.request_render(Action::SaveToFile);
-                            ToolUpdateResult::Unmodified
-                        }
-                        (c, ModifierType::CONTROL_MASK)
-                            if c == ke.is_one_of(Key::c, KeyMappingId::UsC) =>
-                        {
-                            self.renderer.request_render(Action::SaveToClipboard);
-                            ToolUpdateResult::Unmodified
-                        }
-                        (esc, _) if esc == ke.is_one_of(Key::Escape, KeyMappingId::Escape) => {
-                            relm4::main_application().quit();
-                            // this is only here to make rust happy. The application should exit with the previous call
-                            ToolUpdateResult::Unmodified
-                        }
-                        (enter, _)
-                            if enter
-                                == ke.is_one_of(Key::Return, KeyMappingId::Enter)
-                                    | ke.is_one_of(Key::KP_Enter, KeyMappingId::Enter) =>
-                        {
-                            // First, let the tool handle the event. If the tool does nothing, we can do our thing (otherwise require a second Enter)
-                            // Relying on ToolUpdateResult::Unmodified is probably not a good idea, but it's the only way at the moment. See discussion in #144
-                            let result: ToolUpdateResult = self
-                                .active_tool
-                                .borrow_mut()
-                                .handle_event(ToolEvent::Input(ie));
-                            if let ToolUpdateResult::Unmodified = result {
-                                self.renderer
-                                    .request_render(APP_CONFIG.read().action_on_enter());
-                            }
-                            result
-                        }
-                        _ => {
-                            self.active_tool
+                    if ke.is_one_of(Key::z, KeyMappingId::UsZ)
+                        && ke.modifier == ModifierType::CONTROL_MASK
+                    {
+                        self.handle_undo()
+                    } else if ke.is_one_of(Key::y, KeyMappingId::UsY)
+                        && ke.modifier == ModifierType::CONTROL_MASK
+                    {
+                        self.handle_redo()
+                    } else if ke.is_one_of(Key::t, KeyMappingId::UsT)
+                        && ke.modifier == ModifierType::CONTROL_MASK
+                    {
+                        self.handle_toggle_toolbars_display(sender)
+                    } else if ke.is_one_of(Key::s, KeyMappingId::UsS)
+                        && ke.modifier == ModifierType::CONTROL_MASK
+                    {
+                        self.renderer.request_render(&[Action::SaveToFile]);
+                        ToolUpdateResult::Unmodified
+                    } else if ke.is_one_of(Key::c, KeyMappingId::UsC)
+                        && ke.modifier == ModifierType::CONTROL_MASK
+                    {
+                        self.renderer.request_render(&[Action::SaveToClipboard]);
+                        ToolUpdateResult::Unmodified
+                    } else if ke.modifier.is_empty()
+                        && (ke.key == Key::Escape
+                            || ke.key == Key::Return
+                            || ke.key == Key::KP_Enter)
+                    {
+                        // First, let the tool handle the event. If the tool does nothing, we can do our thing (otherwise require a second keyboard press)
+                        // Relying on ToolUpdateResult::Unmodified is probably not a good idea, but it's the only way at the moment. See discussion in #144
+                        let result: ToolUpdateResult = self
+                            .active_tool
+                            .borrow_mut()
+                            .handle_event(ToolEvent::Input(ie));
+                        if let ToolUpdateResult::Unmodified = result {
+                            let actions = if ke.key == Key::Escape {
+                                APP_CONFIG.read().actions_on_escape()
+                            } else {
+                                APP_CONFIG.read().actions_on_enter()
+                            };
+                            self.renderer.request_render(&actions);
+                        };
+                        result
+                    } else {
+                        self.active_tool
                             .borrow_mut()
                             .handle_event(ToolEvent::Input(ie))
-                        },
                     }
                 } else {
-                    ie.remap_event_coordinates(&self.renderer);
+                    ie.handle_event_mouse_input(&self.renderer);
                     self.active_tool
                         .borrow_mut()
                         .handle_event(ToolEvent::Input(ie))
