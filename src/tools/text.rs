@@ -216,8 +216,7 @@ impl Tool for TextTool {
                     return ToolUpdateResult::Commit(result);
                 }
             } else if event.key == Key::Escape {
-                self.text = None;
-                return ToolUpdateResult::Redraw;
+                return self.handle_deactivated();
             } else if event.key == Key::BackSpace {
                 if event.modifier == ModifierType::CONTROL_MASK {
                     return Self::handle_text_buffer_action(
@@ -318,6 +317,7 @@ impl Tool for TextTool {
     }
 
     fn handle_deactivated(&mut self) -> ToolUpdateResult {
+        self.input_enabled = false;
         if let Some(t) = &mut self.text {
             t.editing = false;
             let result = t.clone_box();
