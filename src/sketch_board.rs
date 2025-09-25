@@ -502,25 +502,21 @@ impl SketchBoard {
                     sender.input(SketchBoardInput::new_text_event(TextEventMsg::Commit(
                         txt.to_string(),
                     )));
-                    ToolUpdateResult::Unmodified
-                } else {
-                    let key = txt.as_str();
-                    if let Some(tool) = APP_CONFIG.read().keybinds().get_tool(key)
-                    {
-                        sender.input(SketchBoardInput::ToolbarEvent(ToolbarEvent::ToolSelected(
-                            tool,
-                        )));
-                        sender
-                            .output_sender()
-                            .emit(SketchBoardOutput::ToolSwitchShortcut(tool));
-
-                        ToolUpdateResult::Unmodified
-                    } else {
-                        ToolUpdateResult::Unmodified
-                    }
+                } else if let Some(tool) = txt
+                    .chars()
+                    .next()
+                    .and_then(|char| APP_CONFIG.read().keybinds().get_tool(char))
+                {
+                    sender.input(SketchBoardInput::ToolbarEvent(ToolbarEvent::ToolSelected(
+                        tool,
+                    )));
+                    sender
+                        .output_sender()
+                        .emit(SketchBoardOutput::ToolSwitchShortcut(tool));
                 }
             }
         }
+        ToolUpdateResult::Unmodified
     }
 
     pub fn active_tool_type(&self) -> Tools {

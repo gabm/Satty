@@ -319,7 +319,7 @@ impl SimpleComponent for ToolsToolbar {
 
         // reverse shortcuts mapping
         let config = APP_CONFIG.read();
-        let tool_to_key_map: HashMap<&Tools, &String> = config
+        let tool_to_key_map: HashMap<&Tools, &char> = config
             .keybinds()
             .shortcuts()
             .iter()
@@ -328,26 +328,14 @@ impl SimpleComponent for ToolsToolbar {
 
         // Update tooltips based on configured keybinds
         for (tool, button) in &model.tool_buttons {
-            let tool_name = match tool {
-                Tools::Pointer => "Pointer",
-                Tools::Crop => "Crop",
-                Tools::Brush => "Brush tool",
-                Tools::Line => "Line tool",
-                Tools::Arrow => "Arrow tool",
-                Tools::Rectangle => "Rectangle tool",
-                Tools::Ellipse => "Ellipse tool",
-                Tools::Text => "Text tool",
-                Tools::Marker => "Numbered Marker",
-                Tools::Blur => "Blur",
-                Tools::Highlight => "Highlight",
-            };
+            let display_name = tool.display_name();
 
             let tooltip = if let Some(key) = tool_to_key_map.get(tool) {
-                format!("{} ({})", tool_name, key.to_uppercase())
+                &format!("{} ({})", display_name, key.to_uppercase())
             } else {
-                tool_name.to_string()
+                display_name
             };
-            button.set_tooltip_text(Some(&tooltip));
+            button.set_tooltip_text(Some(tooltip));
         }
 
         // Set initial active button correctly

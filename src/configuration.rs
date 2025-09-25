@@ -59,82 +59,71 @@ pub struct Configuration {
 }
 
 pub struct Keybinds {
-    shortcuts: HashMap<String, Tools>,
+    shortcuts: HashMap<char, Tools>,
 }
 
 impl Keybinds {
-    pub fn get_tool(&self, key: &str) -> Option<Tools> {
-        self.shortcuts.get(key).copied()
+    pub fn get_tool(&self, key: char) -> Option<Tools> {
+        self.shortcuts.get(&key).copied()
     }
 
-    pub fn shortcuts(&self) -> &HashMap<String, Tools> {
+    pub fn shortcuts(&self) -> &HashMap<char, Tools> {
         &self.shortcuts
+    }
+
+    /// Update a single keybind, only if it is valid
+    fn update_keybind(&mut self, key: Option<String>, tool: Tools) {
+        if let Some(key_str) = key {
+            if let Some(validated_key) = Self::validate_keybind(&key_str, tool) {
+                self.shortcuts.retain(|_, v| *v != tool);
+                self.shortcuts.insert(validated_key, tool);
+            }
+        }
+    }
+
+    /// A shortcut keybinding is only valid if it is one char
+    fn validate_keybind(key: &str, tool: Tools) -> Option<char> {
+        let mut chars = key.chars();
+        match (chars.next(), chars.next()) {
+            (Some(c), None) => Some(c),
+            _ => {
+                eprintln!("Warning: Invalid keybind: '{} = {}'. Keybinds must be single characters. Using default keybind instead.", tool,key);
+                None
+            }
+        }
     }
 
     /// Merge [keybindings] with default
     /// Only replaces defaults if they are set (doesn't )
     fn merge(&mut self, file_keybinds: KeybindsFile) {
-        if let Some(pointer) = file_keybinds.pointer {
-            self.shortcuts.retain(|_, v| *v != Tools::Pointer);
-            self.shortcuts.insert(pointer, Tools::Pointer);
-        }
-        if let Some(crop) = file_keybinds.crop {
-            self.shortcuts.retain(|_, v| *v != Tools::Crop);
-            self.shortcuts.insert(crop, Tools::Crop);
-        }
-        if let Some(brush) = file_keybinds.brush {
-            self.shortcuts.retain(|_, v| *v != Tools::Brush);
-            self.shortcuts.insert(brush, Tools::Brush);
-        }
-        if let Some(line) = file_keybinds.line {
-            self.shortcuts.retain(|_, v| *v != Tools::Line);
-            self.shortcuts.insert(line, Tools::Line);
-        }
-        if let Some(arrow) = file_keybinds.arrow {
-            self.shortcuts.retain(|_, v| *v != Tools::Arrow);
-            self.shortcuts.insert(arrow, Tools::Arrow);
-        }
-        if let Some(rectangle) = file_keybinds.rectangle {
-            self.shortcuts.retain(|_, v| *v != Tools::Rectangle);
-            self.shortcuts.insert(rectangle, Tools::Rectangle);
-        }
-        if let Some(ellipse) = file_keybinds.ellipse {
-            self.shortcuts.retain(|_, v| *v != Tools::Ellipse);
-            self.shortcuts.insert(ellipse, Tools::Ellipse);
-        }
-        if let Some(text) = file_keybinds.text {
-            self.shortcuts.retain(|_, v| *v != Tools::Text);
-            self.shortcuts.insert(text, Tools::Text);
-        }
-        if let Some(marker) = file_keybinds.marker {
-            self.shortcuts.retain(|_, v| *v != Tools::Marker);
-            self.shortcuts.insert(marker, Tools::Marker);
-        }
-        if let Some(blur) = file_keybinds.blur {
-            self.shortcuts.retain(|_, v| *v != Tools::Blur);
-            self.shortcuts.insert(blur, Tools::Blur);
-        }
-        if let Some(highlight) = file_keybinds.highlight {
-            self.shortcuts.retain(|_, v| *v != Tools::Highlight);
-            self.shortcuts.insert(highlight, Tools::Highlight);
-        }
+        self.update_keybind(file_keybinds.pointer, Tools::Pointer);
+        self.update_keybind(file_keybinds.crop, Tools::Crop);
+        self.update_keybind(file_keybinds.brush, Tools::Brush);
+        self.update_keybind(file_keybinds.line, Tools::Line);
+        self.update_keybind(file_keybinds.arrow, Tools::Arrow);
+        self.update_keybind(file_keybinds.rectangle, Tools::Rectangle);
+        self.update_keybind(file_keybinds.ellipse, Tools::Ellipse);
+        self.update_keybind(file_keybinds.text, Tools::Text);
+        self.update_keybind(file_keybinds.marker, Tools::Marker);
+        self.update_keybind(file_keybinds.blur, Tools::Blur);
+        self.update_keybind(file_keybinds.highlight, Tools::Highlight);
     }
 }
 
 impl Default for Keybinds {
     fn default() -> Self {
         let mut shortcuts = HashMap::new();
-        shortcuts.insert("p".to_string(), Tools::Pointer);
-        shortcuts.insert("c".to_string(), Tools::Crop);
-        shortcuts.insert("b".to_string(), Tools::Brush);
-        shortcuts.insert("i".to_string(), Tools::Line);
-        shortcuts.insert("z".to_string(), Tools::Arrow);
-        shortcuts.insert("r".to_string(), Tools::Rectangle);
-        shortcuts.insert("e".to_string(), Tools::Ellipse);
-        shortcuts.insert("t".to_string(), Tools::Text);
-        shortcuts.insert("m".to_string(), Tools::Marker);
-        shortcuts.insert("u".to_string(), Tools::Blur);
-        shortcuts.insert("g".to_string(), Tools::Highlight);
+        shortcuts.insert('p', Tools::Pointer);
+        shortcuts.insert('c', Tools::Crop);
+        shortcuts.insert('b', Tools::Brush);
+        shortcuts.insert('i', Tools::Line);
+        shortcuts.insert('z', Tools::Arrow);
+        shortcuts.insert('r', Tools::Rectangle);
+        shortcuts.insert('e', Tools::Ellipse);
+        shortcuts.insert('t', Tools::Text);
+        shortcuts.insert('m', Tools::Marker);
+        shortcuts.insert('u', Tools::Blur);
+        shortcuts.insert('g', Tools::Highlight);
 
         Self { shortcuts }
     }
