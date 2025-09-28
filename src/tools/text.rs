@@ -10,7 +10,6 @@ use relm4::gtk::{
 use relm4::gtk::prelude::*;
 
 use crate::{
-    femtovg_area,
     math::Vec2D,
     sketch_board::{KeyEventMsg, MouseButton, MouseEventMsg, MouseEventType, TextEventMsg},
     style::Style,
@@ -24,7 +23,6 @@ pub struct Text {
     editing: bool,
     text_buffer: TextBuffer,
     style: Style,
-    font_ids: Vec<FontId>,
     preedit_text: String,
     preedit_start_offset: Option<i32>,
     preedit_in_progress: bool,
@@ -41,7 +39,6 @@ impl Text {
             text_buffer,
             editing: true,
             style,
-            font_ids: femtovg_area::font_stack().to_vec(),
             preedit_text: String::new(),
             preedit_start_offset: None,
             preedit_in_progress: false,
@@ -151,11 +148,7 @@ impl Drawable for Text {
         let text = gtext.as_str();
 
         let mut paint: Paint = self.style.into();
-        if self.font_ids.is_empty() {
-            paint.set_font(&[font]);
-        } else {
-            paint.set_font(&self.font_ids);
-        }
+        paint.set_font(&[font]);
 
         // get some metrics
         let canva_scale = canvas.transform().average_scale();

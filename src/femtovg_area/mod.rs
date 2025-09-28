@@ -1,6 +1,6 @@
 mod imp;
 
-use std::{cell::RefCell, rc::Rc, sync::OnceLock};
+use std::{cell::RefCell, rc::Rc};
 
 use gdk_pixbuf::{glib::subclass::types::ObjectSubclassIsExt, Pixbuf};
 use gtk::glib;
@@ -15,18 +15,6 @@ use crate::{
     sketch_board::SketchBoardInput,
     tools::{CropTool, Drawable, Tool},
 };
-
-use femtovg::FontId;
-
-static FONT_STACK: OnceLock<Vec<FontId>> = OnceLock::new();
-
-pub fn set_font_stack(fonts: Vec<FontId>) {
-    let _ = FONT_STACK.set(fonts);
-}
-
-pub fn font_stack() -> &'static [FontId] {
-    FONT_STACK.get().map(Vec::as_slice).unwrap_or(&[])
-}
 
 glib::wrapper! {
     pub struct FemtoVGArea(ObjectSubclass<imp::FemtoVGArea>)
