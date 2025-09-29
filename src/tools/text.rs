@@ -1,7 +1,7 @@
 use std::cell::Cell;
 
 use anyhow::Result;
-use femtovg::{FontId, Paint, Path, TextMetrics};
+use femtovg::{FontId, Paint, Path};
 use relm4::gtk::{
     gdk::{Key, ModifierType},
     TextBuffer,
@@ -131,6 +131,25 @@ impl Text {
     fn ime_cursor_rect(&self) -> Option<(f32, f32, f32)> {
         self.cursor_rect.get()
     }
+
+    fn draw_cursor(
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        paint: &Paint,
+        x: f32,
+        top: f32,
+        height: f32,
+    ) -> (f32, f32) {
+        let extra_height = height * 0.1;
+
+        let mut path = Path::new();
+        path.move_to(x, top - extra_height);
+        path.line_to(x, top + height + 2.0 * extra_height);
+        canvas.fill_path(&path, paint);
+
+        let cursor_top = top - extra_height;
+        let cursor_bottom = top + height + 2.0 * extra_height;
+        (cursor_top, cursor_bottom)
+    }
 }
 
 impl Drawable for Text {
@@ -156,8 +175,6 @@ impl Drawable for Text {
         let canvas_width = canvas.width() as f32;
 
         let width = canvas_width / canva_scale - self.pos.x - canvas_offset_x;
-        let mut metrics = Vec::<TextMetrics>::new();
-
         let lines = canvas.break_text_vec(width, text, &paint)?;
 
         let font_metrics = canvas.measure_font(&paint)?;
@@ -174,88 +191,179 @@ impl Drawable for Text {
         if line_height <= 0.0 {
             line_height = font_metrics.height() / canva_scale;
         }
+        let mut ascender = font_metrics.ascender() / canva_scale;
+        if ascender <= 0.0 {
+            ascender = line_height;
+        }
         let inferred_cursor_top = measured_cursor
             .as_ref()
             .map(|metrics| metrics.y)
             .unwrap_or_else(|| self.pos.y - font_metrics.ascender() / canva_scale);
+
+        struct LineLayout<'a> {
+            baseline: f32,
+            cursor_top: f32,
+            draw_text: &'a str,
+            has_newline: bool,
+            char_start: usize,
+            char_count: usize,
+        }
+
+        let mut line_layouts = Vec::new();
         let mut y = self.pos.y;
+        let mut char_offset = 0usize;
+
         for line_range in lines {
-            if let Ok(text_metrics) = canvas.fill_text(self.pos.x, y, &text[line_range], &paint) {
-                y += font_metrics.height() / canva_scale;
-                metrics.push(text_metrics);
+            let baseline = y;
+            let cursor_top = baseline - ascender;
+            let full_slice = &text[line_range.clone()];
+            let (draw_slice, has_newline) = if let Some(stripped) = full_slice.strip_suffix('\n') {
+                (stripped, true)
+            } else {
+                (full_slice, false)
+            };
+
+            if !draw_slice.is_empty() {
+                let _ = canvas.fill_text(self.pos.x, baseline, draw_slice, &paint);
             }
+
+            let line_char_count = draw_slice.chars().count();
+
+            line_layouts.push(LineLayout {
+                baseline,
+                cursor_top,
+                draw_text: draw_slice,
+                has_newline,
+                char_start: char_offset,
+                char_count: line_char_count,
+            });
+
+            char_offset += line_char_count;
+            if has_newline {
+                char_offset += 1;
+            }
+
+            y += line_height;
+        }
+
+        if line_layouts.is_empty() {
+            line_layouts.push(LineLayout {
+                baseline: self.pos.y,
+                cursor_top: inferred_cursor_top,
+                draw_text: "",
+                has_newline: false,
+                char_start: 0,
+                char_count: 0,
+            });
         }
         if self.editing {
             self.cursor_rect.set(None);
-            // GTK is working with UTF-8 and character positions, pango is working with UTF-8 but byte positions.
-            // here we transform one into the other!
-            let (mut cursor_byte_pos, _) = text
-                .char_indices()
-                .nth((self.text_buffer.cursor_position()) as usize)
-                .unwrap_or((text.len(), 'X'));
 
-            // GTK does swalllow manual line wraps, lets correct the cursor position for that! urgh..
-            let no_manual_line_wraps = text.split_at(cursor_byte_pos).0.matches('\n').count();
-            cursor_byte_pos -= no_manual_line_wraps;
+            let cursor_char_pos = self.text_buffer.cursor_position() as usize;
 
-            // function to draw a cursor
-            let mut draw_cursor = |x: f32, baseline: f32, height: f32| {
-                let extra_height = height * 0.1;
-
-                let mut path = Path::new();
-                path.move_to(x, baseline - extra_height);
-                path.line_to(x, baseline + height + 2.0 * extra_height);
-                canvas.fill_path(&path, &paint);
-
-                let top = baseline - extra_height;
-                let bottom = baseline + height + 2.0 * extra_height;
-                (top, bottom)
-            };
-
-            // find cursor pos in broken text
-            let mut acc_byte_index = 0;
             let mut cursor_drawn = false;
 
-            for m in &metrics {
-                for g in &m.glyphs {
-                    if acc_byte_index + g.byte_index == cursor_byte_pos {
-                        if g.c == '\n' {
-                            let (top, bottom) = draw_cursor(self.pos.x, y, line_height);
-                            self.cursor_rect.set(Some((self.pos.x, top, bottom - top)));
-                        } else {
-                            let x = g.x - g.bearing_x;
-                            let (top, bottom) = draw_cursor(x, m.y, m.height());
-                            self.cursor_rect.set(Some((x, top, bottom - top)));
-                        }
+            for (idx, line) in line_layouts.iter().enumerate() {
+                let line_char_count = line.char_count;
+                let line_start = line.char_start;
+                let line_end = line_start + line_char_count;
+
+                if cursor_char_pos < line_start {
+                    continue;
+                }
+
+                if cursor_char_pos < line_end {
+                    let local_index = cursor_char_pos - line_start;
+                    let byte_offset = line
+                        .draw_text
+                        .char_indices()
+                        .nth(local_index)
+                        .map(|(i, _)| i)
+                        .unwrap_or_else(|| line.draw_text.len());
+
+                    let substring = &line.draw_text[..byte_offset];
+                    let cursor_x = canvas
+                        .measure_text(self.pos.x, line.baseline, substring, &paint)
+                        .ok()
+                        .map(|m| m.x + m.width())
+                        .unwrap_or(self.pos.x);
+
+                    let (top, bottom) =
+                        Text::draw_cursor(canvas, &paint, cursor_x, line.cursor_top, line_height);
+                    self.cursor_rect.set(Some((cursor_x, top, bottom - top)));
+                    cursor_drawn = true;
+                    break;
+                }
+
+                if cursor_char_pos == line_end {
+                    if line.has_newline {
+                        let next_baseline = line_layouts
+                            .get(idx + 1)
+                            .map(|next| next.baseline)
+                            .unwrap_or(line.baseline + line_height);
+                        let next_cursor_top = line_layouts
+                            .get(idx + 1)
+                            .map(|next| next.cursor_top)
+                            .unwrap_or(next_baseline - ascender);
+                        let (top, bottom) = Text::draw_cursor(
+                            canvas,
+                            &paint,
+                            self.pos.x,
+                            next_cursor_top,
+                            line_height,
+                        );
+                        self.cursor_rect.set(Some((self.pos.x, top, bottom - top)));
+                        cursor_drawn = true;
+                        break;
+                    } else {
+                        let cursor_x = canvas
+                            .measure_text(self.pos.x, line.baseline, line.draw_text, &paint)
+                            .ok()
+                            .map(|m| m.x + m.width())
+                            .unwrap_or(self.pos.x);
+                        let (top, bottom) = Text::draw_cursor(
+                            canvas,
+                            &paint,
+                            cursor_x,
+                            line.cursor_top,
+                            line_height,
+                        );
+                        self.cursor_rect.set(Some((cursor_x, top, bottom - top)));
                         cursor_drawn = true;
                         break;
                     }
                 }
-
-                let last_byte_index = match m.glyphs.last() {
-                    Some(g) => g.byte_index,
-                    None => 0,
-                };
-
-                acc_byte_index += last_byte_index;
-
-                if cursor_drawn {
-                    break;
-                }
             }
 
             if !cursor_drawn {
-                // cursor is after last char, draw there!
-                if let Some(m) = metrics.last() {
-                    if let Some(g) = m.glyphs.last() {
-                        // on the same line as last glyph
-                        let x = g.x + g.bearing_x + g.width;
-                        let (top, bottom) = draw_cursor(x, m.y, m.height());
-                        self.cursor_rect.set(Some((x, top, bottom - top)));
-                    }
+                if let Some(last_line) = line_layouts.last() {
+                    let (cursor_top, cursor_x) = if last_line.has_newline {
+                        (last_line.baseline + line_height - ascender, self.pos.x)
+                    } else {
+                        let cursor_x = canvas
+                            .measure_text(
+                                self.pos.x,
+                                last_line.baseline,
+                                last_line.draw_text,
+                                &paint,
+                            )
+                            .ok()
+                            .map(|m| m.x + m.width())
+                            .unwrap_or(self.pos.x);
+                        (last_line.cursor_top, cursor_x)
+                    };
+
+                    let (top, bottom) =
+                        Text::draw_cursor(canvas, &paint, cursor_x, cursor_top, line_height);
+                    self.cursor_rect.set(Some((cursor_x, top, bottom - top)));
                 } else {
-                    // no text rendered so far
-                    let (top, bottom) = draw_cursor(self.pos.x, inferred_cursor_top, line_height);
+                    let (top, bottom) = Text::draw_cursor(
+                        canvas,
+                        &paint,
+                        self.pos.x,
+                        inferred_cursor_top,
+                        line_height,
+                    );
                     self.cursor_rect.set(Some((self.pos.x, top, bottom - top)));
                 }
             }
@@ -318,16 +426,20 @@ impl Tool for TextTool {
 
     fn handle_key_event(&mut self, event: KeyEventMsg) -> ToolUpdateResult {
         if let Some(t) = &mut self.text {
-            if event.key == Key::Return {
-                if event.modifier == ModifierType::SHIFT_MASK {
-                    t.text_buffer.insert_at_cursor("\n");
-                    return ToolUpdateResult::Redraw;
-                } else {
+            if matches!(event.key, Key::Return | Key::KP_Enter) {
+                let modifiers = event.modifier;
+                let ctrl_pressed = modifiers.contains(ModifierType::CONTROL_MASK);
+
+                if ctrl_pressed {
                     t.end_preedit();
                     t.editing = false;
                     let result = t.clone_box();
                     self.text = None;
                     return ToolUpdateResult::Commit(result);
+                } else {
+                    t.end_preedit();
+                    t.text_buffer.insert_at_cursor("\n");
+                    return ToolUpdateResult::Redraw;
                 }
             } else if event.key == Key::Escape {
                 t.end_preedit();
