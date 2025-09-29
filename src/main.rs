@@ -32,8 +32,8 @@ mod style;
 mod tools;
 mod ui;
 
-use crate::sketch_board::TextEventMsg;
-use crate::sketch_board::{KeyEventMsg, SketchBoard, SketchBoardInput};
+use crate::sketch_board::{SketchBoard, SketchBoardInput};
+use crate::tools::Tools;
 
 pub static START_TIME: LazyLock<chrono::DateTime<chrono::Local>> =
     LazyLock::new(chrono::Local::now);
@@ -62,6 +62,7 @@ enum AppInput {
     Realized,
     SetToolbarsDisplay(bool),
     ToggleToolbarsDisplay,
+    ToolSwitchShortcut(Tools),
 }
 
 #[derive(Debug)]
@@ -183,43 +184,6 @@ impl Component for App {
                 sender.input(AppInput::Realized);
             },
 
-            // this should be inside Sketchboard, but doesn't seem so work there. We hook it here
-            // and send the messages there
-            add_controller = gtk::EventControllerKey {
-                connect_key_pressed[sketch_board_sender] => move |controller, key, code, modifier | {
-                    if let Some(im_context) = controller.im_context() {
-                        im_context.focus_in();
-                        if !im_context.filter_keypress(controller.current_event().unwrap()) {
-                            sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
-                        }
-                    } else {
-                        sketch_board_sender.emit(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
-                    }
-                    glib::Propagation::Stop
-                },
-
-                connect_key_released[sketch_board_sender] => move |controller, key, code, modifier | {
-                    if let Some(im_context) = controller.im_context() {
-                        im_context.focus_in();
-                        if !im_context.filter_keypress(controller.current_event().unwrap()) {
-                            sketch_board_sender.emit(SketchBoardInput::new_key_release_event(KeyEventMsg::new(key, code, modifier)));
-                        }
-                    } else {
-                        sketch_board_sender.emit(SketchBoardInput::new_key_release_event(KeyEventMsg::new(key, code, modifier)));
-                    }
-                },
-
-                #[wrap(Some)]
-                set_im_context = &gtk::IMMulticontext {
-                    connect_commit[sketch_board_sender] => move |_cx, txt| {
-                        sketch_board_sender.emit(SketchBoardInput::new_text_event(
-                            TextEventMsg::Commit(txt.to_string()),
-                        ))
-                    }
-                },
-
-            },
-
             gtk::Overlay {
                 add_overlay = model.tools_toolbar.widget(),
 
@@ -248,6 +212,11 @@ impl Component for App {
                 self.style_toolbar
                     .sender()
                     .emit(StyleToolbarInput::ToggleVisibility);
+            }
+            AppInput::ToolSwitchShortcut(tool) => {
+                self.tools_toolbar
+                    .sender()
+                    .emit(ToolsToolbarInput::SwitchSelectedTool(tool));
             }
         }
     }
@@ -278,9 +247,10 @@ impl Component for App {
                 .launch(image)
                 .forward(sender.input_sender(), |t| match t {
                     SketchBoardOutput::ToggleToolbarsDisplay => AppInput::ToggleToolbarsDisplay,
+                    SketchBoardOutput::ToolSwitchShortcut(tool) => {
+                        AppInput::ToolSwitchShortcut(tool)
+                    }
                 });
-
-        let sketch_board_sender = sketch_board.sender().clone();
 
         // Toolbars
         let tools_toolbar = ToolsToolbar::builder()

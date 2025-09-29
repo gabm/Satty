@@ -22,7 +22,7 @@ use crate::femtovg_area::FemtoVGArea;
 use crate::math::Vec2D;
 use crate::notification::log_result;
 use crate::style::Style;
-use crate::tools::{Tool, ToolEvent, ToolUpdateResult, ToolsManager};
+use crate::tools::{Tool, ToolEvent, ToolUpdateResult, Tools, ToolsManager};
 use crate::ui::toolbars::ToolbarEvent;
 
 type RenderedImage = Img<Vec<RGBA<u8>>>;
@@ -32,11 +32,13 @@ pub enum SketchBoardInput {
     InputEvent(InputEvent),
     ToolbarEvent(ToolbarEvent),
     RenderResult(RenderedImage, Vec<Action>),
+    CommitEvent(TextEventMsg),
 }
 
 #[derive(Debug, Clone)]
 pub enum SketchBoardOutput {
     ToggleToolbarsDisplay,
+    ToolSwitchShortcut(Tools),
 }
 
 #[derive(Debug, Clone)]
@@ -108,6 +110,10 @@ impl SketchBoardInput {
 
     pub fn new_text_event(event: TextEventMsg) -> SketchBoardInput {
         SketchBoardInput::InputEvent(InputEvent::Text(event))
+    }
+
+    pub fn new_commit_event(event: TextEventMsg) -> SketchBoardInput {
+        SketchBoardInput::CommitEvent(event)
     }
 }
 
@@ -474,6 +480,48 @@ impl SketchBoard {
             }
         }
     }
+
+    fn handle_text_commit(
+        &self,
+        event: TextEventMsg,
+        sender: ComponentSender<Self>,
+    ) -> ToolUpdateResult {
+        match event {
+            TextEventMsg::Commit(txt) => {
+                // NOTE:
+                // If there's an IMContext binded to the controller, single letter-key events will
+                // always go through it first, denying a bypass, so the only way we can do single-key
+                // bindings is to act upon the IMMulticontext's commit event itself.
+                // NOTE:
+                // Here we're basically bypassing the IMMulticontext. If the text tool is active
+                // and wants text inputs, we're interested in the single-letter keypress as a text character.
+                // If not, we parse it as a shortcut event.
+                if self.active_tool_type() == Tools::Text
+                    && self.active_tool.borrow().input_enabled()
+                {
+                    sender.input(SketchBoardInput::new_text_event(TextEventMsg::Commit(
+                        txt.to_string(),
+                    )));
+                } else if let Some(tool) = txt
+                    .chars()
+                    .next()
+                    .and_then(|char| APP_CONFIG.read().keybinds().get_tool(char))
+                {
+                    sender.input(SketchBoardInput::ToolbarEvent(ToolbarEvent::ToolSelected(
+                        tool,
+                    )));
+                    sender
+                        .output_sender()
+                        .emit(SketchBoardOutput::ToolSwitchShortcut(tool));
+                }
+            }
+        }
+        ToolUpdateResult::Unmodified
+    }
+
+    pub fn active_tool_type(&self) -> Tools {
+        self.active_tool.borrow().get_tool_type()
+    }
 }
 
 #[relm4::component(pub)]
@@ -489,6 +537,8 @@ impl Component for SketchBoard {
             area -> FemtoVGArea {
                 set_vexpand: true,
                 set_hexpand: true,
+                set_can_focus: true,
+                set_focusable: true,
                 grab_focus: (),
 
                 add_controller = gtk::GestureDrag {
@@ -527,6 +577,38 @@ impl Component for SketchBoard {
                             Vec2D::new(x as f32, y as f32)));
                     }
                 },
+
+                add_controller = gtk::EventControllerKey {
+                    connect_key_pressed[sender] => move |controller, key, code, modifier | {
+                        if let Some(im_context) = controller.im_context() {
+                            im_context.focus_in();
+                            if !im_context.filter_keypress(controller.current_event().unwrap()) {
+                                sender.input(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
+                            }
+                        } else {
+                            sender.input(SketchBoardInput::new_key_event(KeyEventMsg::new(key, code, modifier)));
+                        }
+                        glib::Propagation::Stop
+                    },
+
+                    connect_key_released[sender] => move |controller, key, code, modifier | {
+                        if let Some(im_context) = controller.im_context() {
+                            im_context.focus_in();
+                            if !im_context.filter_keypress(controller.current_event().unwrap()) {
+                                sender.input(SketchBoardInput::new_key_release_event(KeyEventMsg::new(key, code, modifier)));
+                            }
+                        } else {
+                            sender.input(SketchBoardInput::new_key_release_event(KeyEventMsg::new(key, code, modifier)));
+                        }
+                    },
+
+                    #[wrap(Some)]
+                    set_im_context = &gtk::IMMulticontext {
+                        connect_commit[sender] => move |_cx, txt| {
+                            sender.input(SketchBoardInput::new_commit_event(TextEventMsg::Commit(txt.to_string())));
+                        },
+                    },
+                }
             }
         },
     }
@@ -595,6 +677,10 @@ impl Component for SketchBoard {
             }
             SketchBoardInput::RenderResult(img, action) => {
                 self.handle_render_result(img, action);
+                ToolUpdateResult::Unmodified
+            }
+            SketchBoardInput::CommitEvent(txt) => {
+                self.handle_text_commit(txt, sender);
                 ToolUpdateResult::Unmodified
             }
         };

@@ -1,4 +1,10 @@
-use std::{borrow::Cow, cell::RefCell, collections::HashMap, fmt::Debug, rc::Rc};
+use std::{
+    borrow::Cow,
+    cell::RefCell,
+    collections::HashMap,
+    fmt::{Debug, Display},
+    rc::Rc,
+};
 
 use anyhow::Result;
 use femtovg::{renderer::OpenGl, Canvas, FontId};
@@ -92,6 +98,10 @@ pub trait Tool {
         false
     }
 
+    fn input_enabled(&self) -> bool;
+
+    fn set_input_enabled(&mut self, value: bool);
+
     fn handle_undo(&mut self) -> ToolUpdateResult {
         ToolUpdateResult::Unmodified
     }
@@ -101,6 +111,8 @@ pub trait Tool {
     }
 
     fn get_drawable(&self) -> Option<&dyn Drawable>;
+
+    fn get_tool_type(&self) -> Tools;
 }
 
 // the clone method below has been adapted from: https://stackoverflow.com/questions/30353462/how-to-clone-a-struct-storing-a-boxed-trait-object
@@ -157,6 +169,43 @@ pub enum Tools {
     Blur = 8,
     Highlight = 9,
     Brush = 10,
+}
+
+impl Tools {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            Tools::Pointer => "Pointer",
+            Tools::Crop => "Crop",
+            Tools::Brush => "Brush",
+            Tools::Line => "Line",
+            Tools::Arrow => "Arrow",
+            Tools::Rectangle => "Rectangle",
+            Tools::Ellipse => "Ellipse",
+            Tools::Text => "Text",
+            Tools::Marker => "Numbered Marker",
+            Tools::Blur => "Blur",
+            Tools::Highlight => "Highlight",
+        }
+    }
+}
+
+// used for printing
+impl Display for Tools {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Pointer => write!(f, "pointer"),
+            Self::Crop => write!(f, "crop"),
+            Self::Line => write!(f, "line"),
+            Self::Arrow => write!(f, "arrow"),
+            Self::Rectangle => write!(f, "rectangle"),
+            Self::Ellipse => write!(f, "ellipse"),
+            Self::Text => write!(f, "text"),
+            Self::Marker => write!(f, "marker"),
+            Self::Blur => write!(f, "blur"),
+            Self::Highlight => write!(f, "highlight"),
+            Self::Brush => write!(f, "brush"),
+        }
+    }
 }
 
 pub struct ToolsManager {

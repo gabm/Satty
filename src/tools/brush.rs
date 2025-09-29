@@ -9,12 +9,13 @@ use crate::{
     style::Style,
 };
 
-use super::{Drawable, DrawableClone, Tool, ToolUpdateResult};
+use super::{Drawable, DrawableClone, Tool, ToolUpdateResult, Tools};
 
 #[derive(Default)]
 pub struct BrushTool {
     drawable: Option<BrushDrawable>,
     style: Style,
+    input_enabled: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -63,6 +64,18 @@ impl Drawable for BrushDrawable {
 }
 
 impl Tool for BrushTool {
+    fn input_enabled(&self) -> bool {
+        self.input_enabled
+    }
+
+    fn set_input_enabled(&mut self, value: bool) {
+        self.input_enabled = value;
+    }
+
+    fn get_tool_type(&self) -> super::Tools {
+        Tools::Brush
+    }
+
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
         match event.type_ {
             MouseEventType::BeginDrag => {
