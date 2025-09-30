@@ -52,7 +52,7 @@ All configuration is done either at the config file in `XDG_CONFIG_DIR/.config/s
 - Highlight: Hold `Ctrl` to switch between block and freehand mode (default configurable, see below), hold Shift for a square (if the default mode is block) or a straight line (if the default mode is freehand)
 - Line: Hold `Shift` to make line snap to 15° steps
 - Rectangle: Hold `Alt` to center the rectangle around origin, hold `Shift` for a square
-- Text: Press `Enter` to insert line breaks, combine `Ctrl` with `Left` or `Right` for word jump or `Ctrl` with `Backspace` or `Delete` for word delete. Press `Ctrl+Enter` or switch to another tool to accept input, press `Escape` to discard entered text.
+- Text: Press `Shift+Enter` to insert line break, combine `Ctrl` with `Left` or `Right` for word jump or `Ctrl` with `Backspace` or `Delete` for word delete. Press `Enter` or switch to another tool to accept input, press `Escape` to discard entered text.
 
 ### Configuration File
 

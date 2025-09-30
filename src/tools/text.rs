@@ -432,18 +432,18 @@ impl Tool for TextTool {
         if let Some(t) = &mut self.text {
             if matches!(event.key, Key::Return | Key::KP_Enter) {
                 let modifiers = event.modifier;
-                let ctrl_pressed = modifiers.contains(ModifierType::CONTROL_MASK);
+                let shift_pressed = modifiers.contains(ModifierType::SHIFT_MASK);
 
-                if ctrl_pressed {
+                if shift_pressed {
+                    t.end_preedit();
+                    t.text_buffer.insert_at_cursor("\n");
+                    return ToolUpdateResult::Redraw;
+                } else {
                     t.end_preedit();
                     t.editing = false;
                     let result = t.clone_box();
                     self.text = None;
                     return ToolUpdateResult::Commit(result);
-                } else {
-                    t.end_preedit();
-                    t.text_buffer.insert_at_cursor("\n");
-                    return ToolUpdateResult::Redraw;
                 }
             } else if event.key == Key::Escape {
                 t.end_preedit();
