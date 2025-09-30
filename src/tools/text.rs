@@ -195,10 +195,11 @@ impl Drawable for Text {
         if ascender <= 0.0 {
             ascender = line_height;
         }
-        let inferred_cursor_top = measured_cursor
+        let cursor_top_offset = measured_cursor
             .as_ref()
-            .map(|metrics| metrics.y)
-            .unwrap_or_else(|| self.pos.y - font_metrics.ascender() / canva_scale);
+            .map(|metrics| metrics.y - self.pos.y)
+            .unwrap_or(-ascender);
+        let inferred_cursor_top = self.pos.y + cursor_top_offset;
 
         struct LineLayout<'a> {
             baseline: f32,
@@ -215,7 +216,7 @@ impl Drawable for Text {
 
         for line_range in lines {
             let baseline = y;
-            let cursor_top = baseline - ascender;
+            let cursor_top = baseline + cursor_top_offset;
             let full_slice = &text[line_range.clone()];
             let (draw_slice, has_newline) = if let Some(stripped) = full_slice.strip_suffix('\n') {
                 (stripped, true)
@@ -304,7 +305,7 @@ impl Drawable for Text {
                         let next_cursor_top = line_layouts
                             .get(idx + 1)
                             .map(|next| next.cursor_top)
-                            .unwrap_or(next_baseline - ascender);
+                            .unwrap_or(next_baseline + cursor_top_offset);
                         let (top, bottom) = Text::draw_cursor(
                             canvas,
                             &paint,
@@ -338,7 +339,10 @@ impl Drawable for Text {
             if !cursor_drawn {
                 if let Some(last_line) = line_layouts.last() {
                     let (cursor_top, cursor_x) = if last_line.has_newline {
-                        (last_line.baseline + line_height - ascender, self.pos.x)
+                        (
+                            last_line.baseline + line_height + cursor_top_offset,
+                            self.pos.x,
+                        )
                     } else {
                         let cursor_x = canvas
                             .measure_text(
