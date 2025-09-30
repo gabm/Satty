@@ -24,6 +24,7 @@ use xdg::BaseDirectories;
 mod command_line;
 mod configuration;
 mod femtovg_area;
+mod icons;
 mod math;
 mod notification;
 mod sketch_board;
@@ -436,7 +437,10 @@ fn run_satty() -> Result<()> {
     app.set_flags(ApplicationFlags::NON_UNIQUE);
     // create relm app and run
     let app = RelmApp::from_app(app).with_args(vec![]);
-    relm4_icons::initialize_icons();
+    relm4_icons::initialize_icons(
+        icons::icon_names::GRESOURCE_BYTES,
+        icons::icon_names::RESOURCE_PREFIX,
+    );
     app.run::<App>(image);
     Ok(())
 }
