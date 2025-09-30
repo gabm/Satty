@@ -67,6 +67,8 @@ pub struct KeyEventMsg {
 #[derive(Debug, Clone)]
 pub enum TextEventMsg {
     Commit(String),
+    Preedit { text: String, cursor: Option<u32> },
+    PreeditEnd,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -515,6 +517,23 @@ impl SketchBoard {
                         .emit(SketchBoardOutput::ToolSwitchShortcut(tool));
                 }
             }
+            TextEventMsg::Preedit { text, cursor } => {
+                if self.active_tool_type() == Tools::Text
+                    && self.active_tool.borrow().input_enabled()
+                {
+                    sender.input(SketchBoardInput::new_text_event(TextEventMsg::Preedit {
+                        text,
+                        cursor,
+                    }));
+                }
+            }
+            TextEventMsg::PreeditEnd => {
+                if self.active_tool_type() == Tools::Text
+                    && self.active_tool.borrow().input_enabled()
+                {
+                    sender.input(SketchBoardInput::new_text_event(TextEventMsg::PreeditEnd));
+                }
+            }
         }
         ToolUpdateResult::Unmodified
     }
@@ -606,6 +625,21 @@ impl Component for SketchBoard {
                     set_im_context = &gtk::IMMulticontext {
                         connect_commit[sender] => move |_cx, txt| {
                             sender.input(SketchBoardInput::new_commit_event(TextEventMsg::Commit(txt.to_string())));
+                        },
+                        connect_preedit_changed[sender] => move |cx| {
+                            let (text, _attrs, cursor) = cx.preedit_string();
+                            let cursor = if cursor >= 0 {
+                                Some(cursor as u32)
+                            } else {
+                                None
+                            };
+                            sender.input(SketchBoardInput::new_commit_event(TextEventMsg::Preedit {
+                                text: text.to_string(),
+                                cursor,
+                            }));
+                        },
+                        connect_preedit_end[sender] => move |_cx| {
+                            sender.input(SketchBoardInput::new_commit_event(TextEventMsg::PreeditEnd));
                         },
                     },
                 }

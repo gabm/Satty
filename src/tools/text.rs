@@ -1,5 +1,6 @@
 use anyhow::Result;
 use femtovg::{FontId, Paint, Path, TextMetrics};
+use std::borrow::Cow;
 use relm4::gtk::{
     gdk::{Key, ModifierType},
     TextBuffer,
@@ -21,6 +22,13 @@ pub struct Text {
     editing: bool,
     text_buffer: TextBuffer,
     style: Style,
+    preedit: Option<Preedit>,
+}
+
+#[derive(Clone, Debug)]
+struct Preedit {
+    text: String,
+    cursor: Option<usize>,
 }
 
 impl Text {
@@ -33,6 +41,47 @@ impl Text {
             text_buffer,
             editing: true,
             style,
+            preedit: None,
+        }
+    }
+
+    fn byte_index_from_char_index(text: &str, char_index: usize) -> usize {
+        text.char_indices()
+            .nth(char_index)
+            .map(|(idx, _)| idx)
+            .unwrap_or_else(|| text.len())
+    }
+
+    fn display_text<'a>(&self, base_text: &'a str) -> (Cow<'a, str>, usize) {
+        let cursor_char_index = self.text_buffer.cursor_position() as usize;
+        let base_cursor_byte = Self::byte_index_from_char_index(base_text, cursor_char_index);
+
+        if self.editing {
+            if let Some(preedit) = &self.preedit {
+                if preedit.text.is_empty() {
+                    return (Cow::Borrowed(base_text), base_cursor_byte);
+                }
+
+                let mut composed = String::with_capacity(base_text.len() + preedit.text.len());
+                composed.push_str(&base_text[..base_cursor_byte]);
+                composed.push_str(&preedit.text);
+                composed.push_str(&base_text[base_cursor_byte..]);
+
+                let preedit_char_len = preedit.text.chars().count();
+                let cursor_chars = preedit
+                    .cursor
+                    .map(|value| value.min(preedit_char_len))
+                    .unwrap_or(preedit_char_len);
+                let preedit_cursor_byte =
+                    Self::byte_index_from_char_index(&preedit.text, cursor_chars);
+                let composed_cursor_byte = base_cursor_byte + preedit_cursor_byte;
+
+                (Cow::Owned(composed), composed_cursor_byte)
+            } else {
+                (Cow::Borrowed(base_text), base_cursor_byte)
+            }
+        } else {
+            (Cow::Borrowed(base_text), base_cursor_byte)
         }
     }
 }
@@ -49,7 +98,9 @@ impl Drawable for Text {
             &self.text_buffer.end_iter(),
             false,
         );
-        let text = gtext.as_str();
+        let base_text = gtext.as_str();
+        let (display_text, mut cursor_byte_pos) = self.display_text(base_text);
+        let text = display_text.as_ref();
 
         let mut paint: Paint = self.style.into();
         paint.set_font(&[font]);
@@ -73,16 +124,10 @@ impl Drawable for Text {
             }
         }
         if self.editing {
-            // GTK is working with UTF-8 and character positions, pango is working with UTF-8 but byte positions.
-            // here we transform one into the other!
-            let (mut cursor_byte_pos, _) = text
-                .char_indices()
-                .nth((self.text_buffer.cursor_position()) as usize)
-                .unwrap_or((text.len(), 'X'));
-
-            // GTK does swalllow manual line wraps, lets correct the cursor position for that! urgh..
-            let no_manual_line_wraps = text.split_at(cursor_byte_pos).0.matches('\n').count();
-            cursor_byte_pos -= no_manual_line_wraps;
+            let bounded_cursor = cursor_byte_pos.min(text.len());
+            // femtovg ignores manual line wrap characters when reporting glyph byte indices.
+            let no_manual_line_wraps = text[..bounded_cursor].matches('\n').count();
+            cursor_byte_pos = cursor_byte_pos.saturating_sub(no_manual_line_wraps);
 
             // function to draw a cursor
             let mut draw_cursor = |x, y: f32, height| {
@@ -193,8 +238,29 @@ impl Tool for TextTool {
         if let Some(t) = &mut self.text {
             match event {
                 TextEventMsg::Commit(text) => {
+                    t.preedit = None;
                     t.text_buffer.insert_at_cursor(&text);
                     ToolUpdateResult::Redraw
+                }
+                TextEventMsg::Preedit { text, cursor } => {
+                    let cursor = cursor.map(|value| value as usize);
+                    if text.is_empty() {
+                        if t.preedit.take().is_some() {
+                            ToolUpdateResult::Redraw
+                        } else {
+                            ToolUpdateResult::Unmodified
+                        }
+                    } else {
+                        t.preedit = Some(Preedit { text, cursor });
+                        ToolUpdateResult::Redraw
+                    }
+                }
+                TextEventMsg::PreeditEnd => {
+                    if t.preedit.take().is_some() {
+                        ToolUpdateResult::Redraw
+                    } else {
+                        ToolUpdateResult::Unmodified
+                    }
                 }
             }
         } else {
@@ -209,6 +275,7 @@ impl Tool for TextTool {
                     t.text_buffer.insert_at_cursor("\n");
                     return ToolUpdateResult::Redraw;
                 } else {
+                    t.preedit = None;
                     t.editing = false;
                     let result = t.clone_box();
                     self.text = None;
@@ -295,6 +362,7 @@ impl Tool for TextTool {
                     // create commit message if necessary
                     let return_value = match &mut self.text {
                         Some(l) => {
+                            l.preedit = None;
                             l.editing = false;
                             ToolUpdateResult::Commit(l.clone_box())
                         }
@@ -319,6 +387,7 @@ impl Tool for TextTool {
     fn handle_deactivated(&mut self) -> ToolUpdateResult {
         self.input_enabled = false;
         if let Some(t) = &mut self.text {
+            t.preedit = None;
             t.editing = false;
             let result = t.clone_box();
             self.text = None;
