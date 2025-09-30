@@ -1,10 +1,10 @@
 use anyhow::Result;
 use femtovg::{FontId, Paint, Path, TextMetrics};
-use std::borrow::Cow;
 use relm4::gtk::{
     gdk::{Key, ModifierType},
     TextBuffer,
 };
+use std::borrow::Cow;
 
 use relm4::gtk::prelude::*;
 
@@ -117,9 +117,38 @@ impl Drawable for Text {
         let lines = canvas.break_text_vec(width, text, &paint)?;
 
         let font_metrics = canvas.measure_font(&paint)?;
+        let measured_cursor = canvas
+            .measure_text(self.pos.x, self.pos.y, "|", &paint)
+            .ok();
+
+        let mut line_height = measured_cursor
+            .as_ref()
+            .map(|metrics| metrics.height())
+            .unwrap_or(0.0);
+        if line_height <= 0.0 {
+            let ascender_plus_descender = font_metrics.ascender() + font_metrics.descender();
+            if ascender_plus_descender.abs() > f32::EPSILON {
+                line_height = ascender_plus_descender.abs() / canva_scale;
+            }
+        }
+        if line_height <= 0.0 {
+            line_height = font_metrics.height() / canva_scale;
+        }
+
+        let cursor_top_offset = measured_cursor
+            .as_ref()
+            .map(|metrics| metrics.y - self.pos.y)
+            .unwrap_or(-font_metrics.ascender() / canva_scale);
+        let cursor_height = if line_height.abs() > f32::EPSILON {
+            line_height.abs()
+        } else {
+            // reasonable default when all metrics fail
+            (font_metrics.height() / canva_scale).abs()
+        };
+
         for line_range in lines {
             if let Ok(text_metrics) = canvas.fill_text(self.pos.x, y, &text[line_range], &paint) {
-                y += font_metrics.height() / canva_scale;
+                y += line_height;
                 metrics.push(text_metrics);
             }
         }
@@ -144,16 +173,15 @@ impl Drawable for Text {
             let mut acc_byte_index = 0;
             let mut cursor_drawn = false;
 
-            for m in &metrics {
+            for (line_idx, m) in metrics.iter().enumerate() {
+                let current_baseline = self.pos.y + line_idx as f32 * line_height;
                 for g in &m.glyphs {
                     if acc_byte_index + g.byte_index == cursor_byte_pos {
                         if g.c == '\n' {
-                            // if its a newline -> draw cursor on next line
-                            draw_cursor(
-                                self.pos.x,
-                                y,
-                                -(font_metrics.ascender() + font_metrics.descender()),
-                            );
+                            // if it's a newline -> draw cursor on next line
+                            let next_baseline = current_baseline + line_height;
+                            let next_cursor_top = next_baseline + cursor_top_offset;
+                            draw_cursor(self.pos.x, next_cursor_top, cursor_height);
                         } else {
                             // cursor is before this glyph, draw here!
                             draw_cursor(g.x - g.bearing_x, m.y, m.height());
@@ -184,11 +212,7 @@ impl Drawable for Text {
                     }
                 } else {
                     // no text rendered so far
-                    draw_cursor(
-                        self.pos.x,
-                        self.pos.y,
-                        -(font_metrics.ascender() + font_metrics.descender()),
-                    );
+                    draw_cursor(self.pos.x, self.pos.y + cursor_top_offset, cursor_height);
                 }
             }
         }
