@@ -135,7 +135,7 @@ highlight = "g"
 # Font to use for text annotations
 [font]
 family = "Roboto"
-style = "Bold"
+style = "Regular"
 
 # Custom colours for the colour palette
 [color-palette]
