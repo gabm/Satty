@@ -355,15 +355,33 @@ impl Tool for TextTool {
                     );
                 }
             } else if event.key == Key::Home {
-                let mut cursor_itr = t.text_buffer.iter_at_mark(&t.text_buffer.get_insert());
-                cursor_itr.backward_line();
-                t.text_buffer.place_cursor(&cursor_itr);
-                return ToolUpdateResult::Redraw;
+                if event.modifier == ModifierType::CONTROL_MASK {
+                    return Self::handle_text_buffer_action(
+                        &mut t.text_buffer,
+                        Action::MoveCursor,
+                        ActionScope::BufferStart,
+                    );
+                } else {
+                    return Self::handle_text_buffer_action(
+                        &mut t.text_buffer,
+                        Action::MoveCursor,
+                        ActionScope::BackwardLine,
+                    );
+                }
             } else if event.key == Key::End {
-                let mut cursor_itr = t.text_buffer.iter_at_mark(&t.text_buffer.get_insert());
-                cursor_itr.forward_line();
-                t.text_buffer.place_cursor(&cursor_itr);
-                return ToolUpdateResult::Redraw;
+                if event.modifier == ModifierType::CONTROL_MASK {
+                    return Self::handle_text_buffer_action(
+                        &mut t.text_buffer,
+                        Action::MoveCursor,
+                        ActionScope::BufferEnd,
+                    );
+                } else {
+                    return Self::handle_text_buffer_action(
+                        &mut t.text_buffer,
+                        Action::MoveCursor,
+                        ActionScope::ForwardLine,
+                    );
+                }
             }
         };
         ToolUpdateResult::Unmodified
@@ -436,8 +454,12 @@ impl Tool for TextTool {
 enum ActionScope {
     ForwardChar,
     BackwardChar,
+    ForwardLine,
+    BackwardLine,
     ForwardWord,
     BackwardWord,
+    BufferStart,
+    BufferEnd,
 }
 
 enum Action {
@@ -462,6 +484,7 @@ impl TextTool {
                     ActionScope::BackwardChar => end_cursor_itr.backward_char(),
                     ActionScope::ForwardWord => end_cursor_itr.forward_word_end(),
                     ActionScope::BackwardWord => end_cursor_itr.backward_word_start(),
+                    _ => false, // should normally be whether movement was possible, but it's not used anyway
                 };
 
                 if text_buffer.delete_interactive(&mut start_cursor_itr, &mut end_cursor_itr, true)
@@ -476,8 +499,29 @@ impl TextTool {
                 match action_scope {
                     ActionScope::ForwardChar => cursor_itr.forward_char(),
                     ActionScope::BackwardChar => cursor_itr.backward_char(),
+                    ActionScope::ForwardLine => cursor_itr.forward_to_line_end(),
                     ActionScope::ForwardWord => cursor_itr.forward_word_end(),
                     ActionScope::BackwardWord => cursor_itr.backward_word_start(),
+                    ActionScope::BackwardLine => {
+                        if cursor_itr.starts_line() {
+                            cursor_itr.backward_line()
+                        } else {
+                            while !cursor_itr.starts_line() {
+                                cursor_itr.backward_char();
+                            }
+                            false
+                        }
+                    }
+                    ActionScope::BufferEnd => {
+                        cursor_itr.forward_to_end();
+                        false
+                    }
+                    ActionScope::BufferStart => {
+                        while !cursor_itr.is_start() {
+                            cursor_itr.backward_line();
+                        }
+                        false
+                    }
                 };
 
                 text_buffer.place_cursor(&cursor_itr);
