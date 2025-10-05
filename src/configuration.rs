@@ -181,6 +181,7 @@ impl ColorPalette {
 pub enum Action {
     SaveToClipboard,
     SaveToFile,
+    SaveToFileAs,
     Exit,
 }
 

@@ -41,6 +41,7 @@ All configuration is done either at the config file in `XDG_CONFIG_DIR/.config/s
 - `Esc`: as configured (see below), default: exit
 - `Ctrl+C`: Save to clipboard
 - `Ctrl+S`: Save to specified output file
+- `Ctrl+Shift+S`: Save using file dialog
 - `Ctrl+T`: Toggle toolbars
 - `Ctrl+Y`: Redo
 - `Ctrl+Z`: Undo

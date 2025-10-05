@@ -51,6 +51,7 @@ pub enum ToolbarEvent {
     ToggleFill,
     AnnotationSizeChanged(f32),
     Reset,
+    SaveFileAs,
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -257,7 +258,14 @@ impl SimpleComponent for ToolsToolbar {
 
                 set_visible: APP_CONFIG.read().output_filename().is_some()
             },
+            gtk::Button {
+                set_focusable: false,
+                set_hexpand: false,
 
+                set_icon_name: "save-regular",
+                set_tooltip: "Save as (Ctrl+Shift+S)",
+                connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::SaveFileAs);},
+            },
         },
     }
 
