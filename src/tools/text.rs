@@ -99,7 +99,7 @@ impl Drawable for Text {
             false,
         );
         let base_text = gtext.as_str();
-        let (display_text, mut cursor_byte_pos) = self.display_text(base_text);
+        let (display_text, cursor_byte_pos) = self.display_text(base_text);
         let text = display_text.as_ref();
 
         let mut paint: Paint = self.style.into();
@@ -153,11 +153,6 @@ impl Drawable for Text {
             }
         }
         if self.editing {
-            let bounded_cursor = cursor_byte_pos.min(text.len());
-            // femtovg ignores manual line wrap characters when reporting glyph byte indices.
-            let no_manual_line_wraps = text[..bounded_cursor].matches('\n').count();
-            cursor_byte_pos = cursor_byte_pos.saturating_sub(no_manual_line_wraps);
-
             // function to draw a cursor
             let mut draw_cursor = |x, y: f32, height| {
                 // 20% extra height for cursor w.r.t. font height
@@ -170,45 +165,40 @@ impl Drawable for Text {
             };
 
             // find cursor pos in broken text
-            let mut acc_byte_index = 0;
+            let mut previous_lines_bytes_offset = 0;
             let mut cursor_drawn = false;
 
-            for (line_idx, m) in metrics.iter().enumerate() {
-                let current_baseline = self.pos.y + line_idx as f32 * line_height;
+            for m in metrics.iter() {
                 for g in &m.glyphs {
-                    if acc_byte_index + g.byte_index == cursor_byte_pos {
-                        if g.c == '\n' {
-                            // if it's a newline -> draw cursor on next line
-                            let next_baseline = current_baseline + line_height;
-                            let next_cursor_top = next_baseline + cursor_top_offset;
-                            draw_cursor(self.pos.x, next_cursor_top, cursor_height);
-                        } else {
-                            // cursor is before this glyph, draw here!
-                            draw_cursor(g.x - g.bearing_x, m.y, m.height());
-                        }
+                    if previous_lines_bytes_offset + g.byte_index == cursor_byte_pos {
+                        // cursor is before this glyph, draw here!
+                        draw_cursor(g.x - g.bearing_x, m.y, m.height());
                         cursor_drawn = true;
                         break;
                     }
                 }
 
-                let last_byte_index = match m.glyphs.last() {
-                    Some(g) => g.byte_index,
+                let last_byte = match m.glyphs.last() {
+                    Some(g) => g.byte_index + 1,
                     None => 0,
                 };
 
-                acc_byte_index += last_byte_index;
-
-                if cursor_drawn {
-                    break;
-                }
+                previous_lines_bytes_offset += last_byte;
             }
 
             if !cursor_drawn {
                 // cursor is after last char, draw there!
                 if let Some(m) = metrics.last() {
                     if let Some(g) = m.glyphs.last() {
-                        // on the same line as last glyph
-                        draw_cursor(g.x + g.bearing_x + g.width, m.y, m.height());
+                        if g.c == '\n' {
+                            // if last char is a manual wrap -> draw cursor on next line
+                            let baseline = self.pos.y + metrics.len() as f32 * line_height;
+                            let next_cursor_top = baseline + cursor_top_offset;
+                            draw_cursor(self.pos.x, next_cursor_top, cursor_height);
+                        } else {
+                            // on the same line as last glyph
+                            draw_cursor(g.x + g.bearing_x + g.width, m.y, m.height());
+                        }
                     }
                 } else {
                     // no text rendered so far
