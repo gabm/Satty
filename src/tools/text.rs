@@ -155,8 +155,8 @@ impl Drawable for Text {
         if self.editing {
             // function to draw a cursor
             let mut draw_cursor = |x, y: f32, height| {
-                // 20% extra height for cursor w.r.t. font height
-                let extra_height = height * 0.1;
+                // 10% extra height for cursor w.r.t. font height
+                let extra_height = height * 0.05;
 
                 let mut path = Path::new();
                 path.move_to(x, y - extra_height);
@@ -168,11 +168,13 @@ impl Drawable for Text {
             let mut previous_lines_bytes_offset = 0;
             let mut cursor_drawn = false;
 
-            for m in metrics.iter() {
+            for (line_idx, m) in metrics.iter().enumerate() {
                 for g in &m.glyphs {
                     if previous_lines_bytes_offset + g.byte_index == cursor_byte_pos {
                         // cursor is before this glyph, draw here!
-                        draw_cursor(g.x - g.bearing_x, m.y, m.height());
+                        let cursor_y =
+                            self.pos.y + line_idx as f32 * line_height + cursor_top_offset;
+                        draw_cursor(g.x - g.bearing_x, cursor_y, cursor_height);
                         cursor_drawn = true;
                         break;
                     }
@@ -192,9 +194,9 @@ impl Drawable for Text {
                     if let Some(g) = m.glyphs.last() {
                         if g.c == '\n' {
                             // if last char is a manual wrap -> draw cursor on next line
-                            let baseline = self.pos.y + metrics.len() as f32 * line_height;
-                            let next_cursor_top = baseline + cursor_top_offset;
-                            draw_cursor(self.pos.x, next_cursor_top, cursor_height);
+                            let cursor_y =
+                                self.pos.y + metrics.len() as f32 * line_height + cursor_top_offset;
+                            draw_cursor(self.pos.x, cursor_y, cursor_height);
                         } else {
                             // on the same line as last glyph
                             draw_cursor(g.x + g.bearing_x + g.width, m.y, m.height());
