@@ -15,7 +15,7 @@ use std::{fs, io};
 use gtk::prelude::*;
 
 use relm4::gtk::gdk::{DisplayManager, Key, ModifierType, Texture};
-use relm4::{gtk, Component, ComponentParts, ComponentSender};
+use relm4::{gtk, Component, ComponentParts, ComponentSender, RelmWidgetExt};
 
 use crate::configuration::{Action, APP_CONFIG};
 use crate::femtovg_area::FemtoVGArea;
@@ -207,9 +207,12 @@ impl SketchBoard {
     }
 
     fn handle_render_result(&self, image: RenderedImage, actions: Vec<Action>) {
-        let needs_pixbuf = actions
-            .iter()
-            .any(|action| matches!(action, Action::SaveToClipboard | Action::SaveToFile));
+        let needs_pixbuf = actions.iter().any(|action| {
+            matches!(
+                action,
+                Action::SaveToClipboard | Action::SaveToFile | Action::SaveToFileAs
+            )
+        });
 
         let pix_buf = if needs_pixbuf {
             Some(Self::image_to_pixbuf(image))
@@ -227,6 +230,11 @@ impl SketchBoard {
                 Action::SaveToFile => {
                     if let Some(ref pix_buf) = pix_buf {
                         self.handle_save(pix_buf);
+                    }
+                }
+                Action::SaveToFileAs => {
+                    if let Some(ref pix_buf) = pix_buf {
+                        self.handle_save_as(pix_buf);
                     }
                 }
                 _ => (),
@@ -318,6 +326,61 @@ impl SketchBoard {
                 !APP_CONFIG.read().disable_notifications(),
             ),
         };
+    }
+
+    fn handle_save_as(&self, image: &Pixbuf) {
+        let data = match image.save_to_bufferv("png", &Vec::new()) {
+            Ok(d) => d,
+            Err(e) => {
+                println!("Error serializing image: {e}");
+                return;
+            }
+        };
+
+        let root = self.renderer.toplevel_window();
+
+        relm4::spawn_local(async move {
+            let builder = gtk::FileChooserDialog::builder()
+                .modal(false)
+                .title("Save Image As")
+                .action(gtk::FileChooserAction::Save);
+
+            let dialog = match root {
+                Some(w) => builder.transient_for(&w),
+                None => builder,
+            }
+            .build();
+
+            dialog.add_buttons(&[
+                ("Cancel", gtk::ResponseType::Cancel),
+                ("Save", gtk::ResponseType::Accept),
+            ]);
+
+            dialog.connect_response(move |dialog, response| {
+                if response == gtk::ResponseType::Accept {
+                    if let Some(file) = dialog.file() {
+                        let output_filename = match file.path() {
+                            Some(path) => path.to_string_lossy().into_owned(),
+                            None => return,
+                        };
+
+                        match fs::write(&output_filename, &data) {
+                            Err(e) => log_result(
+                                &format!("Error while saving file: {e}"),
+                                !APP_CONFIG.read().disable_notifications(),
+                            ),
+                            Ok(_) => log_result(
+                                &format!("File saved to '{}'.", &output_filename),
+                                !APP_CONFIG.read().disable_notifications(),
+                            ),
+                        };
+                    }
+                }
+                dialog.close();
+            });
+
+            dialog.show();
+        });
     }
 
     fn save_to_clipboard(&self, texture: &impl IsA<Texture>) -> anyhow::Result<()> {
@@ -480,6 +543,7 @@ impl SketchBoard {
                     .borrow_mut()
                     .handle_event(ToolEvent::StyleChanged(self.style))
             }
+            ToolbarEvent::SaveFileAs => self.handle_action(&[Action::SaveToFileAs]),
         }
     }
 
@@ -668,6 +732,11 @@ impl Component for SketchBoard {
                         && ke.modifier == ModifierType::CONTROL_MASK
                     {
                         self.renderer.request_render(&[Action::SaveToFile]);
+                        ToolUpdateResult::Unmodified
+                    } else if ke.is_one_of(Key::s, KeyMappingId::UsS)
+                        && ke.modifier == (ModifierType::CONTROL_MASK | ModifierType::SHIFT_MASK)
+                    {
+                        self.renderer.request_render(&[Action::SaveToFileAs]);
                         ToolUpdateResult::Unmodified
                     } else if ke.is_one_of(Key::c, KeyMappingId::UsC)
                         && ke.modifier == ModifierType::CONTROL_MASK
