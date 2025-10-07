@@ -262,7 +262,7 @@ impl SimpleComponent for ToolsToolbar {
                 set_focusable: false,
                 set_hexpand: false,
 
-                set_icon_name: "save-regular",
+                set_icon_name: "save-multiple-regular",
                 set_tooltip: "Save as (Ctrl+Shift+S)",
                 connect_clicked[sender] => move |_| {sender.output_sender().emit(ToolbarEvent::SaveFileAs);},
             },

@@ -39,6 +39,7 @@ fn main() -> Result<(), io::Error> {
             "arrow-undo-filled",
             "recycling-bin",
             "save-regular",
+            "save-multiple-regular",
             "copy-regular",
             "text-case-title-regular",
             "text-font-regular",
