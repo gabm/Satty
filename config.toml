@@ -3,6 +3,8 @@
 fullscreen = true
 # Exit directly after copy/save action
 early-exit = true
+# Draw corners of rectangles round if the value is greater than 0 (0 disables rounded corners)
+corner-roundness = 12
 # Select the tool on startup [possible values: pointer, crop, line, arrow, rectangle, text, marker, blur, brush]
 initial-tool = "brush"
 # Configure the command to be called on copy, for example `wl-copy`
@@ -11,43 +13,76 @@ copy-command = "wl-copy"
 annotation-size-factor = 2
 # Filename to use for saving action. Omit to disable saving to file. Might contain format specifiers: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
 output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
-# Action to perform when the Enter key is pressed [possible values: save-to-clipboard, save-to-file]
-action-on-enter = "save-to-clipboard"
 # After copying the screenshot, save it to a file as well
 save-after-copy = false
-# Right click to copy
-right-click-copy = false
 # Hide toolbars by default
 default-hide-toolbars = false
+# Experimental: whether window focus shows/hides toolbars. This does not affect initial state of toolbars, see default-hide-toolbars.
+focus-toggles-toolbars = false
+# Fill shapes by default
+default-fill-shapes = false
 # The primary highlighter to use, the other is accessible by holding CTRL at the start of a highlight [possible values: block, freehand]
 primary-highlighter = "block"
 # Disable notifications
 disable-notifications = false
+# Actions to trigger on right click (order is important)
+# [possible values: save-to-clipboard, save-to-file, exit]
+actions-on-right-click = []
+# Actions to trigger on Enter key (order is important)
+# [possible values: save-to-clipboard, save-to-file, exit]
+actions-on-enter = ["save-to-clipboard"]
+# Actions to trigger on Escape key (order is important)
+# [possible values: save-to-clipboard, save-to-file, exit]
+actions-on-escape = ["exit"]
+# Action to perform when the Enter key is pressed [possible values: save-to-clipboard, save-to-file]
+# Deprecated: use actions-on-enter instead
+action-on-enter = "save-to-clipboard"
+# Right click to copy
+# Deprecated: use actions-on-right-click instead
+right-click-copy = false
+# request no window decoration. Please note that the compositor has the final say in this. At this point. requires xdg-decoration-unstable-v1.
+no-window-decoration = true
+# experimental feature: adjust history size for brush input smooting (0: disabled, default: 0, try e.g. 5 or 10)
+brush-smooth-history-size = 10
 
-# Tool selection keyboard shortcuts (optional, defaults shown)
-#[keybinds]
-#pointer = "p"
-#crop = "c"
-#brush = "b"
-#line = "i"     
-#arrow = "z"    
-#rectangle = "r"
-#ellipse = "e"
-#text = "t"
-#marker = "m"
-#blur = "u"
-#highlight = "g" 
+# Tool selection keyboard shortcuts
+[keybinds]
+pointer = "p"
+crop = "c"
+brush = "b"
+line = "i"
+arrow = "z"
+rectangle = "r"
+ellipse = "e"
+text = "t"
+marker = "m"
+blur = "u"
+highlight = "g"
 
 # Font to use for text annotations
 [font]
 family = "Roboto"
 style = "Regular"
 
-# custom colours for the colour palette
+# Custom colours for the colour palette
 [color-palette]
-first= "#00ffff"
-second= "#a52a2a"
-third= "#dc143c"
-fourth= "#ff1493"
-fifth= "#ffd700"
-custom= "#008000"
+# These will be shown in the toolbar for quick selection
+palette = [
+    "#00ffff",
+    "#a52a2a",
+    "#dc143c",
+    "#ff1493",
+    "#ffd700",
+    "#008000"
+]
+
+# These will be available in the color picker as presets
+# Leave empty to use GTK's default
+custom = [
+    "#00ffff",
+    "#a52a2a",
+    "#dc143c",
+    "#ff1493",
+    "#ffd700",
+    "#008000"
+]
