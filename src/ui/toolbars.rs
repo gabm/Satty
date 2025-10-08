@@ -408,6 +408,8 @@ impl StyleToolbar {
                     dialog_copy.hide();
                     let color = Color::from_gdk(dialog_copy.rgba());
                     sender.input(StyleToolbarInput::ColorDialogFinished(Some(color)));
+                } else if r == ResponseType::Cancel || r == ResponseType::Close {
+                    dialog_copy.hide();
                 }
             });
 
