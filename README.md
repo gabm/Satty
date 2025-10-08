@@ -67,7 +67,7 @@ Default single-key shortcuts:
 - Highlight: Hold `Ctrl` to switch between block and freehand mode (default configurable, see below), hold Shift for a square (if the default mode is block) or a straight line (if the default mode is freehand)
 - Line: Hold `Shift` to make line snap to 15° steps
 - Rectangle: Hold `Alt` to center the rectangle around origin, hold `Shift` for a square
-- Text: Press `Shift+Enter` to insert line break, combine `Ctrl` with `Left` or `Right` for word jump or `Ctrl` with `Backspace` or `Delete` for word delete. Press `Enter` or switch to another tool to accept input, press `Escape` to discard entered text.
+- Text: Press `Shift+Enter` to insert line break, combine `Ctrl` with `Left` or `Right` for word jump or `Ctrl` with `Backspace` or `Delete` for word delete. Press `Enter` or switch to another tool to accept input, press `Escape` to discard entered text. `Home` and `End` go to the start/end of current line or previous/next line if already on first/last character of line (automatic wrapping is not considered for this). `Ctrl` with `Home`/`End` jumps to start/end of text buffer.
 
 ### Configuration File
 

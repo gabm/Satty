@@ -99,7 +99,7 @@ impl Drawable for Text {
             false,
         );
         let base_text = gtext.as_str();
-        let (display_text, mut cursor_byte_pos) = self.display_text(base_text);
+        let (display_text, cursor_byte_pos) = self.display_text(base_text);
         let text = display_text.as_ref();
 
         let mut paint: Paint = self.style.into();
@@ -153,15 +153,10 @@ impl Drawable for Text {
             }
         }
         if self.editing {
-            let bounded_cursor = cursor_byte_pos.min(text.len());
-            // femtovg ignores manual line wrap characters when reporting glyph byte indices.
-            let no_manual_line_wraps = text[..bounded_cursor].matches('\n').count();
-            cursor_byte_pos = cursor_byte_pos.saturating_sub(no_manual_line_wraps);
-
             // function to draw a cursor
             let mut draw_cursor = |x, y: f32, height| {
-                // 20% extra height for cursor w.r.t. font height
-                let extra_height = height * 0.1;
+                // 10% extra height for cursor w.r.t. font height
+                let extra_height = height * 0.05;
 
                 let mut path = Path::new();
                 path.move_to(x, y - extra_height);
@@ -170,45 +165,42 @@ impl Drawable for Text {
             };
 
             // find cursor pos in broken text
-            let mut acc_byte_index = 0;
+            let mut previous_lines_bytes_offset = 0;
             let mut cursor_drawn = false;
 
             for (line_idx, m) in metrics.iter().enumerate() {
-                let current_baseline = self.pos.y + line_idx as f32 * line_height;
                 for g in &m.glyphs {
-                    if acc_byte_index + g.byte_index == cursor_byte_pos {
-                        if g.c == '\n' {
-                            // if it's a newline -> draw cursor on next line
-                            let next_baseline = current_baseline + line_height;
-                            let next_cursor_top = next_baseline + cursor_top_offset;
-                            draw_cursor(self.pos.x, next_cursor_top, cursor_height);
-                        } else {
-                            // cursor is before this glyph, draw here!
-                            draw_cursor(g.x - g.bearing_x, m.y, m.height());
-                        }
+                    if previous_lines_bytes_offset + g.byte_index == cursor_byte_pos {
+                        // cursor is before this glyph, draw here!
+                        let cursor_y =
+                            self.pos.y + line_idx as f32 * line_height + cursor_top_offset;
+                        draw_cursor(g.x - g.bearing_x, cursor_y, cursor_height);
                         cursor_drawn = true;
                         break;
                     }
                 }
 
-                let last_byte_index = match m.glyphs.last() {
-                    Some(g) => g.byte_index,
+                let last_byte = match m.glyphs.last() {
+                    Some(g) => g.byte_index + 1,
                     None => 0,
                 };
 
-                acc_byte_index += last_byte_index;
-
-                if cursor_drawn {
-                    break;
-                }
+                previous_lines_bytes_offset += last_byte;
             }
 
             if !cursor_drawn {
                 // cursor is after last char, draw there!
                 if let Some(m) = metrics.last() {
                     if let Some(g) = m.glyphs.last() {
-                        // on the same line as last glyph
-                        draw_cursor(g.x + g.bearing_x + g.width, m.y, m.height());
+                        if g.c == '\n' {
+                            // if last char is a manual wrap -> draw cursor on next line
+                            let cursor_y =
+                                self.pos.y + metrics.len() as f32 * line_height + cursor_top_offset;
+                            draw_cursor(self.pos.x, cursor_y, cursor_height);
+                        } else {
+                            // on the same line as last glyph
+                            draw_cursor(g.x + g.bearing_x + g.width, m.y, m.height());
+                        }
                     }
                 } else {
                     // no text rendered so far
@@ -365,15 +357,33 @@ impl Tool for TextTool {
                     );
                 }
             } else if event.key == Key::Home {
-                let mut cursor_itr = t.text_buffer.iter_at_mark(&t.text_buffer.get_insert());
-                cursor_itr.backward_line();
-                t.text_buffer.place_cursor(&cursor_itr);
-                return ToolUpdateResult::Redraw;
+                if event.modifier == ModifierType::CONTROL_MASK {
+                    return Self::handle_text_buffer_action(
+                        &mut t.text_buffer,
+                        Action::MoveCursor,
+                        ActionScope::BufferStart,
+                    );
+                } else {
+                    return Self::handle_text_buffer_action(
+                        &mut t.text_buffer,
+                        Action::MoveCursor,
+                        ActionScope::BackwardLine,
+                    );
+                }
             } else if event.key == Key::End {
-                let mut cursor_itr = t.text_buffer.iter_at_mark(&t.text_buffer.get_insert());
-                cursor_itr.forward_line();
-                t.text_buffer.place_cursor(&cursor_itr);
-                return ToolUpdateResult::Redraw;
+                if event.modifier == ModifierType::CONTROL_MASK {
+                    return Self::handle_text_buffer_action(
+                        &mut t.text_buffer,
+                        Action::MoveCursor,
+                        ActionScope::BufferEnd,
+                    );
+                } else {
+                    return Self::handle_text_buffer_action(
+                        &mut t.text_buffer,
+                        Action::MoveCursor,
+                        ActionScope::ForwardLine,
+                    );
+                }
             }
         };
         ToolUpdateResult::Unmodified
@@ -446,8 +456,12 @@ impl Tool for TextTool {
 enum ActionScope {
     ForwardChar,
     BackwardChar,
+    ForwardLine,
+    BackwardLine,
     ForwardWord,
     BackwardWord,
+    BufferStart,
+    BufferEnd,
 }
 
 enum Action {
@@ -472,6 +486,7 @@ impl TextTool {
                     ActionScope::BackwardChar => end_cursor_itr.backward_char(),
                     ActionScope::ForwardWord => end_cursor_itr.forward_word_end(),
                     ActionScope::BackwardWord => end_cursor_itr.backward_word_start(),
+                    _ => false, // should normally be whether movement was possible, but it's not used anyway
                 };
 
                 if text_buffer.delete_interactive(&mut start_cursor_itr, &mut end_cursor_itr, true)
@@ -486,8 +501,29 @@ impl TextTool {
                 match action_scope {
                     ActionScope::ForwardChar => cursor_itr.forward_char(),
                     ActionScope::BackwardChar => cursor_itr.backward_char(),
+                    ActionScope::ForwardLine => cursor_itr.forward_to_line_end(),
                     ActionScope::ForwardWord => cursor_itr.forward_word_end(),
                     ActionScope::BackwardWord => cursor_itr.backward_word_start(),
+                    ActionScope::BackwardLine => {
+                        if cursor_itr.starts_line() {
+                            cursor_itr.backward_line()
+                        } else {
+                            while !cursor_itr.starts_line() {
+                                cursor_itr.backward_char();
+                            }
+                            false
+                        }
+                    }
+                    ActionScope::BufferEnd => {
+                        cursor_itr.forward_to_end();
+                        false
+                    }
+                    ActionScope::BufferStart => {
+                        while !cursor_itr.is_start() {
+                            cursor_itr.backward_line();
+                        }
+                        false
+                    }
                 };
 
                 text_buffer.place_cursor(&cursor_itr);
