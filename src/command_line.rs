@@ -17,6 +17,7 @@ pub struct CommandLine {
 
     /// Filename to use for saving action or '-' to print to stdout. Omit to disable saving to file. Might contain format
     /// specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>.
+    /// Since 0.20.0, can contain tilde (~) for home dir
     #[arg(short, long)]
     pub output_filename: Option<String>,
 
@@ -62,11 +63,11 @@ pub struct CommandLine {
     #[arg(short, long)]
     pub default_hide_toolbars: bool,
 
-    /// Experimental: Whether to toggle toolbars based on focus. Doesn't affect initial state.
+    /// Experimental (since 0.20.0): Whether to toggle toolbars based on focus. Doesn't affect initial state.
     #[arg(long)]
     pub focus_toggles_toolbars: bool,
 
-    /// Experimental feature: Fill shapes by default
+    /// Experimental feature (since 0.20.0): Fill shapes by default
     #[arg(long)]
     pub default_fill_shapes: bool,
 
