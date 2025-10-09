@@ -1,0 +1,21 @@
+# .github/ISSUE_TEMPLATE/bug-report.yml
+name: 🐛 Bug Report
+description: Something isn’t working as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting an issue!  
+        🔎 Please check if a similar open or closed issue already exists.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Which version are you using?
+      placeholder: e.g. 0.20.0 Debian package or commit 672bcf27b5b3d1dd33a9dfa3ffdfe3d0641773b6
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Description of the problem, step by step instructions, what you observed, what you expected etc.
