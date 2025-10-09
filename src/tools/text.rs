@@ -9,6 +9,7 @@ use std::borrow::Cow;
 use relm4::gtk::prelude::*;
 
 use crate::{
+    femtovg_area,
     math::Vec2D,
     sketch_board::{KeyEventMsg, MouseButton, MouseEventMsg, MouseEventType, TextEventMsg},
     style::Style,
@@ -23,6 +24,7 @@ pub struct Text {
     text_buffer: TextBuffer,
     style: Style,
     preedit: Option<Preedit>,
+    font_ids: Vec<FontId>,
 }
 
 #[derive(Clone, Debug)]
@@ -42,6 +44,7 @@ impl Text {
             editing: true,
             style,
             preedit: None,
+            font_ids: femtovg_area::font_stack().to_vec(),
         }
     }
 
@@ -103,7 +106,11 @@ impl Drawable for Text {
         let text = display_text.as_ref();
 
         let mut paint: Paint = self.style.into();
-        paint.set_font(&[font]);
+        if self.font_ids.is_empty() {
+            paint.set_font(&[font]);
+        } else {
+            paint.set_font(&self.font_ids);
+        }
 
         // get some metrics
         let canva_scale = canvas.transform().average_scale();
