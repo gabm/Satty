@@ -75,6 +75,17 @@ Default single-key shortcuts:
 [general]
 # Start Satty in fullscreen mode
 fullscreen = true
+#fullscreen = false
+# since 0.20.1, this can be written like below. Current is just the current screen, all is all screens. This may depend on the compositor.
+#fullscreen = "none"
+#fullscreen = "all"
+#fullscreen = "current"
+# resize initially
+#resize="none"
+#resize="smart"
+resize={ width=2000, height=800 }
+# try to have the window float. This may depend on the compositor.
+floating-hack=true
 # Exit directly after copy/save action
 early-exit = true
 # Draw corners of rectangles round if the value is greater than 0 (0 disables rounded corners)
@@ -175,8 +186,12 @@ Options:
           Path to the config file. Otherwise will be read from XDG_CONFIG_DIR/satty/config.toml
   -f, --filename <FILENAME>
           Path to input image or '-' to read from stdin
-      --fullscreen
-          Start Satty in fullscreen mode
+      --fullscreen [<FULLSCREEN>]
+          Start Satty in fullscreen mode. Since 0.20.1, takes optional parameter. --fullscreen without parameter is equivalent to --fullscreen current. Mileage may very depending on compositor [possible values: all, current, none]
+      --resize [<MODE|WIDTHxHEIGHT>]
+          Resize to coordinates or use smart mode (0.20.1). --resize without parameter is equivalent to --resize smart [possible values: none, smart, WxH.]
+      --floating-hack
+          Try to enforce floating (0.20.1). Mileage may very depending on compositor
   -o, --output-filename <OUTPUT_FILENAME>
           Filename to use for saving action or '-' to print to stdout. Omit to disable saving to file. Might contain format specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
       --early-exit
