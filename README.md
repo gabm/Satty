@@ -176,7 +176,11 @@ Options:
   -f, --filename <FILENAME>
           Path to input image or '-' to read from stdin
       --fullscreen
-          Start Satty in fullscreen mode
+          Start Satty in fullscreen mode possible values (0.20.1): all, current, none default behaviour is none. --fullscreen without parameter is equivalent to --fullscreen=current
+      --resize <MODE>
+          Resize to coordinates or use smart mode (0.20.1) possible values: none (default), size=WxH, smart
+      --floating-hack
+          Try to enforce floating. (0.20.1) This may or may not work, depending on compositor
   -o, --output-filename <OUTPUT_FILENAME>
           Filename to use for saving action or '-' to print to stdout. Omit to disable saving to file. Might contain format specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
       --early-exit

@@ -13,7 +13,7 @@ use thiserror::Error;
 use xdg::{BaseDirectories, BaseDirectoriesError};
 
 use crate::{
-    command_line::{Action as CommandLineAction, CommandLine},
+    command_line::{Action as CommandLineAction, CommandLine, Fullscreen, Resize},
     style::Color,
     tools::{Highlighters, Tools},
 };
@@ -35,7 +35,9 @@ enum ConfigurationFileError {
 pub struct Configuration {
     input_filename: String,
     output_filename: Option<String>,
-    fullscreen: bool,
+    fullscreen: Fullscreen,
+    resize: Resize,
+    floating_hack: bool,
     early_exit: bool,
     corner_roundness: f32,
     initial_tool: Tools,
@@ -228,6 +230,12 @@ impl Configuration {
         if let Some(v) = general.fullscreen {
             self.fullscreen = v;
         }
+        if let Some(v) = general.resize {
+            self.resize = v;
+        }
+        if let Some(v) = general.floating_hack {
+            self.floating_hack = v;
+        }
         if let Some(v) = general.early_exit {
             self.early_exit = v;
         }
@@ -316,8 +324,14 @@ impl Configuration {
         }
 
         // overwrite with all specified values from command line
-        if command_line.fullscreen {
-            self.fullscreen = command_line.fullscreen;
+        if let Some(v) = command_line.fullscreen {
+            self.fullscreen = v;
+        }
+        if let Some(v) = command_line.resize {
+            self.resize = v;
+        }
+        if command_line.floating_hack {
+            self.floating_hack = command_line.floating_hack;
         }
         if command_line.early_exit {
             self.early_exit = command_line.early_exit;
@@ -411,8 +425,16 @@ impl Configuration {
         self.copy_command.as_ref()
     }
 
-    pub fn fullscreen(&self) -> bool {
+    pub fn fullscreen(&self) -> Fullscreen{
         self.fullscreen
+    }
+
+    pub fn resize(&self) -> Resize {
+        self.resize
+    }
+
+    pub fn floating_hack(&self) -> bool {
+        self.floating_hack
     }
 
     pub fn output_filename(&self) -> Option<&String> {
@@ -493,7 +515,9 @@ impl Default for Configuration {
         Self {
             input_filename: String::new(),
             output_filename: None,
-            fullscreen: false,
+            fullscreen: Fullscreen::default(),
+            resize: Resize::default(),
+            floating_hack: false,
             early_exit: false,
             corner_roundness: 12.0,
             initial_tool: Tools::Pointer,
@@ -568,7 +592,9 @@ struct FontFile {
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct ConfigurationFileGeneral {
-    fullscreen: Option<bool>,
+    fullscreen: Option<Fullscreen>,
+    resize: Option<Resize>,
+    floating_hack: Option<bool>,
     early_exit: Option<bool>,
     corner_roundness: Option<f32>,
     initial_tool: Option<Tools>,

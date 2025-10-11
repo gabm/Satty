@@ -1,4 +1,6 @@
 use clap::{Parser, ValueEnum};
+use serde_derive::Deserialize;
+use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -11,9 +13,22 @@ pub struct CommandLine {
     #[arg(short, long)]
     pub filename: String,
 
-    /// Start Satty in fullscreen mode
+    /// Start Satty in fullscreen mode.
+    /// Possible values (0.20.1): all, current, none.
+    /// --fullscreen without parameter is equivalent to --fullscreen=current.
+    /// Mileage may very depending on compositor.
+    #[arg(long, num_args = 0..=1, default_missing_value = "current", value_enum)]
+    pub fullscreen: Option<Fullscreen>,
+
+    /// Resize to coordinates or use smart mode (0.20.1).
+    /// Possible values: none (default), size=WxH, smart
+    #[arg(long, num_args=1..2, value_name="MODE")]
+    pub resize: Option<Resize>,
+
+    /// Try to enforce floating (0.20.1).
+    /// Mileage may very depending on compositor.
     #[arg(long)]
-    pub fullscreen: bool,
+    pub floating_hack: bool,
 
     /// Filename to use for saving action or '-' to print to stdout. Omit to disable saving to file. Might contain format
     /// specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>.
@@ -113,6 +128,51 @@ pub struct CommandLine {
     #[arg(long, value_delimiter = ',')]
     pub action_on_enter: Option<Action>,
     // ---
+}
+
+#[derive(Debug, Deserialize, Clone, Copy, Default, ValueEnum, PartialEq)]
+#[value(rename_all = "kebab-case")]
+#[serde(rename_all = "kebab-case")]
+pub enum Fullscreen {
+    All,
+    Current,
+    #[default]
+    None,
+}
+
+#[derive(Debug, Deserialize, Clone, Copy, Default, PartialEq)]
+#[serde(rename_all = "kebab-case")]
+pub enum Resize {
+    Size {
+        width: i32,
+        height: i32,
+    },
+    Smart,
+    #[default]
+    None,
+}
+
+impl FromStr for Resize {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = s.trim().to_lowercase();
+        match s.as_str() {
+            "smart" => Ok(Resize::Smart),
+            "none" => Ok(Resize::None),
+            _ if s.starts_with("size=") => {
+                let (w, h) = s["size=".len()..]
+                    .split_once('x')
+                    .ok_or("Expected size=WxH")?;
+                let w: i32 = w.parse().map_err(|_| "Invalid width".to_string())?;
+                let h: i32 = h.parse().map_err(|_| "Invalid height".to_string())?;
+                Ok(Resize::Size {
+                    width: w,
+                    height: h,
+                })
+            }
+            _ => Err("Unknown sizing behaviour".to_string()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, ValueEnum)]
