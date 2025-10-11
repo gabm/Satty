@@ -32,7 +32,7 @@ mod style;
 mod tools;
 mod ui;
 
-use crate::command_line::{Fullscreen, Resize};
+use crate::command_line::{Fullscreen, Resize, ResizeKeyword};
 use crate::sketch_board::{SketchBoard, SketchBoardInput};
 use crate::tools::Tools;
 
@@ -99,7 +99,7 @@ impl App {
             }
         }
 
-        if resize == Resize::Smart {
+        if resize == Resize::Keyword(ResizeKeyword::Smart) {
             let monitor_size = match Self::get_monitor_size(root) {
                 Some(s) => s,
                 None => {

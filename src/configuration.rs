@@ -8,7 +8,9 @@ use std::{
 use clap::Parser;
 use hex_color::HexColor;
 use relm4::SharedState;
-use serde_derive::Deserialize;
+
+use serde::de::Deserializer;
+use serde::Deserialize;
 use thiserror::Error;
 use xdg::{BaseDirectories, BaseDirectoriesError};
 
@@ -175,6 +177,25 @@ impl ColorPalette {
         if let Some(v) = file_palette.custom {
             self.custom = v.into_iter().map(Color::from).collect();
         }
+    }
+}
+
+// remain compatible with old config with fullscreen=true/false
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum FullscreenCompat {
+    Bool(bool),
+    Mode(Fullscreen),
+}
+
+fn de_fullscreen_mode<'de, D>(d: D) -> Result<Option<Fullscreen>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    match FullscreenCompat::deserialize(d)? {
+        FullscreenCompat::Bool(true) => Ok(Some(Fullscreen::Current)),
+        FullscreenCompat::Bool(false) => Ok(Some(Fullscreen::None)),
+        FullscreenCompat::Mode(m) => Ok(Some(m)),
     }
 }
 
@@ -425,7 +446,7 @@ impl Configuration {
         self.copy_command.as_ref()
     }
 
-    pub fn fullscreen(&self) -> Fullscreen{
+    pub fn fullscreen(&self) -> Fullscreen {
         self.fullscreen
     }
 
@@ -592,6 +613,7 @@ struct FontFile {
 #[derive(Deserialize)]
 #[serde(rename_all = "kebab-case", deny_unknown_fields)]
 struct ConfigurationFileGeneral {
+    #[serde(deserialize_with = "de_fullscreen_mode", default)]
     fullscreen: Option<Fullscreen>,
     resize: Option<Resize>,
     floating_hack: Option<bool>,
