@@ -32,7 +32,7 @@ mod style;
 mod tools;
 mod ui;
 
-use crate::command_line::{Fullscreen, Resize, ResizeKeyword};
+use crate::command_line::{Fullscreen, Resize};
 use crate::sketch_board::{SketchBoard, SketchBoardInput};
 use crate::tools::Tools;
 
@@ -91,7 +91,7 @@ impl App {
             fullscreen, resize, floating_hack
         );
 
-        if fullscreen == Fullscreen::All {
+        if fullscreen == Some(Fullscreen::All) {
             if let Some(surface) = root.surface() {
                 if let Ok(toplevel) = surface.downcast::<Toplevel>() {
                     toplevel.set_fullscreen_mode(FullscreenMode::AllMonitors);
@@ -99,7 +99,7 @@ impl App {
             }
         }
 
-        if resize == Resize::Keyword(ResizeKeyword::Smart) {
+        if resize == Some(Resize::Smart) {
             let monitor_size = match Self::get_monitor_size(root) {
                 Some(s) => s,
                 None => {
@@ -135,7 +135,7 @@ impl App {
 
                 root.set_default_size(new_width as i32, new_height as i32);
             }
-        } else if let Resize::Size { width, height } = resize {
+        } else if let Some(Resize::Size { width, height }) = resize {
             root.set_default_size(width, height);
         }
 
@@ -144,7 +144,7 @@ impl App {
         }
 
         match fullscreen {
-            Fullscreen::All | Fullscreen::Current => {
+            Some(Fullscreen::All) | Some(Fullscreen::CurrentScreen) => {
                 root.fullscreen();
             }
             _ => {}
