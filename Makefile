@@ -2,7 +2,7 @@ ifeq ($(PREFIX),)
     PREFIX := /usr/local
 endif
 
-SOURCEDIRS:=src src/tools src/ui
+SOURCEDIRS:=src src/tools src/ui cli/src
 SOURCEFILES:=$(foreach d,$(SOURCEDIRS),$(wildcard $(d)/*.rs))
 
 build: target/debug/satty
