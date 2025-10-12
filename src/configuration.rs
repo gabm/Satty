@@ -37,8 +37,8 @@ enum ConfigurationFileError {
 pub struct Configuration {
     input_filename: String,
     output_filename: Option<String>,
-    fullscreen: Fullscreen,
-    resize: Resize,
+    fullscreen: Option<Fullscreen>,
+    resize: Option<Resize>,
     floating_hack: bool,
     early_exit: bool,
     corner_roundness: f32,
@@ -183,6 +183,7 @@ impl ColorPalette {
 // remain compatible with old config with fullscreen=true/false
 #[derive(Deserialize)]
 #[serde(untagged)]
+#[serde(rename_all = "kebab-case")]
 enum FullscreenCompat {
     Bool(bool),
     Mode(Fullscreen),
@@ -193,8 +194,8 @@ where
     D: Deserializer<'de>,
 {
     match FullscreenCompat::deserialize(d)? {
-        FullscreenCompat::Bool(true) => Ok(Some(Fullscreen::Current)),
-        FullscreenCompat::Bool(false) => Ok(Some(Fullscreen::None)),
+        FullscreenCompat::Bool(true) => Ok(Some(Fullscreen::CurrentScreen)),
+        FullscreenCompat::Bool(false) => Ok(None),
         FullscreenCompat::Mode(m) => Ok(Some(m)),
     }
 }
@@ -249,10 +250,10 @@ impl Configuration {
     }
     fn merge_general(&mut self, general: ConfigurationFileGeneral) {
         if let Some(v) = general.fullscreen {
-            self.fullscreen = v;
+            self.fullscreen = Some(v);
         }
         if let Some(v) = general.resize {
-            self.resize = v;
+            self.resize = Some(v);
         }
         if let Some(v) = general.floating_hack {
             self.floating_hack = v;
@@ -346,10 +347,10 @@ impl Configuration {
 
         // overwrite with all specified values from command line
         if let Some(v) = command_line.fullscreen {
-            self.fullscreen = v;
+            self.fullscreen = Some(v);
         }
         if let Some(v) = command_line.resize {
-            self.resize = v;
+            self.resize = Some(v);
         }
         if command_line.floating_hack {
             self.floating_hack = command_line.floating_hack;
@@ -446,11 +447,11 @@ impl Configuration {
         self.copy_command.as_ref()
     }
 
-    pub fn fullscreen(&self) -> Fullscreen {
+    pub fn fullscreen(&self) -> Option<Fullscreen> {
         self.fullscreen
     }
 
-    pub fn resize(&self) -> Resize {
+    pub fn resize(&self) -> Option<Resize> {
         self.resize
     }
 
@@ -536,8 +537,8 @@ impl Default for Configuration {
         Self {
             input_filename: String::new(),
             output_filename: None,
-            fullscreen: Fullscreen::default(),
-            resize: Resize::default(),
+            fullscreen: None,
+            resize: None,
             floating_hack: false,
             early_exit: false,
             corner_roundness: 12.0,

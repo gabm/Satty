@@ -13,20 +13,20 @@ pub struct CommandLine {
     #[arg(short, long)]
     pub filename: String,
 
-    /// Start Satty in fullscreen mode. Since 0.20.1, takes optional parameter.
+    /// Start Satty in fullscreen mode. Since NEXTRELEASE, takes optional parameter.
     /// --fullscreen without parameter is equivalent to --fullscreen current.
-    /// Mileage may very depending on compositor.
-    #[arg(long, num_args = 0..=1, default_missing_value = "current", value_enum)]
+    /// Mileage may vary depending on compositor.
+    #[arg(long, num_args = 0..=1, default_missing_value = "current-screen", value_enum)]
     pub fullscreen: Option<Fullscreen>,
 
-    /// Resize to coordinates or use smart mode (0.20.1).
+    /// Resize to coordinates or use smart mode (NEXTRELEASE).
     /// --resize without parameter is equivalent to --resize smart
-    /// [possible values: none, smart, WxH.]
+    /// [possible values: smart, WxH.]
     #[arg(long, num_args=0..=1, value_name="MODE|WIDTHxHEIGHT", default_missing_value = "smart", value_parser = Resize::from_str)]
     pub resize: Option<Resize>,
 
-    /// Try to enforce floating (0.20.1).
-    /// Mileage may very depending on compositor.
+    /// Try to enforce floating (NEXTRELEASE).
+    /// Mileage may vary depending on compositor.
     #[arg(long)]
     pub floating_hack: bool,
 
@@ -130,34 +130,19 @@ pub struct CommandLine {
     // ---
 }
 
-#[derive(Debug, Deserialize, Clone, Copy, Default, ValueEnum, PartialEq)]
+#[derive(Debug, Deserialize, Clone, Copy, ValueEnum, PartialEq)]
 #[value(rename_all = "kebab-case")]
 #[serde(rename_all = "kebab-case")]
 pub enum Fullscreen {
     All,
-    Current,
-    #[default]
-    None,
+    CurrentScreen,
 }
 
 #[derive(Debug, Deserialize, Clone, Copy, PartialEq)]
-#[serde(rename_all = "kebab-case")]
-pub enum ResizeKeyword {
-    Smart,
-    None,
-}
-
-#[derive(Debug, Deserialize, Clone, Copy, PartialEq)]
-#[serde(rename_all = "kebab-case", untagged)]
+#[serde(rename_all = "kebab-case", tag = "mode")]
 pub enum Resize {
     Size { width: i32, height: i32 },
-    Keyword(ResizeKeyword),
-}
-
-impl Default for Resize {
-    fn default() -> Resize {
-        Resize::Keyword(ResizeKeyword::None)
-    }
+    Smart,
 }
 
 impl FromStr for Resize {
@@ -165,8 +150,7 @@ impl FromStr for Resize {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let s = s.trim().to_lowercase();
         match s.as_str() {
-            "smart" => Ok(Resize::Keyword(ResizeKeyword::Smart)),
-            "none" => Ok(Resize::Keyword(ResizeKeyword::None)),
+            "smart" => Ok(Resize::Smart),
             _ => {
                 let (w, h) = s.split_once('x').ok_or("Expected size=WxH")?;
                 let w: i32 = w.parse().map_err(|_| "Invalid width".to_string())?;
