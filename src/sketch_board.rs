@@ -67,7 +67,11 @@ pub struct KeyEventMsg {
 #[derive(Debug, Clone)]
 pub enum TextEventMsg {
     Commit(String),
-    Preedit { text: String, cursor: Option<u32> },
+    Preedit {
+        text: String,
+        attrs: Option<pango::AttrList>,
+        cursor: Option<u32>,
+    },
     PreeditEnd,
 }
 
@@ -163,6 +167,7 @@ pub struct SketchBoard {
     active_tool: Rc<RefCell<dyn Tool>>,
     tools: ToolsManager,
     style: Style,
+    im_context: gtk::IMMulticontext,
 }
 
 impl SketchBoard {
@@ -483,10 +488,11 @@ impl SketchBoard {
         match toolbar_event {
             ToolbarEvent::ToolSelected(tool) => {
                 // deactivate old tool and save drawable, if any
-                let mut deactivate_result = self
-                    .active_tool
-                    .borrow_mut()
-                    .handle_event(ToolEvent::Deactivated);
+                let old_tool = self.active_tool.clone();
+                let mut deactivate_result =
+                    old_tool.borrow_mut().handle_event(ToolEvent::Deactivated);
+
+                old_tool.borrow_mut().set_im_context(None);
 
                 if let ToolUpdateResult::Commit(d) = deactivate_result {
                     self.renderer.commit(d);
@@ -497,6 +503,13 @@ impl SketchBoard {
                 // change active tool
                 self.active_tool = self.tools.get(&tool);
                 self.renderer.set_active_tool(self.active_tool.clone());
+                let widget_ref: gtk::Widget = self.renderer.clone().upcast();
+                self.active_tool
+                    .borrow_mut()
+                    .set_im_context(Some(crate::tools::InputContext {
+                        im_context: self.im_context.clone(),
+                        widget: widget_ref,
+                    }));
 
                 // send style event
                 self.active_tool
@@ -581,12 +594,17 @@ impl SketchBoard {
                         .emit(SketchBoardOutput::ToolSwitchShortcut(tool));
                 }
             }
-            TextEventMsg::Preedit { text, cursor } => {
+            TextEventMsg::Preedit {
+                text,
+                attrs,
+                cursor,
+            } => {
                 if self.active_tool_type() == Tools::Text
                     && self.active_tool.borrow().input_enabled()
                 {
                     sender.input(SketchBoardInput::new_text_event(TextEventMsg::Preedit {
                         text,
+                        attrs,
                         cursor,
                     }));
                 }
@@ -684,28 +702,7 @@ impl Component for SketchBoard {
                             sender.input(SketchBoardInput::new_key_release_event(KeyEventMsg::new(key, code, modifier)));
                         }
                     },
-
-                    #[wrap(Some)]
-                    set_im_context = &gtk::IMMulticontext {
-                        connect_commit[sender] => move |_cx, txt| {
-                            sender.input(SketchBoardInput::new_commit_event(TextEventMsg::Commit(txt.to_string())));
-                        },
-                        connect_preedit_changed[sender] => move |cx| {
-                            let (text, _attrs, cursor) = cx.preedit_string();
-                            let cursor = if cursor >= 0 {
-                                Some(cursor as u32)
-                            } else {
-                                None
-                            };
-                            sender.input(SketchBoardInput::new_commit_event(TextEventMsg::Preedit {
-                                text: text.to_string(),
-                                cursor,
-                            }));
-                        },
-                        connect_preedit_end[sender] => move |_cx| {
-                            sender.input(SketchBoardInput::new_commit_event(TextEventMsg::PreeditEnd));
-                        },
-                    },
+                    set_im_context: Some(&model.im_context),
                 }
             }
         },
@@ -807,11 +804,14 @@ impl Component for SketchBoard {
         let config = APP_CONFIG.read();
         let tools = ToolsManager::new();
 
+        let im_context = gtk::IMMulticontext::new();
+
         let mut model = Self {
             renderer: FemtoVGArea::default(),
             active_tool: tools.get(&config.initial_tool()),
             style: Style::default(),
             tools,
+            im_context,
         };
 
         let area = &mut model.renderer;
@@ -823,6 +823,72 @@ impl Component for SketchBoard {
         );
 
         let widgets = view_output!();
+
+        model.im_context.set_client_widget(Some(&model.renderer));
+        model.im_context.set_use_preedit(true);
+
+        if let Ok(module) = std::env::var("GTK_IM_MODULE") {
+            if module.eq_ignore_ascii_case("fcitx") || module.eq_ignore_ascii_case("fcitx5") {
+                model.im_context.set_context_id(Some("fcitx"));
+            }
+        }
+
+        {
+            let sender = sender.input_sender().clone();
+            model.im_context.connect_commit(move |_cx, txt| {
+                sender.emit(SketchBoardInput::new_commit_event(TextEventMsg::Commit(
+                    txt.to_string(),
+                )));
+            });
+        }
+
+        {
+            let sender = sender.input_sender().clone();
+            model.im_context.connect_preedit_changed(move |cx| {
+                let (text, attrs, cursor) = cx.preedit_string();
+                let cursor = if cursor >= 0 {
+                    Some(cursor as u32)
+                } else {
+                    None
+                };
+                sender.emit(SketchBoardInput::new_commit_event(TextEventMsg::Preedit {
+                    text: text.to_string(),
+                    attrs: Some(attrs),
+                    cursor,
+                }));
+            });
+        }
+
+        {
+            let sender = sender.input_sender().clone();
+            model.im_context.connect_preedit_end(move |_cx| {
+                sender.emit(SketchBoardInput::new_commit_event(TextEventMsg::PreeditEnd));
+            });
+        }
+
+        let focus_controller = gtk::EventControllerFocus::new();
+        {
+            let im_context = model.im_context.clone();
+            focus_controller.connect_enter(move |_| {
+                im_context.focus_in();
+            });
+        }
+        {
+            let im_context = model.im_context.clone();
+            focus_controller.connect_leave(move |_| {
+                im_context.focus_out();
+            });
+        }
+        model.renderer.add_controller(focus_controller);
+
+        let widget_ref: gtk::Widget = model.renderer.clone().upcast();
+        model
+            .active_tool
+            .borrow_mut()
+            .set_im_context(Some(crate::tools::InputContext {
+                im_context: model.im_context.clone(),
+                widget: widget_ref,
+            }));
 
         ComponentParts { model, widgets }
     }
