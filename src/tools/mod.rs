@@ -14,6 +14,7 @@ use gdk_pixbuf::{
 };
 
 use glib::variant::FromVariant;
+use relm4::gtk::{self, IMMulticontext};
 use serde_derive::Deserialize;
 
 use crate::{
@@ -110,9 +111,17 @@ pub trait Tool {
         ToolUpdateResult::Unmodified
     }
 
+    fn set_im_context(&mut self, _context: Option<InputContext>) {}
+
     fn get_drawable(&self) -> Option<&dyn Drawable>;
 
     fn get_tool_type(&self) -> Tools;
+}
+
+#[derive(Clone, Debug)]
+pub struct InputContext {
+    pub im_context: IMMulticontext,
+    pub widget: gtk::Widget,
 }
 
 // the clone method below has been adapted from: https://stackoverflow.com/questions/30353462/how-to-clone-a-struct-storing-a-boxed-trait-object

@@ -1365,6 +1365,7 @@ dependencies = [
  "hex_color",
  "keycode",
  "libloading",
+ "pango",
  "relm4",
  "relm4-icons",
  "relm4-icons-build",
