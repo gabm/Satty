@@ -1,10 +1,13 @@
 use anyhow::Result;
-use femtovg::{FontId, Paint, Path, TextMetrics};
+use femtovg::{FontId, Paint, Path};
+use glib::translate::FromGlib;
+use pango::{AttrColor, AttrInt, AttrList, AttrType, Underline};
+use relm4::gtk::prelude::IMContextExt;
 use relm4::gtk::{
-    gdk::{Key, ModifierType},
+    gdk::{Key, ModifierType, Rectangle},
     TextBuffer,
 };
-use std::borrow::Cow;
+use std::{borrow::Cow, ops::Range};
 
 use relm4::gtk::prelude::*;
 
@@ -14,7 +17,7 @@ use crate::{
     style::Style,
 };
 
-use super::{Drawable, DrawableClone, Tool, ToolUpdateResult, Tools};
+use super::{Drawable, DrawableClone, InputContext, Tool, ToolUpdateResult, Tools};
 
 #[derive(Clone, Debug)]
 pub struct Text {
@@ -23,16 +26,51 @@ pub struct Text {
     text_buffer: TextBuffer,
     style: Style,
     preedit: Option<Preedit>,
+    im_context: Option<InputContext>,
 }
 
 #[derive(Clone, Debug)]
 struct Preedit {
     text: String,
     cursor: Option<usize>,
+    spans: Vec<PreeditSpan>,
+}
+
+#[derive(Clone, Debug, Default)]
+struct PreeditSpan {
+    range: Range<usize>,
+    foreground: Option<crate::style::Color>,
+    background: Option<crate::style::Color>,
+    underline: Option<Underline>,
+    underline_color: Option<crate::style::Color>,
+}
+
+struct DisplayContent<'a> {
+    text: Cow<'a, str>,
+    cursor_byte_pos: usize,
+    preedit_range: Option<Range<usize>>,
+}
+
+struct LineLayout {
+    range: Range<usize>,
+    baseline: f32,
+}
+
+struct TextDrawingContext<'a> {
+    paint: &'a Paint,
+    text: &'a str,
+    lines: &'a [LineLayout],
+}
+
+#[derive(Clone, Copy)]
+struct CursorMetrics {
+    top_offset: f32,
+    height: f32,
+    line_height: f32,
 }
 
 impl Text {
-    fn new(pos: Vec2D, style: Style) -> Self {
+    fn new(pos: Vec2D, style: Style, im_context: Option<InputContext>) -> Self {
         let text_buffer = TextBuffer::new(None);
         text_buffer.set_enable_undo(true);
 
@@ -42,6 +80,7 @@ impl Text {
             editing: true,
             style,
             preedit: None,
+            im_context,
         }
     }
 
@@ -52,14 +91,18 @@ impl Text {
             .unwrap_or_else(|| text.len())
     }
 
-    fn display_text<'a>(&self, base_text: &'a str) -> (Cow<'a, str>, usize) {
+    fn display_text<'a>(&self, base_text: &'a str) -> DisplayContent<'a> {
         let cursor_char_index = self.text_buffer.cursor_position() as usize;
         let base_cursor_byte = Self::byte_index_from_char_index(base_text, cursor_char_index);
 
         if self.editing {
             if let Some(preedit) = &self.preedit {
                 if preedit.text.is_empty() {
-                    return (Cow::Borrowed(base_text), base_cursor_byte);
+                    return DisplayContent {
+                        text: Cow::Borrowed(base_text),
+                        cursor_byte_pos: base_cursor_byte,
+                        preedit_range: None,
+                    };
                 }
 
                 let mut composed = String::with_capacity(base_text.len() + preedit.text.len());
@@ -76,12 +119,24 @@ impl Text {
                     Self::byte_index_from_char_index(&preedit.text, cursor_chars);
                 let composed_cursor_byte = base_cursor_byte + preedit_cursor_byte;
 
-                (Cow::Owned(composed), composed_cursor_byte)
+                DisplayContent {
+                    text: Cow::Owned(composed),
+                    cursor_byte_pos: composed_cursor_byte,
+                    preedit_range: Some(base_cursor_byte..base_cursor_byte + preedit.text.len()),
+                }
             } else {
-                (Cow::Borrowed(base_text), base_cursor_byte)
+                DisplayContent {
+                    text: Cow::Borrowed(base_text),
+                    cursor_byte_pos: base_cursor_byte,
+                    preedit_range: None,
+                }
             }
         } else {
-            (Cow::Borrowed(base_text), base_cursor_byte)
+            DisplayContent {
+                text: Cow::Borrowed(base_text),
+                cursor_byte_pos: base_cursor_byte,
+                preedit_range: None,
+            }
         }
     }
 }
@@ -99,26 +154,24 @@ impl Drawable for Text {
             false,
         );
         let base_text = gtext.as_str();
-        let (display_text, cursor_byte_pos) = self.display_text(base_text);
-        let text = display_text.as_ref();
+        let display = self.display_text(base_text);
+        let text = display.text.as_ref();
 
-        let mut paint: Paint = self.style.into();
-        paint.set_font(&[font]);
+        let mut base_paint: Paint = self.style.into();
+        base_paint.set_font(&[font]);
 
-        // get some metrics
-        let canva_scale = canvas.transform().average_scale();
-        let canvas_offset_x = canvas.transform()[4];
+        let transform = canvas.transform();
+        let canva_scale = transform.average_scale();
+        let canvas_offset_x = transform[4];
         let canvas_width = canvas.width() as f32;
 
         let width = canvas_width / canva_scale - self.pos.x - canvas_offset_x;
-        let mut y = self.pos.y;
-        let mut metrics = Vec::<TextMetrics>::new();
 
-        let lines = canvas.break_text_vec(width, text, &paint)?;
+        let lines = canvas.break_text_vec(width, text, &base_paint)?;
 
-        let font_metrics = canvas.measure_font(&paint)?;
+        let font_metrics = canvas.measure_font(&base_paint)?;
         let measured_cursor = canvas
-            .measure_text(self.pos.x, self.pos.y, "|", &paint)
+            .measure_text(self.pos.x, self.pos.y, "|", &base_paint)
             .ok();
 
         let mut line_height = measured_cursor
@@ -142,75 +195,499 @@ impl Drawable for Text {
         let cursor_height = if line_height.abs() > f32::EPSILON {
             line_height.abs()
         } else {
-            // reasonable default when all metrics fail
             (font_metrics.height() / canva_scale).abs()
         };
 
-        for line_range in lines {
-            if let Ok(text_metrics) = canvas.fill_text(self.pos.x, y, &text[line_range], &paint) {
-                y += line_height;
-                metrics.push(text_metrics);
+        let mut line_layouts: Vec<LineLayout> = Vec::with_capacity(lines.len());
+        let mut baseline = self.pos.y;
+        for line_range in &lines {
+            line_layouts.push(LineLayout {
+                range: line_range.clone(),
+                baseline,
+            });
+            baseline += line_height;
+        }
+
+        let cursor_metrics = CursorMetrics {
+            top_offset: cursor_top_offset,
+            height: cursor_height,
+            line_height,
+        };
+
+        let layout_context = TextDrawingContext {
+            paint: &base_paint,
+            text,
+            lines: &line_layouts,
+        };
+
+        if self.editing {
+            if let (Some(preedit), Some(preedit_range)) = (&self.preedit, &display.preedit_range) {
+                self.draw_preedit_background(
+                    canvas,
+                    &layout_context,
+                    preedit,
+                    preedit_range,
+                    cursor_metrics,
+                );
             }
         }
+
+        let mut draw_baseline = self.pos.y;
+        for line_range in &lines {
+            canvas.fill_text(
+                self.pos.x,
+                draw_baseline,
+                &text[line_range.clone()],
+                &base_paint,
+            )?;
+            draw_baseline += line_height;
+        }
+
         if self.editing {
-            // function to draw a cursor
-            let mut draw_cursor = |x, y: f32, height| {
-                // 10% extra height for cursor w.r.t. font height
-                let extra_height = height * 0.05;
+            if let (Some(preedit), Some(preedit_range)) = (&self.preedit, &display.preedit_range) {
+                self.draw_preedit_overlays(
+                    canvas,
+                    font,
+                    &layout_context,
+                    preedit,
+                    preedit_range,
+                    cursor_metrics,
+                )?;
+            }
+        }
 
-                let mut path = Path::new();
-                path.move_to(x, y - extra_height);
-                path.line_to(x, y + height + 2.0 * extra_height);
-                canvas.fill_path(&path, &paint);
+        if self.editing {
+            self.draw_cursor_and_update_ime(
+                canvas,
+                font,
+                &layout_context,
+                cursor_metrics,
+                display.cursor_byte_pos,
+            );
+        }
+
+        Ok(())
+    }
+}
+
+impl Text {
+    fn draw_preedit_background(
+        &self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        context: &TextDrawingContext<'_>,
+        preedit: &Preedit,
+        preedit_range: &Range<usize>,
+        cursor: CursorMetrics,
+    ) {
+        for span in &preedit.spans {
+            let Some(background_color) = span.background else {
+                continue;
             };
+            let global_start = preedit_range.start + span.range.start;
+            let global_end = preedit_range.start + span.range.end;
 
-            // find cursor pos in broken text
-            let mut previous_lines_bytes_offset = 0;
-            let mut cursor_drawn = false;
+            for line in context.lines {
+                let overlap_start = global_start.max(line.range.start);
+                let overlap_end = global_end.min(line.range.end);
+                if overlap_start >= overlap_end {
+                    continue;
+                }
+                let segments =
+                    self.segments_for_line_span(canvas, context, line, overlap_start..overlap_end);
+                for (start_x, end_x) in segments {
+                    let width = (end_x - start_x).max(0.0);
+                    if width <= f32::EPSILON {
+                        continue;
+                    }
+                    let mut path = Path::new();
+                    let top = line.baseline + cursor.top_offset;
+                    path.rect(start_x, top, width, cursor.height);
+                    let mut fill_paint = Paint::color(background_color.into());
+                    fill_paint.set_anti_alias(true);
+                    canvas.fill_path(&path, &fill_paint);
+                }
+            }
+        }
+    }
 
-            for (line_idx, m) in metrics.iter().enumerate() {
-                for g in &m.glyphs {
-                    if previous_lines_bytes_offset + g.byte_index == cursor_byte_pos {
-                        // cursor is before this glyph, draw here!
-                        let cursor_y =
-                            self.pos.y + line_idx as f32 * line_height + cursor_top_offset;
-                        draw_cursor(g.x - g.bearing_x, cursor_y, cursor_height);
-                        cursor_drawn = true;
-                        break;
+    fn draw_preedit_overlays(
+        &self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        font: FontId,
+        context: &TextDrawingContext<'_>,
+        preedit: &Preedit,
+        preedit_range: &Range<usize>,
+        cursor: CursorMetrics,
+    ) -> Result<()> {
+        for span in &preedit.spans {
+            let global_start = preedit_range.start + span.range.start;
+            let global_end = preedit_range.start + span.range.end;
+
+            for line in context.lines {
+                let overlap_start = global_start.max(line.range.start);
+                let overlap_end = global_end.min(line.range.end);
+                if overlap_start >= overlap_end {
+                    continue;
+                }
+                let segments =
+                    self.segments_for_line_span(canvas, context, line, overlap_start..overlap_end);
+                if segments.is_empty() {
+                    continue;
+                }
+
+                if let Some(color) = span.foreground {
+                    let mut overlay_paint: Paint = self.style.into();
+                    overlay_paint.set_font(&[font]);
+                    overlay_paint.set_color(color.into());
+                    for (start_x, end_x) in &segments {
+                        let width = (*end_x - *start_x).max(0.0);
+                        if width <= f32::EPSILON {
+                            continue;
+                        }
+                        canvas.save();
+                        canvas.scissor(
+                            *start_x,
+                            line.baseline + cursor.top_offset,
+                            width,
+                            cursor.height,
+                        );
+                        canvas.fill_text(
+                            self.pos.x,
+                            line.baseline,
+                            &context.text[line.range.clone()],
+                            &overlay_paint,
+                        )?;
+                        canvas.restore();
                     }
                 }
 
-                let last_byte = match m.glyphs.last() {
-                    Some(g) => g.byte_index + 1,
-                    None => 0,
-                };
-
-                previous_lines_bytes_offset += last_byte;
-            }
-
-            if !cursor_drawn {
-                // cursor is after last char, draw there!
-                if let Some(m) = metrics.last() {
-                    if let Some(g) = m.glyphs.last() {
-                        if g.c == '\n' {
-                            // if last char is a manual wrap -> draw cursor on next line
-                            let cursor_y =
-                                self.pos.y + metrics.len() as f32 * line_height + cursor_top_offset;
-                            draw_cursor(self.pos.x, cursor_y, cursor_height);
-                        } else {
-                            // on the same line as last glyph
-                            draw_cursor(g.x + g.bearing_x + g.width, m.y, m.height());
-                        }
-                    }
-                } else {
-                    // no text rendered so far
-                    draw_cursor(self.pos.x, self.pos.y + cursor_top_offset, cursor_height);
+                if let Some(underline) = span.underline {
+                    let color = span
+                        .underline_color
+                        .or(span.foreground)
+                        .unwrap_or(self.style.color);
+                    self.draw_underline_segments(
+                        canvas,
+                        &segments,
+                        line.baseline + cursor.top_offset,
+                        cursor.height,
+                        underline,
+                        color,
+                    );
                 }
             }
         }
 
         Ok(())
     }
+
+    fn draw_underline_segments(
+        &self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        segments: &[(f32, f32)],
+        line_top: f32,
+        cursor_height: f32,
+        underline: Underline,
+        color: crate::style::Color,
+    ) {
+        if segments.is_empty() {
+            return;
+        }
+        let mut paint = Paint::color(color.into());
+        let thickness = (cursor_height * 0.08).clamp(1.0, cursor_height / 2.0);
+        paint.set_line_width(thickness);
+        paint.set_anti_alias(true);
+
+        let base_y = line_top + cursor_height - thickness * 0.5;
+
+        for &(start_x, end_x) in segments {
+            if end_x - start_x <= f32::EPSILON {
+                continue;
+            }
+            match underline {
+                Underline::Double | Underline::DoubleLine => {
+                    let mut first = Path::new();
+                    first.move_to(start_x, base_y - thickness);
+                    first.line_to(end_x, base_y - thickness);
+                    canvas.stroke_path(&first, &paint);
+
+                    let mut second = Path::new();
+                    second.move_to(start_x, base_y + thickness * 0.5);
+                    second.line_to(end_x, base_y + thickness * 0.5);
+                    canvas.stroke_path(&second, &paint);
+                }
+                Underline::None => {}
+                _ => {
+                    let mut path = Path::new();
+                    path.move_to(start_x, base_y);
+                    path.line_to(end_x, base_y);
+                    canvas.stroke_path(&path, &paint);
+                }
+            }
+        }
+    }
+
+    fn segments_for_line_span(
+        &self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        context: &TextDrawingContext<'_>,
+        line: &LineLayout,
+        range: Range<usize>,
+    ) -> Vec<(f32, f32)> {
+        if range.start >= range.end {
+            return Vec::new();
+        }
+
+        let line_start = line.range.start;
+        let line_end = line.range.end;
+        let overlap_start = range.start.max(line_start).min(line_end);
+        let overlap_end = range.end.max(line_start).min(line_end);
+        if overlap_start >= overlap_end {
+            return Vec::new();
+        }
+
+        let line_text = &context.text[line.range.clone()];
+        let start_offset = overlap_start.saturating_sub(line_start);
+        let end_offset = overlap_end.saturating_sub(line_start);
+
+        let prefix = &line_text[..start_offset];
+        let selected = &line_text[start_offset..end_offset];
+
+        let start_x = self.pos.x + Self::text_width(canvas, context.paint, prefix);
+        let width = Self::text_width(canvas, context.paint, selected);
+
+        vec![(start_x, start_x + width.max(0.0))]
+    }
+
+    fn caret_top_left(
+        &self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        context: &TextDrawingContext<'_>,
+        cursor_byte_pos: usize,
+        cursor: CursorMetrics,
+    ) -> (f32, f32) {
+        if context.lines.is_empty() {
+            return (self.pos.x, self.pos.y + cursor.top_offset);
+        }
+
+        let mut newline_pending_baseline: Option<f32> = None;
+
+        for line in context.lines {
+            let line_text = &context.text[line.range.clone()];
+
+            if cursor_byte_pos < line.range.end {
+                let prefix_len = cursor_byte_pos
+                    .saturating_sub(line.range.start)
+                    .min(line_text.len());
+                let prefix = &line_text[..prefix_len];
+                let offset = Self::text_width(canvas, context.paint, prefix);
+                return (self.pos.x + offset, line.baseline + cursor.top_offset);
+            }
+
+            if cursor_byte_pos == line.range.end {
+                if line_text.ends_with('\n') {
+                    // The caret is positioned right after a manual line break,
+                    // so place it on the next visual line instead.
+                    newline_pending_baseline =
+                        Some(line.baseline + cursor.top_offset + cursor.line_height);
+                    continue;
+                }
+                let offset = Self::text_width(canvas, context.paint, line_text);
+                return (self.pos.x + offset, line.baseline + cursor.top_offset);
+            }
+        }
+
+        if let Some(baseline) = newline_pending_baseline {
+            return (self.pos.x, baseline);
+        }
+
+        if let Some(last_line) = context.lines.last() {
+            let line_text = &context.text[last_line.range.clone()];
+            let offset = Self::text_width(canvas, context.paint, line_text);
+            (
+                self.pos.x + offset,
+                last_line.baseline + cursor.top_offset + cursor.line_height,
+            )
+        } else {
+            (self.pos.x, self.pos.y + cursor.top_offset)
+        }
+    }
+
+    fn draw_cursor_and_update_ime(
+        &self,
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        font: FontId,
+        context: &TextDrawingContext<'_>,
+        cursor: CursorMetrics,
+        cursor_byte_pos: usize,
+    ) {
+        let (cursor_x, cursor_top) = self.caret_top_left(canvas, context, cursor_byte_pos, cursor);
+        let caret_height = cursor.height;
+
+        let mut caret_paint: Paint = self.style.into();
+        caret_paint.set_font(&[font]);
+        let extra_height = caret_height * 0.05;
+        let mut path = Path::new();
+        path.move_to(cursor_x, cursor_top - extra_height);
+        path.line_to(cursor_x, cursor_top + caret_height + extra_height * 2.0);
+        canvas.fill_path(&path, &caret_paint);
+
+        if self.editing {
+            if let Some(handle) = &self.im_context {
+                let transform = canvas.transform();
+                let widget_scale = handle.widget.scale_factor().max(1) as f32;
+                let (x1, y1) = transform.transform_point(cursor_x, cursor_top);
+                let (x2, y2) = transform.transform_point(cursor_x + 1.0, cursor_top + caret_height);
+                let logical_x = (x1 / widget_scale).floor() as i32;
+                let logical_y = (y1 / widget_scale).floor() as i32;
+                let logical_width = ((x2 - x1).abs() / widget_scale).ceil().max(1.0) as i32;
+                let logical_height = ((y2 - y1).abs() / widget_scale).ceil().max(1.0) as i32;
+                let rect =
+                    Rectangle::new(logical_x, logical_y, logical_width, logical_height.max(1));
+                handle.im_context.set_cursor_location(&rect);
+            }
+        }
+    }
+
+    fn text_width(
+        canvas: &mut femtovg::Canvas<femtovg::renderer::OpenGl>,
+        paint: &Paint,
+        text: &str,
+    ) -> f32 {
+        if text.is_empty() {
+            return 0.0;
+        }
+        canvas
+            .measure_text(0.0, 0.0, text, paint)
+            .map(|metrics| metrics.width())
+            .unwrap_or(0.0)
+    }
+}
+
+impl Preedit {
+    fn from_ime(text: String, cursor: Option<usize>, attrs: Option<AttrList>) -> Self {
+        let spans = build_preedit_spans(&text, attrs);
+        Self {
+            text,
+            cursor,
+            spans,
+        }
+    }
+}
+
+#[allow(clippy::cast_possible_truncation)]
+fn pango_color_to_style(color: pango::Color, alpha: Option<u16>) -> crate::style::Color {
+    let to_u8 = |value: u16| -> u8 { (value / 257) as u8 };
+    let alpha = alpha.unwrap_or(u16::MAX);
+    crate::style::Color::new(
+        to_u8(color.red()),
+        to_u8(color.green()),
+        to_u8(color.blue()),
+        to_u8(alpha),
+    )
+}
+
+fn clamp_index(index: i32, len: usize) -> usize {
+    if index < 0 {
+        0
+    } else {
+        (index as usize).min(len)
+    }
+}
+
+fn build_preedit_spans(text: &str, attrs: Option<AttrList>) -> Vec<PreeditSpan> {
+    let mut spans = Vec::new();
+    let text_len = text.len();
+
+    if let Some(attr_list) = attrs {
+        let mut iterator = attr_list.iterator();
+        loop {
+            let (start, end) = iterator.range();
+            let span_start = clamp_index(start, text_len);
+            let span_end = clamp_index(end, text_len);
+            if span_start < span_end {
+                let mut fg_color: Option<pango::Color> = None;
+                let mut bg_color: Option<pango::Color> = None;
+                let mut underline_color: Option<pango::Color> = None;
+                let mut underline: Option<Underline> = None;
+                let mut fg_alpha: Option<u16> = None;
+                let mut bg_alpha: Option<u16> = None;
+
+                for attr in iterator.attrs() {
+                    match attr.attr_class().type_() {
+                        AttrType::Foreground => {
+                            if let Some(color_attr) = attr.downcast_ref::<AttrColor>() {
+                                fg_color = Some(color_attr.color());
+                            }
+                        }
+                        AttrType::Background => {
+                            if let Some(color_attr) = attr.downcast_ref::<AttrColor>() {
+                                bg_color = Some(color_attr.color());
+                            }
+                        }
+                        AttrType::Underline => {
+                            if let Some(value_attr) = attr.downcast_ref::<AttrInt>() {
+                                underline =
+                                    Some(unsafe { Underline::from_glib(value_attr.value()) });
+                            }
+                        }
+                        AttrType::UnderlineColor => {
+                            if let Some(color_attr) = attr.downcast_ref::<AttrColor>() {
+                                underline_color = Some(color_attr.color());
+                            }
+                        }
+                        AttrType::ForegroundAlpha => {
+                            if let Some(alpha_attr) = attr.downcast_ref::<AttrInt>() {
+                                fg_alpha =
+                                    Some(alpha_attr.value().clamp(0, u16::MAX as i32) as u16);
+                            }
+                        }
+                        AttrType::BackgroundAlpha => {
+                            if let Some(alpha_attr) = attr.downcast_ref::<AttrInt>() {
+                                bg_alpha =
+                                    Some(alpha_attr.value().clamp(0, u16::MAX as i32) as u16);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+
+                let mut span = PreeditSpan {
+                    range: span_start..span_end,
+                    ..Default::default()
+                };
+
+                if let Some(color) = fg_color {
+                    span.foreground = Some(pango_color_to_style(color, fg_alpha));
+                }
+                if let Some(color) = bg_color {
+                    span.background = Some(pango_color_to_style(color, bg_alpha));
+                }
+                if let Some(color) = underline_color {
+                    span.underline_color = Some(pango_color_to_style(color, None));
+                }
+                if let Some(value) = underline {
+                    span.underline = Some(value);
+                }
+
+                spans.push(span);
+            }
+
+            if !iterator.next_style_change() {
+                break;
+            }
+        }
+    }
+
+    if spans.is_empty() && !text.is_empty() {
+        spans.push(PreeditSpan {
+            range: 0..text_len,
+            underline: Some(Underline::Single),
+            ..Default::default()
+        });
+    }
+
+    spans
 }
 
 #[derive(Default)]
@@ -218,6 +695,7 @@ pub struct TextTool {
     text: Option<Text>,
     style: Style,
     input_enabled: bool,
+    im_context: Option<InputContext>,
 }
 
 impl Tool for TextTool {
@@ -231,6 +709,13 @@ impl Tool for TextTool {
 
     fn set_input_enabled(&mut self, value: bool) {
         self.input_enabled = value;
+    }
+
+    fn set_im_context(&mut self, context: Option<InputContext>) {
+        self.im_context = context.clone();
+        if let Some(text) = &mut self.text {
+            text.im_context = context;
+        }
     }
 
     fn get_drawable(&self) -> Option<&dyn Drawable> {
@@ -258,7 +743,11 @@ impl Tool for TextTool {
                     t.text_buffer.insert_at_cursor(&text);
                     ToolUpdateResult::Redraw
                 }
-                TextEventMsg::Preedit { text, cursor } => {
+                TextEventMsg::Preedit {
+                    text,
+                    attrs,
+                    cursor,
+                } => {
                     let cursor = cursor.map(|value| value as usize);
                     if text.is_empty() {
                         if t.preedit.take().is_some() {
@@ -267,7 +756,7 @@ impl Tool for TextTool {
                             ToolUpdateResult::Unmodified
                         }
                     } else {
-                        t.preedit = Some(Preedit { text, cursor });
+                        t.preedit = Some(Preedit::from_ime(text, cursor, attrs));
                         ToolUpdateResult::Redraw
                     }
                 }
@@ -293,6 +782,7 @@ impl Tool for TextTool {
                 } else {
                     t.preedit = None;
                     t.editing = false;
+                    t.im_context = None;
                     let result = t.clone_box();
                     self.text = None;
                     self.input_enabled = false;
@@ -398,13 +888,14 @@ impl Tool for TextTool {
                         Some(l) => {
                             l.preedit = None;
                             l.editing = false;
+                            l.im_context = None;
                             ToolUpdateResult::Commit(l.clone_box())
                         }
                         None => ToolUpdateResult::Redraw,
                     };
 
                     // create a new Text
-                    self.text = Some(Text::new(event.pos, self.style));
+                    self.text = Some(Text::new(event.pos, self.style, self.im_context.clone()));
 
                     self.set_input_enabled(true);
 
@@ -423,6 +914,7 @@ impl Tool for TextTool {
         if let Some(t) = &mut self.text {
             t.preedit = None;
             t.editing = false;
+            t.im_context = None;
             let result = t.clone_box();
             self.text = None;
             ToolUpdateResult::Commit(result)
