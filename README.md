@@ -41,12 +41,12 @@ All configuration is done either at the config file in `XDG_CONFIG_DIR/.config/s
 - `Esc`: as configured (see below), default: exit
 - `Ctrl+C`: Save to clipboard
 - `Ctrl+S`: Save to specified output file
-- `Ctrl+Shift+S`: Save using file dialog
+- `Ctrl+Shift+S`: Save using file dialog <sup>0.20.0</sup>
 - `Ctrl+T`: Toggle toolbars
 - `Ctrl+Y`: Redo
 - `Ctrl+Z`: Undo
 
-#### Tool Selection Shortcuts (configurable)
+#### Tool Selection Shortcuts (configurable) <sup>0.20.0</sup>
 Default single-key shortcuts:
 - `p`: Pointer tool
 - `c`: Crop tool
@@ -86,14 +86,15 @@ copy-command = "wl-copy"
 # Increase or decrease the size of the annotations
 annotation-size-factor = 2
 # Filename to use for saving action. Omit to disable saving to file. Might contain format specifiers: https://docs.rs/chrono/latest/chrono/format/strftime/index.html
+# starting with 0.20.0, can contain leading tilde (~) for home directory
 output-filename = "/tmp/test-%Y-%m-%d_%H:%M:%S.png"
 # After copying the screenshot, save it to a file as well
 save-after-copy = false
 # Hide toolbars by default
 default-hide-toolbars = false
-# Experimental: whether window focus shows/hides toolbars. This does not affect initial state of toolbars, see default-hide-toolbars.
+# Experimental (since 0.20.0): whether window focus shows/hides toolbars. This does not affect initial state of toolbars, see default-hide-toolbars.
 focus-toggles-toolbars = false
-# Fill shapes by default
+# Fill shapes by default (since 0.20.0)
 default-fill-shapes = false
 # The primary highlighter to use, the other is accessible by holding CTRL at the start of a highlight [possible values: block, freehand]
 primary-highlighter = "block"
@@ -119,7 +120,7 @@ no-window-decoration = true
 # experimental feature: adjust history size for brush input smooting (0: disabled, default: 0, try e.g. 5 or 10)
 brush-smooth-history-size = 10
 
-# Tool selection keyboard shortcuts
+# Tool selection keyboard shortcuts (since 0.20.0)
 [keybinds]
 pointer = "p"
 crop = "c"
@@ -178,7 +179,7 @@ Options:
       --fullscreen
           Start Satty in fullscreen mode
   -o, --output-filename <OUTPUT_FILENAME>
-          Filename to use for saving action or '-' to print to stdout. Omit to disable saving to file. Might contain format specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>
+          Filename to use for saving action or '-' to print to stdout. Omit to disable saving to file. Might contain format specifiers: <https://docs.rs/chrono/latest/chrono/format/strftime/index.html>. Since 0.20.0, can contain tilde (~) for home dir
       --early-exit
           Exit directly after copy/save action
       --corner-roundness <CORNER_ROUNDNESS>
@@ -200,9 +201,9 @@ Options:
   -d, --default-hide-toolbars
           Hide toolbars by default
       --focus-toggles-toolbars
-          Experimental: Whether to toggle toolbars based on focus. Doesn't affect initial state
+          Experimental (since 0.20.0): Whether to toggle toolbars based on focus. Doesn't affect initial state
       --default-fill-shapes
-          Experimental feature: Fill shapes by default
+          Experimental feature (since 0.20.0): Fill shapes by default
       --font-family <FONT_FAMILY>
           Font family to use for text annotations
       --font-style <FONT_STYLE>
@@ -226,6 +227,10 @@ Options:
   -V, --version
           Print version
 ```
+
+### IME <sup>0.20.0</sup>
+
+Satty supports IME via GTK with and without preediting. Please note, at this point Satty has no proper fallback font handling so the font used needs to contain the entered glyphs.
 
 ### wlroots based compositors (Sway, Wayfire, River, ...)
 
