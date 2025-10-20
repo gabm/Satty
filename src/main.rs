@@ -25,6 +25,7 @@ mod command_line;
 mod configuration;
 mod femtovg_area;
 mod icons;
+mod ime;
 mod math;
 mod notification;
 mod sketch_board;
