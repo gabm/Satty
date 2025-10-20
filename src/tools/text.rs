@@ -1,7 +1,5 @@
 use anyhow::Result;
 use femtovg::{FontId, Paint, Path};
-use glib::translate::FromGlib;
-use pango::{AttrColor, AttrInt, AttrList, AttrType, Underline};
 use relm4::gtk::prelude::IMContextExt;
 use relm4::gtk::{
     gdk::{Key, ModifierType, Rectangle},
@@ -12,6 +10,7 @@ use std::{borrow::Cow, ops::Range};
 use relm4::gtk::prelude::*;
 
 use crate::{
+    ime::preedit::{Preedit, UnderlineKind},
     math::Vec2D,
     sketch_board::{KeyEventMsg, MouseButton, MouseEventMsg, MouseEventType, TextEventMsg},
     style::Style,
@@ -27,22 +26,6 @@ pub struct Text {
     style: Style,
     preedit: Option<Preedit>,
     im_context: Option<InputContext>,
-}
-
-#[derive(Clone, Debug)]
-struct Preedit {
-    text: String,
-    cursor: Option<usize>,
-    spans: Vec<PreeditSpan>,
-}
-
-#[derive(Clone, Debug, Default)]
-struct PreeditSpan {
-    range: Range<usize>,
-    foreground: Option<crate::style::Color>,
-    background: Option<crate::style::Color>,
-    underline: Option<Underline>,
-    underline_color: Option<crate::style::Color>,
 }
 
 struct DisplayContent<'a> {
@@ -112,7 +95,7 @@ impl Text {
 
                 let preedit_char_len = preedit.text.chars().count();
                 let cursor_chars = preedit
-                    .cursor
+                    .cursor_chars
                     .map(|value| value.min(preedit_char_len))
                     .unwrap_or(preedit_char_len);
                 let preedit_cursor_byte =
@@ -346,10 +329,10 @@ impl Text {
                         }
                         canvas.save();
                         canvas.scissor(
-                            *start_x,
-                            line.baseline + cursor.top_offset,
-                            width,
-                            cursor.height,
+                            (*start_x - 1.0).floor(),
+                            (line.baseline + cursor.top_offset - 1.0).floor(),
+                            (width + 2.0).ceil(),
+                            (cursor.height + 2.0).ceil(),
                         );
                         canvas.fill_text(
                             self.pos.x,
@@ -361,7 +344,7 @@ impl Text {
                     }
                 }
 
-                if let Some(underline) = span.underline {
+                if span.underline != UnderlineKind::None {
                     let color = span
                         .underline_color
                         .or(span.foreground)
@@ -371,7 +354,7 @@ impl Text {
                         &segments,
                         line.baseline + cursor.top_offset,
                         cursor.height,
-                        underline,
+                        span.underline,
                         color,
                     );
                 }
@@ -387,7 +370,7 @@ impl Text {
         segments: &[(f32, f32)],
         line_top: f32,
         cursor_height: f32,
-        underline: Underline,
+        underline: UnderlineKind,
         color: crate::style::Color,
     ) {
         if segments.is_empty() {
@@ -405,7 +388,7 @@ impl Text {
                 continue;
             }
             match underline {
-                Underline::Double | Underline::DoubleLine => {
+                UnderlineKind::Double => {
                     let mut first = Path::new();
                     first.move_to(start_x, base_y - thickness);
                     first.line_to(end_x, base_y - thickness);
@@ -416,7 +399,7 @@ impl Text {
                     second.line_to(end_x, base_y + thickness * 0.5);
                     canvas.stroke_path(&second, &paint);
                 }
-                Underline::None => {}
+                UnderlineKind::None => {}
                 _ => {
                     let mut path = Path::new();
                     path.move_to(start_x, base_y);
@@ -564,132 +547,6 @@ impl Text {
     }
 }
 
-impl Preedit {
-    fn from_ime(text: String, cursor: Option<usize>, attrs: Option<AttrList>) -> Self {
-        let spans = build_preedit_spans(&text, attrs);
-        Self {
-            text,
-            cursor,
-            spans,
-        }
-    }
-}
-
-#[allow(clippy::cast_possible_truncation)]
-fn pango_color_to_style(color: pango::Color, alpha: Option<u16>) -> crate::style::Color {
-    let to_u8 = |value: u16| -> u8 { (value / 257) as u8 };
-    let alpha = alpha.unwrap_or(u16::MAX);
-    crate::style::Color::new(
-        to_u8(color.red()),
-        to_u8(color.green()),
-        to_u8(color.blue()),
-        to_u8(alpha),
-    )
-}
-
-fn clamp_index(index: i32, len: usize) -> usize {
-    if index < 0 {
-        0
-    } else {
-        (index as usize).min(len)
-    }
-}
-
-fn build_preedit_spans(text: &str, attrs: Option<AttrList>) -> Vec<PreeditSpan> {
-    let mut spans = Vec::new();
-    let text_len = text.len();
-
-    if let Some(attr_list) = attrs {
-        let mut iterator = attr_list.iterator();
-        loop {
-            let (start, end) = iterator.range();
-            let span_start = clamp_index(start, text_len);
-            let span_end = clamp_index(end, text_len);
-            if span_start < span_end {
-                let mut fg_color: Option<pango::Color> = None;
-                let mut bg_color: Option<pango::Color> = None;
-                let mut underline_color: Option<pango::Color> = None;
-                let mut underline: Option<Underline> = None;
-                let mut fg_alpha: Option<u16> = None;
-                let mut bg_alpha: Option<u16> = None;
-
-                for attr in iterator.attrs() {
-                    match attr.attr_class().type_() {
-                        AttrType::Foreground => {
-                            if let Some(color_attr) = attr.downcast_ref::<AttrColor>() {
-                                fg_color = Some(color_attr.color());
-                            }
-                        }
-                        AttrType::Background => {
-                            if let Some(color_attr) = attr.downcast_ref::<AttrColor>() {
-                                bg_color = Some(color_attr.color());
-                            }
-                        }
-                        AttrType::Underline => {
-                            if let Some(value_attr) = attr.downcast_ref::<AttrInt>() {
-                                underline =
-                                    Some(unsafe { Underline::from_glib(value_attr.value()) });
-                            }
-                        }
-                        AttrType::UnderlineColor => {
-                            if let Some(color_attr) = attr.downcast_ref::<AttrColor>() {
-                                underline_color = Some(color_attr.color());
-                            }
-                        }
-                        AttrType::ForegroundAlpha => {
-                            if let Some(alpha_attr) = attr.downcast_ref::<AttrInt>() {
-                                fg_alpha =
-                                    Some(alpha_attr.value().clamp(0, u16::MAX as i32) as u16);
-                            }
-                        }
-                        AttrType::BackgroundAlpha => {
-                            if let Some(alpha_attr) = attr.downcast_ref::<AttrInt>() {
-                                bg_alpha =
-                                    Some(alpha_attr.value().clamp(0, u16::MAX as i32) as u16);
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-
-                let mut span = PreeditSpan {
-                    range: span_start..span_end,
-                    ..Default::default()
-                };
-
-                if let Some(color) = fg_color {
-                    span.foreground = Some(pango_color_to_style(color, fg_alpha));
-                }
-                if let Some(color) = bg_color {
-                    span.background = Some(pango_color_to_style(color, bg_alpha));
-                }
-                if let Some(color) = underline_color {
-                    span.underline_color = Some(pango_color_to_style(color, None));
-                }
-                if let Some(value) = underline {
-                    span.underline = Some(value);
-                }
-
-                spans.push(span);
-            }
-
-            if !iterator.next_style_change() {
-                break;
-            }
-        }
-    }
-
-    if spans.is_empty() && !text.is_empty() {
-        spans.push(PreeditSpan {
-            range: 0..text_len,
-            underline: Some(Underline::Single),
-            ..Default::default()
-        });
-    }
-
-    spans
-}
-
 #[derive(Default)]
 pub struct TextTool {
     text: Option<Text>,
@@ -745,10 +602,9 @@ impl Tool for TextTool {
                 }
                 TextEventMsg::Preedit {
                     text,
-                    attrs,
-                    cursor,
+                    cursor_chars,
+                    spans,
                 } => {
-                    let cursor = cursor.map(|value| value as usize);
                     if text.is_empty() {
                         if t.preedit.take().is_some() {
                             ToolUpdateResult::Redraw
@@ -756,7 +612,11 @@ impl Tool for TextTool {
                             ToolUpdateResult::Unmodified
                         }
                     } else {
-                        t.preedit = Some(Preedit::from_ime(text, cursor, attrs));
+                        t.preedit = Some(Preedit {
+                            text,
+                            cursor_chars,
+                            spans,
+                        });
                         ToolUpdateResult::Redraw
                     }
                 }

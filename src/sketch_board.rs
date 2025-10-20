@@ -19,6 +19,7 @@ use relm4::{gtk, Component, ComponentParts, ComponentSender, RelmWidgetExt};
 
 use crate::configuration::{Action, APP_CONFIG};
 use crate::femtovg_area::FemtoVGArea;
+use crate::ime::pango_adapter::spans_from_pango_attrs;
 use crate::math::Vec2D;
 use crate::notification::log_result;
 use crate::style::Style;
@@ -69,8 +70,8 @@ pub enum TextEventMsg {
     Commit(String),
     Preedit {
         text: String,
-        attrs: Option<pango::AttrList>,
-        cursor: Option<u32>,
+        cursor_chars: Option<usize>,
+        spans: Vec<crate::ime::preedit::PreeditSpan>,
     },
     PreeditEnd,
 }
@@ -596,16 +597,16 @@ impl SketchBoard {
             }
             TextEventMsg::Preedit {
                 text,
-                attrs,
-                cursor,
+                cursor_chars,
+                spans,
             } => {
                 if self.active_tool_type() == Tools::Text
                     && self.active_tool.borrow().input_enabled()
                 {
                     sender.input(SketchBoardInput::new_text_event(TextEventMsg::Preedit {
                         text,
-                        attrs,
-                        cursor,
+                        cursor_chars,
+                        spans,
                     }));
                 }
             }
@@ -846,15 +847,16 @@ impl Component for SketchBoard {
             let sender = sender.input_sender().clone();
             model.im_context.connect_preedit_changed(move |cx| {
                 let (text, attrs, cursor) = cx.preedit_string();
-                let cursor = if cursor >= 0 {
-                    Some(cursor as u32)
+                let cursor_chars = if cursor >= 0 {
+                    Some(cursor as usize)
                 } else {
                     None
                 };
+                let spans = spans_from_pango_attrs(text.as_str(), Some(attrs));
                 sender.emit(SketchBoardInput::new_commit_event(TextEventMsg::Preedit {
                     text: text.to_string(),
-                    attrs: Some(attrs),
-                    cursor,
+                    cursor_chars,
+                    spans,
                 }));
             });
         }
