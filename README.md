@@ -165,7 +165,7 @@ custom = [
 
 ### Command Line
 
-```sh
+```
 » satty --help
 Modern Screenshot Annotation.
 
