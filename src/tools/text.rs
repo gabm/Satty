@@ -171,10 +171,7 @@ impl Drawable for Text {
             line_height = font_metrics.height() / canva_scale;
         }
 
-        let cursor_top_offset = measured_cursor
-            .as_ref()
-            .map(|metrics| metrics.y - self.pos.y)
-            .unwrap_or(-font_metrics.ascender() / canva_scale);
+        let cursor_top_offset = -line_height;
         let cursor_height = if line_height.abs() > f32::EPSILON {
             line_height.abs()
         } else {
