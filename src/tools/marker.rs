@@ -33,7 +33,16 @@ impl Drawable for Marker {
     ) -> anyhow::Result<()> {
         let text = format!("{}", self.number);
 
-        let mut paint = Paint::color(Color::white());
+        let marker_color: Color = self.style.color.into();
+        let luminance = 0.2126 * marker_color.r + 0.7152 * marker_color.g + 0.0722 * marker_color.b;
+        let text_color = if luminance > 0.5 {
+            Color::black()
+        } else {
+            Color::white()
+        };
+
+        let mut paint = Paint::color(text_color);
+
         paint.set_font(&[font]);
         paint.set_font_size(
             (self
