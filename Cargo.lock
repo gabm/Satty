@@ -1273,18 +1273,18 @@ dependencies = [
 
 [[package]]
 name = "resource"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eba77c4af60b466e86a835324da49c58f3effcec3f658989062adddff17ea0ae"
+checksum = "f77952223cf98193d7bbd64b1f2aa3c3b95949ed2bb7f1dc90879e5e12d68176"
 dependencies = [
  "resource_list_proc_macro",
 ]
 
 [[package]]
 name = "resource_list_proc_macro"
-version = "0.6.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fd4ffd64e61cd0b962d75f623355e06ba6318d5028920394b269bb8972b61ace"
+checksum = "dae77d3af77dfd48e45d8e2fa3a3cc02525181eccc930eee4b8c3de62e12e816"
 dependencies = [
  "quote",
 ]
