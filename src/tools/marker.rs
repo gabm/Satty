@@ -34,6 +34,7 @@ impl Drawable for Marker {
         let text = format!("{}", self.number);
 
         let marker_color: Color = self.style.color.into();
+        // https://en.wikipedia.org/wiki/Luma_(video)
         let luminance = 0.2126 * marker_color.r + 0.7152 * marker_color.g + 0.0722 * marker_color.b;
         let text_color = if luminance > 0.5 {
             Color::black()
@@ -79,7 +80,7 @@ impl Drawable for Marker {
             femtovg::Solidity::Solid,
         );
 
-        let circle_paint = Paint::color(self.style.color.into()).with_line_width(
+        let circle_paint = Paint::color(marker_color).with_line_width(
             self.style
                 .size
                 .to_line_width(self.style.annotation_size_factor)
