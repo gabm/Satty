@@ -376,11 +376,16 @@ impl Tool for CropTool {
     }
 
     fn handle_key_event(&mut self, event: KeyEventMsg) -> ToolUpdateResult {
-        if event.key == Key::Escape && self.crop.is_some() {
-            self.handle_deactivated()
-        } else {
-            ToolUpdateResult::Unmodified
+        if event.key == Key::Escape {
+            if let Some(crop) = &self.crop {
+                if crop.active {
+                    // Crop is active, deactivate it
+                    return self.handle_deactivated();
+                }
+            }
         }
+        // No crop exists or crop is inactive - let event bubble to global handler
+        ToolUpdateResult::Unmodified
     }
 
     fn handle_mouse_event(&mut self, event: MouseEventMsg) -> ToolUpdateResult {
