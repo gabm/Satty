@@ -136,6 +136,7 @@ pub enum Tools {
 pub enum Action {
     SaveToClipboard,
     SaveToFile,
+    CopyFilepathToClipboard,
     Exit,
 }
 
